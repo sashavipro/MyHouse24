@@ -102,7 +102,7 @@ class AboutUsPage(models.Model):
     """Модель для контента страницы 'О нас'."""
     title1 = models.CharField(max_length=200, verbose_name="Заголовок 1")
     description1 = models.TextField(verbose_name="Описание 1")
-    image = models.ImageField(upload_to='about_us/', verbose_name="Изображение")
+    image = models.ImageField(upload_to='about_us/avatar', verbose_name="Изображение")
 
     gallery1 = models.OneToOneField(Gallery, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='about_us_gallery1', verbose_name="Галерея 1")
@@ -142,7 +142,7 @@ class ServiceBlock(models.Model):
     """Модель отдельного блока услуги."""
     service_page = models.ForeignKey(ServicePage, on_delete=models.CASCADE, related_name='services',
                                      verbose_name="Страница услуг")
-    image = models.ImageField(upload_to='services/', verbose_name="Изображение услуги")
+    image = models.ImageField(upload_to='services/service_block', verbose_name="Изображение услуги")
     title = models.CharField(max_length=150, verbose_name="Название услуги")
     description = models.TextField(verbose_name="Описание услуги")
 

@@ -14,7 +14,7 @@
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-end">
                     <li class="breadcrumb-item"><a href="{% url 'core:admin_stats' %}">Главная</a></li>
-                    <li class="breadcrumb-item active">Редактирование страницы "О нас"</li>
+                    <li class="breadcrumb-item active">Редактирование страницы</li>
                 </ol>
             </div>
         </div>
@@ -59,12 +59,16 @@
 
                     <!-- ФОТОГАЛЕРЕЯ 1 -->
                     <h4 class="page-header mt-4">Фотогалерея</h4>
-                    <div class="row">
+                    <div class="row" id="gallery1-container"> {# Добавляем ID для контейнера #}
                         {% for image in gallery1_images %}
-                        <div class="col-2 text-center">
+                        <div class="col-2 text-center" id="image-container-{{ image.id }}"> {# ID для каждого элемента с картинкой #}
                             <img src="{{ image.image.url }}" alt="" class="mb-2 img-thumbnail">
-                            <!-- Логику удаления нужно будет реализовать отдельно -->
-                            <a href="#" class="text-danger" title="Удалить"><i class="bi bi-trash"></i></a>
+                            <a href="{% url 'core:delete_gallery_image' image.id %}"
+                               class="text-danger delete-image-btn"
+                               data-image-id="{{ image.id }}"
+                               title="Удалить">
+                               <i class="bi bi-trash"></i>
+                            </a>
                         </div>
                         {% endfor %}
                     </div>
@@ -86,15 +90,20 @@
 
                     <!-- ФОТОГАЛЕРЕЯ 2 -->
                     <h4 class="page-header mt-4">Дополнительная фотогалерея</h4>
-                    <div class="row">
+                    <div class="row" id="gallery2-container"> {# Добавляем ID для контейнера #}
                         {% for image in gallery2_images %}
-                        <div class="col-2 text-center">
+                        <div class="col-2 text-center" id="image-container-{{ image.id }}"> {# ID для каждого элемента #}
                             <img src="{{ image.image.url }}" alt="" class="mb-2 img-thumbnail">
-                            <a href="#" class="text-danger" title="Удалить"><i class="bi bi-trash"></i></a>
+                            <a href="{% url 'core:delete_gallery_image' image.id %}"
+                               class="text-danger delete-image-btn"
+                               data-image-id="{{ image.id }}"
+                               title="Удалить">
+                               <i class="bi bi-trash"></i>
+                            </a>
                         </div>
                         {% endfor %}
                     </div>
-                     <div class="mb-3 mt-3">
+                    <div class="mb-3 mt-3">
                         <label class="form-label" for="gallery2_files">Добавить фото (1200x1200)</label>
                         <input type="file" name="gallery2_files" id="gallery2_files" class="form-control" multiple accept="image/*">
                     </div>
@@ -147,13 +156,68 @@
 
                 </div>
                 <div class="card-footer text-center">
-                    <a href="{% url 'core:admin_stats' %}" class="btn btn-secondary">Отменить</a>
+                    <a href="{% url 'core:admin_about' %}" class="btn btn-secondary">Отменить</a>
                     <button type="submit" class="btn btn-success">Сохранить</button>
                 </div>
             </div>
         </form>
     </div>
 </section>
-
 {% endblock %}
 
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Находим все кнопки удаления
+    const deleteButtons = document.querySelectorAll('.delete-image-btn');
+
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            // Предотвращаем стандартное действие ссылки (переход по href)
+            event.preventDefault();
+
+            // Запрашиваем подтверждение
+            if (!confirm('Вы уверены, что хотите удалить это изображение?')) {
+                return;
+            }
+
+            const url = this.href;
+            const imageId = this.dataset.imageId;
+            const imageContainer = document.getElementById(`image-container-${imageId}`);
+
+            // Получаем CSRF-токен из формы
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // Отправляем AJAX-запрос
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                // Тело запроса не обязательно, но хорошая практика
+                body: JSON.stringify({id: imageId})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // В случае успеха, плавно удаляем блок с картинкой со страницы
+                    if (imageContainer) {
+                        imageContainer.style.transition = 'opacity 0.5s ease';
+                        imageContainer.style.opacity = '0';
+                        setTimeout(() => imageContainer.remove(), 500);
+                    }
+                } else {
+                    // В случае ошибки, выводим сообщение
+                    alert('Ошибка при удалении: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Произошла сетевая ошибка. Пожалуйста, попробуйте еще раз.');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

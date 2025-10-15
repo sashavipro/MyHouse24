@@ -1,5 +1,5 @@
 from django import forms
-from .models import MainPage, MainBlock, SeoBlock, Image, AboutUsPage, Document
+from .models import MainPage, MainBlock, SeoBlock, Image, AboutUsPage, Document, ServiceBlock
 
 
 class MainPageForm(forms.ModelForm):
@@ -68,6 +68,17 @@ class DocumentForm(forms.ModelForm):
         }
 
 
+class ServiceBlockForm(forms.ModelForm):
+    class Meta:
+        model = ServiceBlock
+        fields = ['image', 'title', 'description']
+        widgets = {
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control tinymce-editor', 'rows': 5}),
+        }
+
+
 # --- ФОРМСЕТЫ ---
 # FormSet для блоков "Рядом с нами". `extra=0` означает, что не будет создаваться пустых форм для добавления новых.
 MainBlockFormSet = forms.modelformset_factory(
@@ -90,5 +101,13 @@ DocumentFormSet = forms.modelformset_factory(
     Document,
     form=DocumentForm,
     extra=1,
+    can_delete=True
+)
+
+# Формсет для Услуг. `extra=1` и `can_delete=True` позволят добавлять и удалять услуги.
+ServiceBlockFormSet = forms.modelformset_factory(
+    ServiceBlock,
+    form=ServiceBlockForm,
+    extra=0,
     can_delete=True
 )

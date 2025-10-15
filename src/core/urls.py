@@ -12,6 +12,9 @@ urlpatterns = [
     path('adminlte/website/tariff', views.admin_tariff_page, name='admin_tariff'),
 
 
+    path('adminlte/gallery/image/delete/<int:image_id>/', views.delete_gallery_image, name='delete_gallery_image'),
+
+
     path('', views.home_page, name='home'),
     path('about/', views.about, name='about'),
     path('contacts/', views.contacts, name='contacts'),

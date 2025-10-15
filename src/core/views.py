@@ -1,8 +1,11 @@
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.views.decorators.http import require_POST
 
 from src.core.forms import MainPageForm, SeoBlockForm, SliderImageFormSet, MainBlockFormSet, AboutUsPageForm, \
-    DocumentFormSet
-from src.core.models import MainPage, MainBlock, SeoBlock, Gallery, Image, Document, AboutUsPage
+    DocumentFormSet, ServiceBlockFormSet
+from src.core.models import MainPage, MainBlock, SeoBlock, Gallery, Image, Document, AboutUsPage, ServicePage, \
+    ServiceBlock
 
 
 def admin_home_page(request):
@@ -12,7 +15,7 @@ def admin_home_page(request):
     # Если объекта еще нет, нужно его создать. Это важный шаг для первого запуска.
     if not main_page_instance:
         seo = SeoBlock.objects.create(title="Главная страница")
-        gallery = Gallery.objects.create(name="Слайдер главной страницы")
+        gallery = Gallery.objects.create(name="Слайдер главной страницы", upload_path='main_page/main_gallery/')
         # Создаем 3 пустых объекта Image для слайдера
         for _ in range(3):
             Image.objects.create(gallery=gallery)
@@ -144,11 +147,52 @@ def admin_about_page(request):
 
 
 def about(request):
-    return render(request, "core/user/about.html")
+    # Получаем единственный экземпляр страницы 'О нас'
+    about_page_data = AboutUsPage.objects.first()
+    # Получаем все документы
+    documents = Document.objects.all()
+
+    context = {
+        'about_page': about_page_data,
+        'documents': documents
+    }
+    return render(request, "core/user/about.html", context)
 
 
 def admin_services_page(request):
-    return render(request, "core/adminlte/admin_services_page.html")
+    service_page, created = ServicePage.objects.get_or_create(id=1, defaults={
+        'seo_block': SeoBlock.objects.create(title="Услуги")
+    })
+
+    if request.method == 'POST':
+        formset = ServiceBlockFormSet(request.POST, request.FILES, prefix='services')
+        seo_form = SeoBlockForm(request.POST, instance=service_page.seo_block, prefix='seo')
+
+        if formset.is_valid() and seo_form.is_valid():
+            instances = formset.save(commit=False)
+            for instance in instances:
+                instance.service_page = service_page
+                instance.save()
+            formset.save_m2m()  # На случай, если в будущем будут ManyToMany поля
+
+            # Удаляем объекты, отмеченные для удаления
+            for form in formset.deleted_forms:
+                if form.instance.pk:
+                    form.instance.delete()
+
+            seo_form.save()
+            return redirect('core:admin_services')
+
+    else:
+        formset = ServiceBlockFormSet(queryset=ServiceBlock.objects.filter(service_page=service_page),
+                                      prefix='services')
+        seo_form = SeoBlockForm(instance=service_page.seo_block, prefix='seo')
+
+    context = {
+        'formset': formset,
+        'seo_form': seo_form
+    }
+    return render(request, 'core/adminlte/admin_services_page.html', context)
 
 
 def services(request):
@@ -177,3 +221,18 @@ def admin_stats(request):
     return render(request, 'core/adminlte/admin_stats.html', context)
 
 
+@require_POST  # Этот декоратор разрешает только POST-запросы для безопасности
+def delete_gallery_image(request, image_id):
+    # Проверяем, аутентифицирован ли пользователь (добавим позже)
+    # if not request.user.is_staff:
+    #     return JsonResponse({'status': 'error', 'message': 'Permission denied'}, status=403)
+
+    try:
+        # Находим изображение по ID и удаляем его
+        image_to_delete = Image.objects.get(id=image_id)
+        image_to_delete.delete()  # Это также удалит файл с диска
+        return JsonResponse({'status': 'success', 'message': 'Image deleted successfully'})
+    except Image.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Image not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

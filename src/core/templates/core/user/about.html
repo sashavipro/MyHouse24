@@ -1,11 +1,9 @@
 {% extends 'core/user/layout.html' %}
 {% load static %}
 
-{% block title %}{% endblock %}
-
-{% block description %}{% endblock %}
-
-{% block keywords %}{% endblock %}
+{% block title %}{{ about_page.seo_block.title }}{% endblock %}
+{% block description %}{{ about_page.seo_block.description }}{% endblock %}
+{% block keywords %}{{ about_page.seo_block.keywords }}{% endblock %}
 
 
 {% block content %}
@@ -15,7 +13,7 @@
         <div class="row">
             <div class="col-xs-12">
                 <ol class="breadcrumb">
-                    <li><a href="/">Главная</a></li>
+                    <li><a href="{% url 'core:home' %}">Главная</a></li>
                     <li class="active">О нас</li>
                 </ol>
             </div>
@@ -23,48 +21,41 @@
     </div>
 </div>
 
+{% if about_page %}
 <div class="about">
     <div class="container">
         <div class="row">
             <div class="col-xs-12">
                 <div class="box clearfix">
                     <div class="page-header">
-                        <h1>Наша миссия</h1>
+                        <h1>{{ about_page.title1 }}</h1>
                     </div>
-                    <img src="" class="img-responsive imgFloatRight" alt="">
-                    <p></p>
+                    {% if about_page.image %}
+                    <img src="{{ about_page.image.url }}" class="img-responsive imgFloatRight" alt="{{ about_page.title1 }}">
+                    {% endif %}
+
+                    {{ about_page.description1|safe }}
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+    {% if about_page.gallery1 and about_page.gallery1.images.all %}
     <div class="gallery g1">
         <div class="container">
             <div class="row">
-                <div class="col-xs-12 col-sm-6 col-md-3 item" data-src="">
-                    <a href="" class="big">
-                        <img src="" alt="" class="img-responsive img-thumbnail">
+                {% for image in about_page.gallery1.images.all %}
+                <div class="col-xs-12 col-sm-6 col-md-3 item" data-src="{{ image.image.url }}">
+                    <a href="{{ image.image.url }}" class="big">
+                        <img src="{{ image.image.url }}" alt="Галерея 1" class="img-responsive img-thumbnail">
                     </a>
                 </div>
-                <div class="col-xs-12 col-sm-6 col-md-3 item" data-src="">
-                    <a href="" class="big">
-                        <img src="" alt="" class="img-responsive img-thumbnail">
-                    </a>
-                </div>
-                <div class="col-xs-12 col-sm-6 col-md-3 item" data-src="">
-                    <a href="" class="big">
-                        <img src="" alt="" class="img-responsive img-thumbnail">
-                    </a>
-                </div>
-                <div class="col-xs-12 col-sm-6 col-md-3 item" data-src="">
-                    <a href="" class="big">
-                        <img src="" alt="" class="img-responsive img-thumbnail">
-                    </a>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
+    {% endif %}
 
 <div class="about">
     <div class="container">
@@ -72,32 +63,32 @@
             <div class="col-xs-12">
                 <div class="box clearfix">
                     <div class="page-header">
-                        <h3></h3>
+                        <h3>{{ about_page.title2 }}</h3>
                     </div>
-                    <p></p>
+                    <p>{{ about_page.description2|safe }}</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+    {% if about_page.gallery2 and about_page.gallery2.images.all %}
     <div class="gallery g2">
         <div class="container">
             <div class="row">
-                <div class="col-xs-12 col-sm-6 col-md-3 item" data-src="">
-                    <a href="" class="big">
-                        <img src="" alt="" class="img-responsive img-thumbnail">
+                 {% for image in about_page.gallery2.images.all %}
+                <div class="col-xs-12 col-sm-6 col-md-3 item" data-src="{{ image.image.url }}">
+                    <a href="{{ image.image.url }}" class="big">
+                        <img src="{{ image.image.url }}" alt="Галерея 2" class="img-responsive img-thumbnail">
                     </a>
                 </div>
-                <div class="col-xs-12 col-sm-6 col-md-3 item" data-src="">
-                    <a href="" class="big">
-                        <img src="" alt="" class="img-responsive img-thumbnail">
-                    </a>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
+    {% endif %}
 
+    {% if documents %}
     <div class="documents">
         <div class="container">
             <div class="row">
@@ -106,6 +97,7 @@
                         <div class="page-header">
                             <h3>Документы</h3>
                         </div>
+                        {% for doc in documents %}
                         <div class="media">
                             <div class="media-left">
                                 <div class="media-object">
@@ -113,20 +105,22 @@
                                 </div>
                             </div>
                             <div class="media-body">
-                                <h4 class="media-heading">спвр</h4>
-                                <a href="" download><i class="fa fa-download" aria-hidden="true"></i> Скачать</a>
+                                <h4 class="media-heading">{{ doc.name }}</h4>
+                                <a href="{{ doc.document.url }}" download><i class="fa fa-download" aria-hidden="true"></i> Скачать</a>
                             </div>
                         </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    {% endif %}
 
-
-
-
-
-
+    {% else %}
+    <div class="container">
+        <p>Страница "О нас" еще не заполнена.</p>
+    </div>
+{% endif %}
 
 {% endblock %}
