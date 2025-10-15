@@ -1,3 +1,4 @@
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
@@ -196,7 +197,23 @@ def admin_services_page(request):
 
 
 def services(request):
-    return render(request, "core/user/services.html")
+    service_page = ServicePage.objects.first()
+
+    all_services_list = ServiceBlock.objects.all().order_by('id')
+
+    paginator = Paginator(all_services_list, 1)
+
+    # Получаем номер страницы из GET-параметра ?page=
+    page_number = request.GET.get('page')
+
+    # Получаем объект Page для текущей страницы
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'service_page': service_page,
+        'page_obj': page_obj,
+    }
+    return render(request, "core/user/services.html", context)
 
 
 def admin_contacts_page(request):
