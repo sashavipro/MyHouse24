@@ -77,8 +77,11 @@
                                     {{ main_page_form.description.errors }}
                                 </div>
                                 <div class="form-check mb-3">
-                                    <input type="checkbox" id="showApps" name="showApps" value="1" class="form-check-input" checked>
-                                    <label class="form-check-label" for="showApps">Показать ссылки на приложения</label>
+                                    {{ main_page_form.is_show_apps }}
+                                    <label class="form-check-label" for="{{ main_page_form.is_show_apps.id_for_label }}">
+                                        {{ main_page_form.is_show_apps.label }}
+                                    </label>
+                                    {{ main_page_form.is_show_apps.errors }}
                                 </div>
                             </div>
 

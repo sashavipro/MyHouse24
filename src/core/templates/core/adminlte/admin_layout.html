@@ -190,22 +190,22 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="#" class="nav-link">
+                            <a href="{% url 'core:admin_about' %}" class="nav-link">
                                 <i class="nav-icon bi bi-circle"></i><p>О нас</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="#" class="nav-link">
+                            <a href="{% url 'core:admin_services' %}" class="nav-link">
                                 <i class="nav-icon bi bi-circle"></i><p>Услуги</p>
                             </a>
                         </li>
                          <li class="nav-item">
-                            <a href="#" class="nav-link">
+                            <a href="{% url 'core:admin_tariff' %}" class="nav-link">
                                 <i class="nav-icon bi bi-circle"></i><p>Тарифы</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="#" class="nav-link">
+                            <a href="{% url 'core:admin_contacts' %}" class="nav-link">
                                 <i class="nav-icon bi bi-circle"></i><p>Контакты</p>
                             </a>
                         </li>
@@ -323,11 +323,18 @@
     <script>
       document.addEventListener('DOMContentLoaded', function () {
         tinymce.init({
-          selector: 'textarea.tinymce-editor', // Мы будем использовать этот класс
+          selector: 'textarea.tinymce-editor',
           plugins: 'code table lists link image',
-          toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | indent outdent | bullist numlist | code | table | link image',
+          toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | indent outdent | bullist numlist',
           height: 300,
           menubar: false, // Убираем верхнее меню File, Edit и т.д.
+
+          // Эта функция будет вызвана ПЕРЕД тем, как форма будет отправлена на сервер.
+          setup: function (editor) {
+            editor.on('init change', function () {
+              editor.save(); // Сохраняем контент из редактора в оригинальное textarea
+            });
+          }
         });
       });
     </script>

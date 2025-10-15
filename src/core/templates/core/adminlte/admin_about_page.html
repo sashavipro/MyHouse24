@@ -1,0 +1,159 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+{% load static %}
+
+{% block title %}Редактирование страницы О нас{% endblock %}
+
+{% block content %}
+<!-- Content Header -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Редактирование страницы</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-end">
+                    <li class="breadcrumb-item"><a href="{% url 'core:admin_stats' %}">Главная</a></li>
+                    <li class="breadcrumb-item active">Редактирование страницы "О нас"</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- /.content-header -->
+
+<!-- Main content -->
+<section class="content">
+    <div class="container-fluid">
+        <form action="{% url 'core:admin_about' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="card card-primary card-outline">
+                <div class="card-header">
+                    <h3 class="card-title">Редактирование страницы "О нас"</h3>
+                </div>
+                <div class="card-body">
+                    <!-- ОСНОВНАЯ ИНФОРМАЦИЯ -->
+                    <h4 class="page-header">Информация</h4>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label" for="{{ about_form.title1.id_for_label }}">Заголовок</label>
+                                {{ about_form.title1 }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="{{ about_form.description1.id_for_label }}">Краткий текст</label>
+                                {{ about_form.description1 }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Фото директора</h6>
+                            {% if about_form.instance.image %}
+                                <img src="{{ about_form.instance.image.url }}" alt="Фото директора" class="img-fluid rounded mb-2">
+                            {% endif %}
+                            <div class="mb-3">
+                                <label class="form-label" for="{{ about_form.image.id_for_label }}">Рекомендуемый размер: (250x310)</label>
+                                {{ about_form.image }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ФОТОГАЛЕРЕЯ 1 -->
+                    <h4 class="page-header mt-4">Фотогалерея</h4>
+                    <div class="row">
+                        {% for image in gallery1_images %}
+                        <div class="col-2 text-center">
+                            <img src="{{ image.image.url }}" alt="" class="mb-2 img-thumbnail">
+                            <!-- Логику удаления нужно будет реализовать отдельно -->
+                            <a href="#" class="text-danger" title="Удалить"><i class="bi bi-trash"></i></a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label" for="gallery1_files">Добавить фото (1200x1200)</label>
+                        <input type="file" name="gallery1_files" id="gallery1_files" class="form-control" multiple accept="image/*">
+                    </div>
+
+                    <!-- ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ -->
+                    <h4 class="page-header mt-4">Дополнительная информация</h4>
+                     <div class="mb-3">
+                        <label class="form-label" for="{{ about_form.title2.id_for_label }}">Заголовок</label>
+                        {{ about_form.title2 }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ about_form.description2.id_for_label }}">Краткий текст</label>
+                        {{ about_form.description2 }}
+                    </div>
+
+                    <!-- ФОТОГАЛЕРЕЯ 2 -->
+                    <h4 class="page-header mt-4">Дополнительная фотогалерея</h4>
+                    <div class="row">
+                        {% for image in gallery2_images %}
+                        <div class="col-2 text-center">
+                            <img src="{{ image.image.url }}" alt="" class="mb-2 img-thumbnail">
+                            <a href="#" class="text-danger" title="Удалить"><i class="bi bi-trash"></i></a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                     <div class="mb-3 mt-3">
+                        <label class="form-label" for="gallery2_files">Добавить фото (1200x1200)</label>
+                        <input type="file" name="gallery2_files" id="gallery2_files" class="form-control" multiple accept="image/*">
+                    </div>
+
+                    <!-- ДОКУМЕНТЫ -->
+                    <h4 class="page-header mt-4">Документы</h4>
+                    {{ docs_formset.management_form }}
+                    <div id="document-forms">
+                        {% for form in docs_formset %}
+                        <div class="document-form mb-4 p-3 border rounded">
+                             {{ form.id }}
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <i class="bi bi-file-earmark-text fs-2"></i>
+                                </div>
+                                <div class="col">
+                                     <div class="mb-2">
+                                        <label for="{{ form.document.id_for_label }}">PDF, JPG (макс. размер 20 Mb)</label>
+                                        {{ form.document }}
+                                     </div>
+                                     <div class="mb-2">
+                                        <label for="{{ form.name.id_for_label }}">Название документа</label>
+                                        {{ form.name }}
+                                     </div>
+                                </div>
+                                <div class="col-auto">
+                                    {% if form.instance.pk %}
+                                        {{ form.DELETE }} <label for="{{ form.DELETE.id_for_label }}">Удалить</label>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- НАСТРОЙКИ SEO -->
+                    <h4 class="page-header mt-4">Настройки SEO</h4>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ seo_form.title.id_for_label }}">Title</label>
+                        {{ seo_form.title }}
+                    </div>
+                     <div class="mb-3">
+                        <label class="form-label" for="{{ seo_form.description.id_for_label }}">Description</label>
+                        {{ seo_form.description }}
+                    </div>
+                     <div class="mb-3">
+                        <label class="form-label" for="{{ seo_form.keywords.id_for_label }}">Keywords</label>
+                        {{ seo_form.keywords }}
+                    </div>
+
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'core:admin_stats' %}" class="btn btn-secondary">Отменить</a>
+                    <button type="submit" class="btn btn-success">Сохранить</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+{% endblock %}
+

@@ -69,6 +69,7 @@ class MainPage(models.Model):
     description = models.TextField(verbose_name="Описание слайдера")
     gallery = models.OneToOneField(Gallery, on_delete=models.SET_NULL, null=True, blank=True,
                                    verbose_name="Галерея для слайдера")
+    is_show_apps = models.BooleanField(default=True, verbose_name="Показать ссылки на приложения")
     seo_block = models.OneToOneField(SeoBlock, on_delete=models.CASCADE, verbose_name="SEO блок")
 
     def __str__(self):
