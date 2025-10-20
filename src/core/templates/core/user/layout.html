@@ -52,11 +52,19 @@
 
             <div class="collapse navbar-collapse" id="menuBtn">
                 <ul class="nav navbar-nav navbar-right">
-                    <li class="active"><a href="/">Главная<span class="sr-only">(current)</span></a></li>
-                    <li class=""><a href="{% url 'core:about' %}">О нас</a></li>
-                    <li class=""><a href="{% url 'core:services' %}">Услуги</a></li>
+                    <li class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                        <a href="{% url 'core:home' %}">Главная</a>
+                    </li>
+                    <li class="{% if request.resolver_match.url_name == 'about' %}active{% endif %}">
+                        <a href="{% url 'core:about' %}">О нас</a>
+                    </li>
+                    <li class="{% if request.resolver_match.url_name == 'services' %}active{% endif %}">
+                        <a href="{% url 'core:services' %}">Услуги</a>
+                    </li>
                     <li><a href="https://avada-media.ua/moydom24/">Условия приобретения</a></li>
-                    <li class=""><a href="{% url 'core:contacts' %}">Контакты</a></li>
+                    <li class="{% if request.resolver_match.url_name == 'contacts' %}active{% endif %}">
+                        <a href="{% url 'core:contacts' %}">Контакты</a>
+                    </li>
                     <li><a href=""><i class="fas fa-sign-in-alt"></i> Вход</a></li>
                 </ul>
             </div>

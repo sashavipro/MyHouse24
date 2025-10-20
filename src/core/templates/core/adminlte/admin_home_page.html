@@ -29,35 +29,34 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-12">
-                <div class="card card-primary card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">Редактирование страницы "Главная"</h3>
-                        <div class="card-tools">
-                            <a href="#" class="btn btn-secondary btn-sm">
-                                <span class="d-none d-sm-inline">Обновить robots и sitemap</span>
-                                <i class="bi bi-arrow-clockwise d-sm-none" aria-hidden="true"></i>
-                            </a>
+                <form  action="{% url 'core:admin_home' %}" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="card card-primary card-outline">
+                        <div class="card-header">
+                            <h3 class="card-title">Редактирование страницы "Главная"</h3>
+                            <div class="card-tools">
+                                <a href="#" class="btn btn-secondary btn-sm">
+                                    <span class="d-none d-sm-inline">Обновить robots и sitemap</span>
+                                    <i class="bi bi-arrow-clockwise d-sm-none" aria-hidden="true"></i>
+                                </a>
+                            </div>
                         </div>
-                    </div>
-                    <div class="card-body">
-                        <form  action="{% url 'core:admin_home' %}" method="post" enctype="multipart/form-data">
-                            {% csrf_token %}
-
+                        <div class="card-body">
                             <div class="card-header"><h3 class="card-title">Слайдер</h3></div>
                             <div class="card-body">
                                 {{ slider_formset.management_form }} {# Обязательно для работы формсета #}
                                 <div class="row">
-                                    {% for form in slider_formset %}
+                                    {% for slider_form in slider_formset %}
                                     <div class="col-md-4">
                                         <h4>Слайд {{ forloop.counter }}</h4>
-                                        {% if form.instance.image %}
-                                            <img src="{{ form.instance.image.url }}" alt="Превью" class="img-fluid rounded mb-3">
+                                        {% if slider_form.instance.image %}
+                                            <img src="{{ slider_form.instance.image.url }}" alt="Превью" class="img-fluid rounded mb-3">
                                         {% endif %}
                                         <div class="mb-3">
-                                            <label class="form-label" for="{{ form.image.id_for_label }}">Рекомендуемый размер: (1920x800)</label>
-                                            {{ form.image }}
-                                            {{ form.image.errors }}
-                                            {{ form.id }} {# Скрытое поле с ID объекта #}
+                                            <label class="form-label" for="{{ slider_form.image.id_for_label }}">Рекомендуемый размер: (1920x800)</label>
+                                            {{ slider_form.image }}
+                                            {{ slider_form.image.errors }}
+                                            {{ slider_form.id }}
                                         </div>
                                     </div>
                                     {% endfor %}
@@ -143,9 +142,9 @@
                                 <a href="{% url 'core:admin_home' %}" class="btn btn-secondary">Отменить</a>
                                 <button type="submit" class="btn btn-success">Сохранить</button>
                             </div>
-                        </form>
+                        </div>
                     </div>
-                </div>
+                </form>
             </div>
         </div>
     </div>

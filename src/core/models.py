@@ -100,19 +100,19 @@ class MainBlock(models.Model):
 
 class AboutUsPage(models.Model):
     """Модель для контента страницы 'О нас'."""
-    title1 = models.CharField(max_length=200, verbose_name="Заголовок 1")
-    description1 = models.TextField(verbose_name="Описание 1")
-    image = models.ImageField(upload_to='about_us/avatar', verbose_name="Изображение")
+    title1 = models.CharField(max_length=200, verbose_name="Заголовок 1", blank=True)
+    description1 = models.TextField(verbose_name="Описание 1", blank=True)
+    image = models.ImageField(upload_to='about_us/avatar', verbose_name="Изображение", null=True, blank=True)
 
     gallery1 = models.OneToOneField(Gallery, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='about_us_gallery1', verbose_name="Галерея 1")
     gallery2 = models.OneToOneField(Gallery, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='about_us_gallery2', verbose_name="Галерея 2")
 
-    title2 = models.CharField(max_length=200, verbose_name="Заголовок 2")
-    description2 = models.TextField(verbose_name="Описание 2")
+    title2 = models.CharField(max_length=200, verbose_name="Заголовок 2", blank=True)
+    description2 = models.TextField(verbose_name="Описание 2", blank=True)
 
-    document = models.OneToOneField(Document, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Документ")
+    # document = models.OneToOneField(Document, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Документ")
     seo_block = models.OneToOneField(SeoBlock, on_delete=models.CASCADE, verbose_name="SEO блок")
 
     def __str__(self):
@@ -164,9 +164,9 @@ class ContactPage(models.Model):
     url = models.URLField(blank=True, verbose_name="URL (например, ссылка на соцсеть)")
     fullname = models.CharField(max_length=255, blank=True, verbose_name="ФИО / Название компании")
     location = models.CharField(max_length=255, blank=True, verbose_name="Город / Местоположение")
-    address = models.CharField(max_length=255, verbose_name="Адрес")
-    phone = models.CharField(max_length=50, verbose_name="Телефон")
-    email = models.EmailField(verbose_name="Email")
+    address = models.CharField(max_length=255, verbose_name="Адрес", blank=True)
+    phone = models.CharField(max_length=50, verbose_name="Телефон", blank=True)
+    email = models.EmailField(verbose_name="Email", blank=True)
 
     map = models.TextField(blank=True, verbose_name="Код для вставки карты (HTML/JS)")
     seo_block = models.OneToOneField(SeoBlock, on_delete=models.CASCADE, verbose_name="SEO блок")

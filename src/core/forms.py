@@ -1,5 +1,5 @@
 from django import forms
-from .models import MainPage, MainBlock, SeoBlock, Image, AboutUsPage, Document, ServiceBlock
+from .models import MainPage, MainBlock, SeoBlock, Image, AboutUsPage, Document, ServiceBlock, ContactPage
 
 
 class MainPageForm(forms.ModelForm):
@@ -11,6 +11,8 @@ class MainPageForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control tinymce-editor'}),
             'is_show_apps': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+
 
 
 class SeoBlockForm(forms.ModelForm):
@@ -34,6 +36,10 @@ class MainBlockForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control tinymce-editor', 'rows': 5}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['image'].required = False
+        self.fields['description'].required = False
 
 class ImageForm(forms.ModelForm):
     class Meta:
@@ -43,6 +49,9 @@ class ImageForm(forms.ModelForm):
             'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['image'].required = False
 
 class AboutUsPageForm(forms.ModelForm):
     class Meta:
@@ -79,15 +88,31 @@ class ServiceBlockForm(forms.ModelForm):
         }
 
 
-# --- ФОРМСЕТЫ ---
-# FormSet для блоков "Рядом с нами". `extra=0` означает, что не будет создаваться пустых форм для добавления новых.
+class ContactPageForm(forms.ModelForm):
+    class Meta:
+        model = ContactPage
+        # Включаем все поля, кроме seo_block, который обработаем отдельно
+        exclude = ['seo_block']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control tinymce-editor'}),
+            'url': forms.URLInput(attrs={'class': 'form-control'}),
+            'fullname': forms.TextInput(attrs={'class': 'form-control'}),
+            'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'address': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'map': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
+        }
+
+
 MainBlockFormSet = forms.modelformset_factory(
     MainBlock,
     form=MainBlockForm,
     extra=0
 )
 
-# FormSet для слайдов. Мы хотим редактировать ровно 3 слайда.
+
 SliderImageFormSet = forms.modelformset_factory(
     Image,
     form=ImageForm,
@@ -95,16 +120,15 @@ SliderImageFormSet = forms.modelformset_factory(
     max_num=3  # Указываем, что форм должно быть не больше 3
 )
 
-# Формсет для документов. `extra=1` - показывать одну пустую форму для добавления.
-# `can_delete=True` - позволит удалять существующие документы.
+
 DocumentFormSet = forms.modelformset_factory(
     Document,
     form=DocumentForm,
     extra=1,
-    can_delete=True
+    can_delete=True  # позволит удалять существующие документы
 )
 
-# Формсет для Услуг. `extra=1` и `can_delete=True` позволят добавлять и удалять услуги.
+
 ServiceBlockFormSet = forms.modelformset_factory(
     ServiceBlock,
     form=ServiceBlockForm,

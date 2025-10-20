@@ -38,6 +38,44 @@
     <!--end::Required Plugin(AdminLTE)-->
     <!-- TinyMCE -->
     <script src="https://cdn.tiny.cloud/1/3a1ahm886y0eixd3f1v77fit4267p9n4jdgovp88cy4ufgu7/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+  <style>
+        .document-form-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: .25rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        .document-form-item .doc-preview {
+            flex-shrink: 0;
+            width: 60px;
+            height: 60px;
+            margin-right: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .document-form-item .doc-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+            border-radius: .25rem;
+        }
+        .document-form-item .doc-preview .bi {
+            font-size: 2.5rem;
+            color: #6c757d;
+        }
+        .document-form-item .doc-fields {
+            flex-grow: 1;
+        }
+        .document-form-item .delete-doc-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+        }
+    </style>
   </head>
   <!--end::Head-->
   <!--begin::Body-->
@@ -127,7 +165,7 @@
             <!--begin::Sidebar Menu-->
             <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="navigation" data-accordion="false">
                 <li class="nav-item">
-                    <a href="{% url 'core:admin_stats' %}" class="nav-link">
+                    <a href="{% url 'core:admin_stats' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_stats' %}active{% endif %}">
                         <i class="nav-icon bi bi-graph-up"></i><p>Статистика</p>
                     </a>
                 </li>
@@ -178,43 +216,40 @@
                 </li>
 
                 <!-- Меню "Управление сайтом" -->
-                <li class="nav-item menu-open">
-                    <a href="#" class="nav-link active">
+                {% with website_pages='admin_home,admin_about,admin_services,admin_tariff,admin_contacts' %}
+                <li class="nav-item {% if request.resolver_match.url_name in website_pages %}menu-open{% endif %}">
+                    <a href="#" class="nav-link {% if request.resolver_match.url_name in website_pages %}active{% endif %}">
                         <i class="nav-icon bi bi-display"></i>
                         <p>Управление сайтом<i class="nav-arrow bi bi-chevron-right"></i></p>
                     </a>
                     <ul class="nav nav-treeview">
                         <li class="nav-item">
-                            <a href="{% url 'core:admin_home' %}" class="nav-link active">
+                            <a href="{% url 'core:admin_home' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_home' %}active{% endif %}">
                                 <i class="nav-icon bi bi-circle"></i><p>Главная страница</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="{% url 'core:admin_about' %}" class="nav-link">
+                            <a href="{% url 'core:admin_about' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_about' %}active{% endif %}">
                                 <i class="nav-icon bi bi-circle"></i><p>О нас</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="{% url 'core:admin_services' %}" class="nav-link">
+                            <a href="{% url 'core:admin_services' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_services' %}active{% endif %}">
                                 <i class="nav-icon bi bi-circle"></i><p>Услуги</p>
                             </a>
                         </li>
-                         <li class="nav-item">
-                            <a href="{% url 'core:admin_tariff' %}" class="nav-link">
-                                <i class="nav-icon bi bi-circle"></i><p>Тарифы</p>
-                            </a>
-                        </li>
                         <li class="nav-item">
-                            <a href="{% url 'core:admin_contacts' %}" class="nav-link">
+                            <a href="{% url 'core:admin_contacts' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_contacts' %}active{% endif %}">
                                 <i class="nav-icon bi bi-circle"></i><p>Контакты</p>
                             </a>
                         </li>
                     </ul>
                 </li>
+                {% endwith %}
                 <!-- Конец меню "Управление сайтом" -->
 
                 <!-- Меню "Настройки системы" -->
-                 <li class="nav-item menu-open">
+                 <li class="nav-item">
                     <a href="#" class="nav-link">
                         <i class="nav-icon bi bi-gear-wide-connected"></i>
                         <p>Настройки системы<i class="nav-arrow bi bi-chevron-right"></i></p>
