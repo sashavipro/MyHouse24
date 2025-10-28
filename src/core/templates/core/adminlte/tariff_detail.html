@@ -1,0 +1,99 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Тариф: {{ tariff.name }}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Тариф: {{ tariff.name }}</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:tariff_list' %}">Тарифы</a>
+            </li>
+            <li class="breadcrumb-item active">{{ tariff.name }}</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="d-flex justify-content-end mb-3">
+        <a href="{% url 'finance:tariff_edit' tariff.pk %}"
+           class="btn btn-primary">Редактировать тариф</a>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <!-- Основная информация о тарифе -->
+          <table class="table table-bordered mb-4 tariff-info-table">
+            <tbody>
+              <tr>
+                <th>Название тарифа</th>
+                <td>{{ tariff.name }}</td>
+              </tr>
+              <tr>
+                <th>Описание</th>
+                <td>{{ tariff.description|default:"-" }}</td>
+              </tr>
+              <tr>
+                <th>Дата редактирования</th>
+                <td>{{ tariff.updated_at|date:"d.m.Y - H:i" }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Таблица с услугами -->
+          <h4 class="mt-4">Услуги, включенные в тариф</h4>
+          <div class="table-responsive">
+            <table class="table table-bordered table-striped tariff-services-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Услуга</th>
+                  <th>Ед. изм.</th>
+                  <th>Цена за ед., грн</th>
+                  <th>Валюта</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for tariff_service in tariff.tariffservice_set.all %}
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ tariff_service.service.name }}</td>
+                    <td>{{ tariff_service.service.unit.name }}</td>
+                    <td>{{ tariff_service.price }}</td>
+                    <td>{{ tariff_service.currency.name }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="5" class="text-center">В этот тариф еще не добавлены услуги.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block styles %}
+  <style>
+    .tariff-info-table th {
+      width: 200px;
+    }
+
+    .tariff-services-table th:first-child {
+      width: 50px;
+    }
+  </style>
+{% endblock styles %}

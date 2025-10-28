@@ -1,89 +1,111 @@
 {% extends 'core/user/layout.html' %}
+
 {% load static %}
 
-
-{% block title %}{{ main_page.seo_block.title }}{% endblock %}
-{% block description %}{{ main_page.seo_block.description }}{% endblock %}
-{% block keywords %}{{ main_page.seo_block.keywords }}{% endblock %}
-
+{% block title %}
+  {{ main_page.seo_block.title }}
+{% endblock title %}
+{% block description %}
+  {{ main_page.seo_block.description }}
+{% endblock description %}
+{% block keywords %}
+  {{ main_page.seo_block.keywords }}
+{% endblock keywords %}
 {% block content %}
-
-{% if main_page.gallery.images.all %}
-<div class="slider">
-    {% for slide in main_page.gallery.images.all %}
-        {% if slide.image %} {# Добавляем проверку, что у слайда есть картинка #}
-        <div>
+  {% if main_page.gallery.images.all %}
+    <div class="slider">
+      {% for slide in main_page.gallery.images.all %}
+        {% if slide.image %}
+          {# Добавляем проверку, что у слайда есть картинка #}
+          <div>
             <div class="slideTitle hidden-xs">{{ main_page.title }}</div>
-            <img src="{{ slide.image.url }}" class="img-responsive" alt="{{ main_page.title }}">
-        </div>
+            <img src="{{ slide.image.url }}"
+                 class="img-responsive"
+                 alt="{{ main_page.title }}" />
+          </div>
         {% endif %}
-    {% endfor %}
-</div>
-{% endif %}
-<div class="info">
+      {% endfor %}
+    </div>
+  {% endif %}
+  <div class="info">
     <div class="container">
-        <div class="row">
-            <div class="col-xs-12 col-sm-7 col-md-8">
-                <div class="page-header">
-                    <h1>{{ main_page.title }}</h1>
+      <div class="row">
+        <div class="col-xs-12 col-sm-7 col-md-8">
+          <div class="page-header">
+            <h1>{{ main_page.title }}</h1>
+          </div>
+          <div class="box">
+            {{ main_page.description|safe }}
+            <div class="row">
+              <div class="col-xs-4">
+                <a href="{% url 'website:about' %}" class="btn btn-primary">Подробнее</a>
+              </div>
+              {% if main_page.is_show_apps %}
+                <div class="col-xs-8">
+                  <a href="https://itunes.apple.com/us/app/%D0%BC%D0%BE%D0%B9%D0%BE%D0%BC24/id1308075440?l=ru&ls=1&mt=8">
+                    <img src="{% static 'core/user/img/appstore.png' %}"
+                         class="img-responsive imgStore"
+                         alt="" />
+                  </a>
+                  <a href="https://play.google.com/store/apps/details?id=com.avadamedia.program.myhouse24&hl=uk">
+                    <img src="{% static 'core/user/img/googleplay.png' %}"
+                         class="img-responsive imgStore"
+                         alt="" />
+                  </a>
                 </div>
-                <div class="box">
-                    {{ main_page.description|safe }}
-                    <div class="row">
-                        <div class="col-xs-4">
-                            <a href="/about" class="btn btn-primary">Подробнее</a>
-                        </div>
-                        {% if main_page.is_show_apps %}
-                        <div class="col-xs-8">
-                            <a href="https://itunes.apple.com/us/app/%D0%BC%D0%BE%D0%B9%D0%BE%D0%BC24/id1308075440?l=ru&ls=1&mt=8">
-                                <img src="{% static 'core/user/img/appstore.png' %}" class="img-responsive imgStore" alt="">
-                            </a>
-                            <a href="https://play.google.com/store/apps/details?id=com.avadamedia.program.myhouse24&hl=uk">
-                                <img src="{% static 'core/user/img/googleplay.png' %}" class="img-responsive imgStore" alt="">
-                            </a>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
+              {% endif %}
             </div>
-            <div class="col-xs-12 col-sm-5 col-md-4">
-                <div class="page-header">
-                    <h3>Контакты</h3>
-                </div>
-                <div class="box">
-                    <p><i class="fas fa-user-circle"></i> AVADA-MEDIА</p>
-                    <p><i class="fas fa-compass"></i> ул. Космонавтов, 32</p>
-                    <p><i class="fas fa-map-marker"></i> Малиновский р-н, г. Одесса</p>
-                    <p><i class="fas fa-phone"></i> <a href="tel:+380971799663">+38 (097) 179-96-63</a></p>
-                    <p><i class="fas fa-envelope"></i> <a href="mailto:info@avada-media.com.ua">info@avada-media.com.ua</a></p>
-                </div>
-            </div>
+          </div>
         </div>
-    </div>
-</div>
-    <div class="advantages">
-        <div class="container">
-            <div class="row row-eq-height">
-                <div class="col-xs-12">
-                    <div class="page-header">
-                        <h3>Рядом с нами</h3>
-                    </div>
-                </div>
-                {% for block in main_page.blocks.all %}
-                <div class="col-xs-12 col-sm-6 col-md-4 advantage-item">
-                    <div class="thumbnail">
-                        {% if block.image %}
-                        <img src="{{ block.image.url }}" class="img-responsive" alt="{{ block.title }}">
-                        {% endif %}
-                        <div class="caption">
-                            <h3>{{ block.title }}</h3>
-                            <p>{{ block.description|safe }}</p>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+        <div class="col-xs-12 col-sm-5 col-md-4">
+          <div class="page-header">
+            <h3>Контакты</h3>
+          </div>
+          <div class="box">
+            <p>
+              <i class="fas fa-user-circle"></i> AVADA-MEDIА
+            </p>
+            <p>
+              <i class="fas fa-compass"></i> ул. Космонавтов, 32
+            </p>
+            <p>
+              <i class="fas fa-map-marker"></i> Малиновский р-н, г. Одесса
+            </p>
+            <p>
+              <i class="fas fa-phone"></i> <a href="tel:+380971799663">+38 (097) 179-96-63</a>
+            </p>
+            <p>
+              <i class="fas fa-envelope"></i> <a href="mailto:info@avada-media.com.ua">info@avada-media.com.ua</a>
+            </p>
+          </div>
         </div>
+      </div>
     </div>
-
-{% endblock %}
+  </div>
+  <div class="advantages">
+    <div class="container">
+      <div class="row row-eq-height">
+        <div class="col-xs-12">
+          <div class="page-header">
+            <h3>Рядом с нами</h3>
+          </div>
+        </div>
+        {% for block in main_page.blocks.all %}
+          <div class="col-xs-12 col-sm-6 col-md-4 advantage-item">
+            <div class="thumbnail">
+              {% if block.image %}
+                <img src="{{ block.image.url }}"
+                     class="img-responsive"
+                     alt="{{ block.title }}" />
+              {% endif %}
+              <div class="caption">
+                <h3>{{ block.title }}</h3>
+                <p>{{ block.description|safe }}</p>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock content %}

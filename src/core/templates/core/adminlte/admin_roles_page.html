@@ -1,0 +1,70 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Роли
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Роли</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}"><i class="bi bi-house-door-fill"></i> Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Роли</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post">
+        {% csrf_token %}
+        <div class="card">
+          <div class="card-body p-0">
+            {{ formset.management_form }}
+            <div class="table-responsive">
+              <table class="table table-bordered text-center">
+                <thead>
+                  <tr>
+                    <th class="text-start">Роль</th>
+                    {% for field in formset.forms.0.visible_fields %}<th>{{ field.label }}</th>{% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for form in formset %}
+                    <tr>
+                      <th class="text-start align-middle">{{ form.instance.name }}</th>
+                      {{ form.id }}
+                      {% for field in form.visible_fields %}
+                        <td class="align-middle">
+                          <div class="form-check d-flex justify-content-center">
+                            {# Мы рендерим поле, но не его label, так как заголовок уже есть в <th> #}
+                            {{ field }}
+                          </div>
+                        </td>
+                      {% endfor %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="text-end">
+              <a href="{% url 'users:admin_roles' %}" class="btn btn-secondary">Отменить</a>
+              <button type="submit" class="btn btn-success">Сохранить</button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}

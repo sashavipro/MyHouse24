@@ -1,30 +1,33 @@
 {% extends 'core/adminlte/admin_layout.html' %}
+
 {% load static %}
 
-{% block title %}Статистика{% endblock %}
-
+{% block title %}
+  Статистика
+{% endblock title %}
 {% block content %}
-<!-- Content Header (Page header) -->
-<div class="content-header">
+  <!-- Content Header (Page header) -->
+  <div class="content-header">
     <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0">Статистика</h1>
-            </div>
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1 class="m-0">Статистика</h1>
         </div>
+      </div>
     </div>
-</div>
-<!-- /.content-header -->
-
-<!-- Main content -->
-<section class="content">
+  </div>
+  <!-- /.content-header -->
+  <!-- Main content -->
+  <section class="content">
     <div class="container-fluid">
-        <!-- Здесь будет ваша статистика -->
-        <div class="alert alert-info">
-            <h5><i class="icon bi bi-info-circle"></i> Добро пожаловать!</h5>
-            Это главная страница вашей административной панели.
-        </div>
+      <!-- Здесь будет ваша статистика -->
+      <div class="alert alert-info">
+        <h5>
+          <i class="icon bi bi-info-circle"></i> Добро пожаловать!
+        </h5>
+        Это главная страница вашей административной панели.
+      </div>
     </div>
-</section>
-<!-- /.content -->
-{% endblock %}
+  </section>
+  <!-- /.content -->
+{% endblock content %}

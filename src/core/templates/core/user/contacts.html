@@ -1,59 +1,109 @@
 {% extends 'core/user/layout.html' %}
+
 {% load static %}
 
-{% block title %}Система &quot;МОЙ ДОМ 24&quot; - Контакты{% endblock %}
+{% block title %}
+  {{ contact_page.seo_block.title|default:'Система "МОЙ ДОМ 24" - Контакты' }}
+{% endblock title %}
 {% block description %}
-    Украина, г. Одесса, Космонавтов, 32   Телефон, Viber: +38 097 179-96-63  Telegram: SergeyMeleshkevych  Skype: SergeyMeleshkevych
-{% endblock %}
-{% block keywords %}Система, МОЙ ДОМ 24, Контакт{% endblock %}
-
-
-
-
+  {{ contact_page.seo_block.description|default:'Описание контактов по умолчанию' }}
+{% endblock description %}
+{% block keywords %}
+  {{ contact_page.seo_block.keywords|default:'Система, МОЙ ДОМ 24, Контакт' }}
+{% endblock keywords %}
 {% block content %}
-
-<div class="breadcrumbs">
+  <div class="breadcrumbs">
     <div class="container">
-        <div class="row">
-            <div class="col-xs-12">
-                <ol class="breadcrumb">
-                    <li><a href="/">Главная</a></li>
-                    <li class="active">Контакты</li>
-                </ol>
-            </div>
+      <div class="row">
+        <div class="col-xs-12">
+          <ol class="breadcrumb">
+            <li>
+              <a href="{% url 'website:home' %}">Главная</a>
+            </li>
+            <li class="active">Контакты</li>
+          </ol>
         </div>
+      </div>
     </div>
-</div>
-
-<div style="width: 100%">
-    <iframe width="100%" height="600" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="https://maps.google.com/maps?width=100%25&amp;height=600&amp;hl=en&amp;q=Odessa%20Ukraine%20Avada%20Media+(My%20Business%20Name)&amp;t=&amp;z=14&amp;ie=UTF8&amp;iwloc=B&amp;output=embed">
-        <a href="https://www.maps.ie/distance-area-calculator.html">measure acres/hectares on map</a>
-    </iframe>
-</div>
-<div class="contacts">
-    <div class="container">
+  </div>
+  {% if contact_page %}
+    {# Карта. Фильтр |safe нужен, чтобы HTML-код iframe корректно отобразился #}
+    {% if contact_page.map %}<div class="map-container">{{ contact_page.map|safe }}</div>{% endif %}
+    <div class="contacts">
+      <div class="container">
         <div class="row">
-            <div class="col-xs-12 col-sm-7 col-md-8">
-                <div class="page-header">
-                    <h1> ❤️❤️❤️</h1>
-                </div>
-                <div class="box">
-                    <p><b></b><b></b><b></b>Р<b></b><u></u>азработчиком системы&nbsp;"Мой Дом 24" является компания AVADA-MEDIA -&nbsp;наша компания, специализируется на разработке web и мобильных п<b></b><u></u>риложений разного уровня сложности, но неизменно высокого качества!!!<br></p><p><b><i>Официальный сайт компании -&nbsp;</i></b><a target="_blank" rel="nofollow" href="https://avada-media.ua/"><b><i></i></b><u></u>https://avada-media.ua/</a></p><p><b></b></p>                </div>
+          <!-- Левая колонка с описанием -->
+          <div class="col-xs-12 col-sm-7 col-md-8">
+            <div class="page-header">
+              <h1>{{ contact_page.title }}</h1>
             </div>
-            <div class="col-xs-12 col-sm-5 col-md-4">
-                <div class="page-header">
-                    <h3>Контакты</h3>
-                </div>
-                <div class="box">
-                    <p><i class="fas fa-user-circle"></i> AVADA-MEDIА</p>
-                    <p><i class="fas fa-compass"></i> ул. Космонавтов, 32</p>
-                    <p><i class="fas fa-map-marker"></i> Малиновский р-н, г. Одесса</p>
-                    <p><i class="fas fa-phone"></i> <a href="tel:+380971799663">+38 (097) 179-96-63</a></p>
-                    <p><i class="fas fa-envelope"></i> <a href="mailto:info@avada-media.com.ua">info@avada-media.com.ua</a></p>
-                </div>
+            <div class="box">
+              {# Фильтр |safe для текста из TinyMCE #}
+              {{ contact_page.description|safe }}
+              {% if contact_page.url %}
+                <p class="mt-3">
+                  <b><i>Официальный сайт компании - </i></b><a target="_blank" rel="nofollow" href="{{ contact_page.url }}">{{ contact_page.url }}</a>
+                </p>
+              {% endif %}
             </div>
+          </div>
+          <!-- Правая колонка с контактными данными -->
+          <div class="col-xs-12 col-sm-5 col-md-4">
+            <div class="page-header">
+              <h3>Контакты</h3>
+            </div>
+            <div class="box">
+              {% if contact_page.fullname %}
+                <p>
+                  <i class="fas fa-user-circle"></i> {{ contact_page.fullname }}
+                </p>
+              {% endif %}
+              {% if contact_page.location %}
+                <p>
+                  <i class="fas fa-compass"></i> {{ contact_page.location }}
+                </p>
+              {% endif %}
+              {% if contact_page.address %}
+                <p>
+                  <i class="fas fa-map-marker"></i> {{ contact_page.address }}
+                </p>
+              {% endif %}
+              {% if contact_page.phone %}
+                <p>
+                  <i class="fas fa-phone"></i> <a href="tel:{{ contact_page.phone }}">{{ contact_page.phone }}</a>
+                </p>
+              {% endif %}
+              {% if contact_page.email %}
+                <p>
+                  <i class="fas fa-envelope"></i> <a href="mailto:{{ contact_page.email }}">{{ contact_page.email }}</a>
+                </p>
+              {% endif %}
+            </div>
+          </div>
         </div>
+      </div>
     </div>
-</div>
+  {% else %}
+    <div class="container contacts-no-data">
+      <p>Контактная информация еще не заполнена.</p>
+    </div>
+  {% endif %}
+{% endblock content %}
+{% block styles %}
+  {# Дополнительные стили для карты, чтобы она была адаптивной #}
+  <style>
+    .map-container {
+      width: 100%;
+    }
 
-{% endblock %}
+    .map-container iframe {
+      width: 100%;
+      height: 600px;
+      border: 0;
+    }
+
+    .contacts-no-data {
+      padding: 40px 0;
+    }
+  </style>
+{% endblock styles %}

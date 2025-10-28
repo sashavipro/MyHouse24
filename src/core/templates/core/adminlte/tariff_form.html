@@ -1,0 +1,226 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  {% if form.instance.pk %}
+    Редактирование тарифа: {{ form.instance.name }}
+  {% else %}
+    Добавление нового тарифа
+  {% endif %}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>
+            {% if form.instance.pk %}
+              Редактирование тарифа
+            {% else %}
+              Добавление тарифа
+            {% endif %}
+          </h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:tariff_list' %}">Тарифы</a>
+            </li>
+            {% if form.instance.pk %}
+              <li class="breadcrumb-item">
+                <a href="{% url 'finance:tariff_detail' form.instance.pk %}">{{ form.instance.name }}</a>
+              </li>
+              <li class="breadcrumb-item active">Редактирование</li>
+            {% else %}
+              <li class="breadcrumb-item active">Добавление</li>
+            {% endif %}
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post" id="tariff-form">
+        {% csrf_token %}
+        <div class="card card-primary card-outline">
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+              {{ form.name }}
+              {{ form.name.errors }}
+            </div>
+            <div class="mb-3">
+              <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+              {{ form.description }}
+              {{ form.description.errors }}
+            </div>
+            <hr class="my-4" />
+            <h4>Услуги</h4>
+            {{ services_formset.management_form }}
+            <div id="services-formset-container">
+              {% for form in services_formset %}
+                <div class="service-form-row row align-items-end mb-3 p-3 border rounded">
+                  {{ form.id }}
+                  <div class="col-md-4">
+                    <label for="{{ form.service.id_for_label }}">Услуга</label>
+                    {{ form.service }}
+                    {{ form.service.errors }}
+                  </div>
+                  <div class="col-md-2">
+                    <label for="{{ form.price.id_for_label }}">Цена</label>
+                    {{ form.price }}
+                    {{ form.price.errors }}
+                  </div>
+                  <div class="col-md-2">
+                    <label>Валюта</label>
+                    <input type="text" class="form-control" value="грн" readonly />
+                  </div>
+                  <div class="col-md-3">
+                    <label>Ед. изм.</label>
+                    <input type="text" class="form-control unit-display" readonly />
+                  </div>
+                  <div class="col-md-1">
+                    {{ form.DELETE }}
+                    <button type="button" class="btn btn-danger delete-btn" title="Удалить">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            <button type="button" id="add-service-btn" class="btn btn-primary mt-2">Добавить услугу</button>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{% url 'finance:tariff_list' %}" class="btn btn-secondary">Отменить</a>
+            <button type="submit" class="btn btn-success">Сохранить</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  <style>
+    /* Стили для скрытия чекбокса и оформления удаляемых строк */
+    input[type="checkbox"][name$="-DELETE"] {
+      display: none;
+    }
+
+    .form-row-delete {
+      opacity: 0.6;
+      background-color: #f8d7da;
+    }
+
+    .form-row-delete label,
+    .form-row-delete input,
+    .form-row-delete select {
+      text-decoration: line-through;
+    }
+
+    .form-row-delete .btn.delete-btn {
+      background-color: #6c757d;
+      border-color: #6c757d;
+    }
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+      const formsetContainer = document.getElementById('services-formset-container');
+
+      /**
+       * По ID услуги запрашивает у API ее ед. изм. и обновляет поле.
+       * @param {Element} selectElement - HTML-элемент <select>, в котором выбрали услугу.
+       */
+      function updateUnitDisplay(selectElement) {
+        const serviceId = selectElement.value;
+        const formRow = selectElement.closest('.service-form-row');
+        if (!formRow) return;
+
+        const unitDisplay = formRow.querySelector('.unit-display');
+        if (!unitDisplay) return;
+
+        if (!serviceId) {
+          unitDisplay.value = '';
+          return;
+        }
+
+        const url = `/api/v1/finance/service/${serviceId}/unit`;
+
+        fetch(url)
+          .then(response => {
+            if (!response.ok) throw new Error('Service unit not found');
+            return response.json();
+          })
+          .then(data => {
+            unitDisplay.value = data.name;
+          })
+          .catch(error => {
+            console.error('Error fetching unit:', error);
+            unitDisplay.value = 'Ошибка';
+          });
+      }
+
+      // === ЕДИНЫЙ ОБРАБОТЧИК КЛИКОВ ===
+      formsetContainer.addEventListener('click', function(event) {
+        const deleteButton = event.target.closest('.delete-btn');
+        if (deleteButton) {
+          const formRow = deleteButton.closest('.service-form-row');
+          const deleteCheckbox = formRow.querySelector('input[type="checkbox"][name$="-DELETE"]');
+
+          if (deleteCheckbox) {
+            deleteCheckbox.checked = !deleteCheckbox.checked;
+            formRow.classList.toggle('form-row-delete', deleteCheckbox.checked);
+          } else {
+            formRow.remove();
+          }
+        }
+      });
+
+      formsetContainer.addEventListener('change', function(event) {
+        // Логика для авто-заполнения Ед.Изм.
+        if (event.target && event.target.tagName === 'SELECT' && event.target.name.endsWith('-service')) {
+          updateUnitDisplay(event.target);
+        }
+      });
+
+      // --- Логика для кнопки "Добавить услугу" ---
+      const addServiceBtn = document.getElementById('add-service-btn');
+      if (addServiceBtn) {
+        const totalFormsInput = document.querySelector('#id_services-TOTAL_FORMS');
+        const emptyFormTemplate = `
+            <div class="service-form-row row align-items-end mb-3 p-3 border rounded">
+                {{ services_formset.empty_form.id|safe }}
+                <div class="col-md-4"><label for="id_services-__prefix__-service">Услуга</label>{{ services_formset.empty_form.service|safe }}</div>
+                <div class="col-md-2"><label for="id_services-__prefix__-price">Цена</label>{{ services_formset.empty_form.price|safe }}</div>
+                <div class="col-md-2"><label>Валюта</label><input type="text" class="form-control" value="грн" readonly /></div>
+                <div class="col-md-3"><label>Ед. изм.</label><input type="text" class="form-control unit-display" readonly /></div>
+                <div class="col-md-1">
+                    <button type="button" class="btn btn-danger delete-btn" title="Удалить">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        addServiceBtn.addEventListener('click', function() {
+          let formIdx = parseInt(totalFormsInput.value);
+          const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formIdx);
+          formsetContainer.insertAdjacentHTML('beforeend', newFormHtml);
+          totalFormsInput.value = formIdx + 1;
+        });
+      }
+
+      // Инициализация существующих форм при загрузке
+      formsetContainer.querySelectorAll('select[name$="-service"]').forEach(select => {
+        if (select.value) {
+          updateUnitDisplay(select);
+        }
+      });
+    });
+  </script>
+{% endblock scripts %}

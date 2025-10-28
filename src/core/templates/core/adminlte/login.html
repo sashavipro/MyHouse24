@@ -1,0 +1,151 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ru-RU">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Вход | Мой Дом 24</title>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.0.12/index.css" />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="{% static 'core/adminlte/css/adminlte.css' %}" />
+    <style>
+      body {
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f4f6f9;
+      }
+
+      .login-box {
+        width: 380px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-box">
+      <div class="login-logo mb-4 text-center">
+        <a href="{% url 'website:home' %}">
+          <img src="{% static 'core/adminlte/img/logo.svg' %}"
+               alt="logo"
+               width="200" />
+        </a>
+      </div>
+      <div class="card card-outline card-primary">
+        <div class="card-header p-0 border-bottom-0">
+          <ul class="nav nav-tabs nav-justified" id="login-tabs" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link"
+                 id="resident-tab"
+                 data-bs-toggle="tab"
+                 href="#tab-resident"
+                 role="tab">Для жильца</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active"
+                 id="admin-tab"
+                 data-bs-toggle="tab"
+                 href="#tab-admin"
+                 role="tab">Для администрации</a>
+            </li>
+          </ul>
+        </div>
+        <div class="card-body">
+          <div class="tab-content" id="login-tabs-content">
+            <!-- ВКЛАДКА ЖИЛЬЦА -->
+            <div class="tab-pane fade" id="tab-resident" role="tabpanel">
+              <p class="login-box-msg">Вход в личный кабинет</p>
+              <form action="{% url 'core:login' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="tab" value="resident" />
+                <div class="input-group mb-3">
+                  <input type="text" class="form-control" placeholder="E-mail или ID" />
+                  <div class="input-group-text">
+                    <i class="bi bi-person"></i>
+                  </div>
+                </div>
+                <div class="input-group mb-3">
+                  <input type="password" class="form-control" placeholder="Пароль" />
+                  <div class="input-group-text">
+                    <i class="bi bi-lock"></i>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-8">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="remember-resident" />
+                      <label class="form-check-label" for="remember-resident">Запомнить меня</label>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <button type="submit" class="btn btn-primary btn-block">Вход</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <!-- ВКЛАДКА АДМИНИСТРАЦИИ -->
+            <div class="tab-pane fade show active" id="tab-admin" role="tabpanel">
+              <p class="login-box-msg">Вход в панель управления</p>
+              {# === БЛОК ДЛЯ ОТОБРАЖЕНИЯ ОБЩИХ ОШИБОК ФОРМЫ === #}
+              {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                  {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+              {# Отображаем сообщения из Django Messages Framework (опционально, но полезно) #}
+              {% if messages %}
+                <div class="alert alert-danger">
+                  {% for message in messages %}{{ message }}{% endfor %}
+                </div>
+              {% endif %}
+              <form action="{% url 'core:login' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="tab" value="admin" />
+                <div class="input-group mb-3">
+                  {{ form.username }}
+                  <div class="input-group-text">
+                    <i class="bi bi-envelope"></i>
+                  </div>
+                </div>
+                {# Показываем ошибки для поля username, если они есть #}
+                {% if form.username.errors %}
+                  <div class="text-danger small mb-2">
+                    {% for error in form.username.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+                <div class="input-group mb-3">
+                  {{ form.password }}
+                  <div class="input-group-text">
+                    <i class="bi bi-lock"></i>
+                  </div>
+                </div>
+                {# Показываем ошибки для поля password, если они есть #}
+                {% if form.password.errors %}
+                  <div class="text-danger small mb-2">
+                    {% for error in form.password.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+                <div class="row">
+                  <div class="col-8">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="remember" />
+                      <label class="form-check-label" for="remember">Запомнить меня</label>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <button type="submit" class="btn btn-primary btn-block">Вход</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

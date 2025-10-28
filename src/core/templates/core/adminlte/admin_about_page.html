@@ -1,306 +1,347 @@
 {% extends 'core/adminlte/admin_layout.html' %}
+
 {% load static %}
 
-{% block title %}Редактирование страницы О нас{% endblock %}
-
+{% block title %}
+  Редактирование страницы О нас
+{% endblock title %}
 {% block content %}
-<!-- Content Header -->
-<div class="content-header">
+  <!-- Content Header -->
+  <div class="content-header">
     <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0">Редактирование страницы</h1>
-            </div>
-            <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-end">
-                    <li class="breadcrumb-item"><a href="{% url 'core:admin_stats' %}">Главная</a></li>
-                    <li class="breadcrumb-item active">Редактирование страницы</li>
-                </ol>
-            </div>
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1 class="m-0">Редактирование страницы</h1>
         </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}"><i class="bi bi-house-door-fill"></i> Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Редактирование страницы</li>
+          </ol>
+        </div>
+      </div>
     </div>
-</div>
-<!-- /.content-header -->
-
-<!-- Main content -->
-<section class="content">
+  </div>
+  <!-- /.content-header -->
+  <!-- Main content -->
+  <section class="content">
     <div class="container-fluid">
-        <form action="{% url 'core:admin_about' %}" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="card card-primary card-outline">
-                <div class="card-header">
-                    <h3 class="card-title">Редактирование страницы "О нас"</h3>
+      <form action="{% url 'website:admin_about' %}"
+            method="post"
+            enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="card card-primary card-outline">
+          <div class="card-header">
+            <h3 class="card-title">Редактирование страницы "О нас"</h3>
+          </div>
+          <div class="card-body">
+            <!-- ОСНОВНАЯ ИНФОРМАЦИЯ -->
+            <h4 class="page-header">Информация</h4>
+            <div class="row">
+              <div class="col-md-8">
+                <div class="mb-3">
+                  <label class="form-label" for="{{ about_form.title1.id_for_label }}">Заголовок</label>
+                  {{ about_form.title1 }}
                 </div>
-                <div class="card-body">
-                    <!-- ОСНОВНАЯ ИНФОРМАЦИЯ -->
-                    <h4 class="page-header">Информация</h4>
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label class="form-label" for="{{ about_form.title1.id_for_label }}">Заголовок</label>
-                                {{ about_form.title1 }}
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label" for="{{ about_form.description1.id_for_label }}">Краткий текст</label>
-                                {{ about_form.description1 }}
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <h6>Фото директора</h6>
-                            {% if about_form.instance.image %}
-                                <img src="{{ about_form.instance.image.url }}" alt="Фото директора" class="img-fluid rounded mb-2">
-                            {% endif %}
-                            <div class="mb-3">
-                                <label class="form-label" for="{{ about_form.image.id_for_label }}">Рекомендуемый размер: (250x310)</label>
-                                {{ about_form.image }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ФОТОГАЛЕРЕЯ 1 -->
-                    <h4 class="page-header mt-4">Фотогалерея</h4>
-                    <div class="row" id="gallery1-container"> {# Добавляем ID для контейнера #}
-                        {% for image in gallery1_images %}
-                        <div class="col-2 text-center" id="image-container-{{ image.id }}"> {# ID для каждого элемента с картинкой #}
-                            <img src="{{ image.image.url }}" alt="" class="mb-2 img-thumbnail">
-                            <a href="{% url 'core:delete_gallery_image' image.id %}"
-                               class="text-danger delete-image-btn"
-                               data-image-id="{{ image.id }}"
-                               title="Удалить">
-                               <i class="bi bi-trash"></i>
-                            </a>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <div class="mb-3 mt-3">
-                        <label class="form-label" for="gallery1_files">Добавить фото (1200x1200)</label>
-                        <input type="file" name="gallery1_files" id="gallery1_files" class="form-control" multiple accept="image/*">
-                    </div>
-
-                    <!-- ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ -->
-                    <h4 class="page-header mt-4">Дополнительная информация</h4>
-                     <div class="mb-3">
-                        <label class="form-label" for="{{ about_form.title2.id_for_label }}">Заголовок</label>
-                        {{ about_form.title2 }}
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ about_form.description2.id_for_label }}">Краткий текст</label>
-                        {{ about_form.description2 }}
-                    </div>
-
-                    <!-- ФОТОГАЛЕРЕЯ 2 -->
-                    <h4 class="page-header mt-4">Дополнительная фотогалерея</h4>
-                    <div class="row" id="gallery2-container"> {# Добавляем ID для контейнера #}
-                        {% for image in gallery2_images %}
-                        <div class="col-2 text-center" id="image-container-{{ image.id }}"> {# ID для каждого элемента #}
-                            <img src="{{ image.image.url }}" alt="" class="mb-2 img-thumbnail">
-                            <a href="{% url 'core:delete_gallery_image' image.id %}"
-                               class="text-danger delete-image-btn"
-                               data-image-id="{{ image.id }}"
-                               title="Удалить">
-                               <i class="bi bi-trash"></i>
-                            </a>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <div class="mb-3 mt-3">
-                        <label class="form-label" for="gallery2_files">Добавить фото (1200x1200)</label>
-                        <input type="file" name="gallery2_files" id="gallery2_files" class="form-control" multiple accept="image/*">
-                    </div>
-
-                    <h4 class="page-header mt-4">Документы</h4>
-                    {{ docs_formset.management_form }}
-                    <div id="document-forms-container">
-                        {% for form in docs_formset %}
-                        <div class="document-form-item" id="document-form-container-{{ forloop.counter0 }}">
-                            {{ form.id }}
-                            <div class="doc-preview">
-                                {# Сначала проверяем, есть ли вообще файл в поле 'document' #}
-                                {% if form.instance.document %}
-                                    {# Если файл есть, получаем его URL #}
-                                    {% with doc_url=form.instance.document.url %}
-                                        {# Проверяем, является ли файл картинкой по расширению #}
-                                        {% if doc_url|slice:"-4:"|lower in ".jpg,.jpeg,.png,.gif,.webp" %}
-                                            <img src="{{ doc_url }}" alt="Превью">
-                                        {% else %}
-                                            <i class="bi bi-file-earmark-text"></i>
-                                        {% endif %}
-                                    {% endwith %}
-                                {% else %}
-                                    {# Если файла нет, просто показываем иконку #}
-                                    <i class="bi bi-file-earmark-text"></i>
-                                {% endif %}
-                            </div>
-                            <div class="doc-fields">
-                                <div class="mb-2">
-                                    <label for="{{ form.document.id_for_label }}">PDF, JPG (макс. размер 20 Mb)</label>
-                                    {{ form.document }}
-                                    {{ form.document.errors }}
-                                </div>
-                                <div class="mb-2">
-                                    <label for="{{ form.name.id_for_label }}">Название документа</label>
-                                    {{ form.name }}
-                                    {{ form.name.errors }}
-                                </div>
-                            </div>
-                            {% if form.instance.pk %}
-                                <button type="button" class="btn btn-link text-danger p-0 delete-document-btn delete-doc-btn"
-                                        data-doc-id="{{ form.instance.pk }}"
-                                        data-url="{% url 'core:delete_document' form.instance.pk %}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-
-                    <!-- Шаблон для новой формы документа -->
-                    <template id="empty-document-form-template">
-                        <div class="document-form-item" id="document-form-container-__prefix__">
-                            {{ docs_formset.empty_form.id }}
-                            <div class="doc-preview">
-                                <i class="bi bi-file-earmark-text"></i>
-                            </div>
-                            <div class="doc-fields">
-                                <div class="mb-2">
-                                    <label for="id_{{ docs_formset.prefix }}-__prefix__-document">PDF, JPG (макс. размер 20 Mb)</label>
-                                    {{ docs_formset.empty_form.document }}
-                                </div>
-                                <div class="mb-2">
-                                    <label for="id_{{ docs_formset.prefix }}-__prefix__-name">Название документа</label>
-                                    {{ docs_formset.empty_form.name }}
-                                </div>
-                            </div>
-                            <!-- У новых форм нет кнопки удаления -->
-                        </div>
-                    </template>
-
-                    <button type="button" id="add-document-btn" class="btn btn-success mt-2">Добавить документ</button>
-
-                    <!-- НАСТРОЙКИ SEO -->
-                    <h4 class="page-header mt-4">Настройки SEO</h4>
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ seo_form.title.id_for_label }}">Title</label>
-                        {{ seo_form.title }}
-                    </div>
-                     <div class="mb-3">
-                        <label class="form-label" for="{{ seo_form.description.id_for_label }}">Description</label>
-                        {{ seo_form.description }}
-                    </div>
-                     <div class="mb-3">
-                        <label class="form-label" for="{{ seo_form.keywords.id_for_label }}">Keywords</label>
-                        {{ seo_form.keywords }}
-                    </div>
-
+                <div class="mb-3">
+                  <label class="form-label" for="{{ about_form.description1.id_for_label }}">
+                    Краткий
+                    текст
+                  </label>
+                  {{ about_form.description1 }}
                 </div>
-                <div class="card-footer text-center">
-                    <a href="{% url 'core:admin_about' %}" class="btn btn-secondary">Отменить</a>
-                    <button type="submit" class="btn btn-success">Сохранить</button>
+              </div>
+              <div class="col-md-4">
+                <h6>Фото директора</h6>
+                {% if about_form.instance.image %}
+                  <img src="{{ about_form.instance.image.url }}"
+                       alt="Фото директора"
+                       class="img-fluid rounded mb-2" />
+                {% endif %}
+                <div class="mb-3">
+                  <label class="form-label" for="{{ about_form.image.id_for_label }}">
+                    Рекомендуемый
+                    размер: (250x310)
+                  </label>
+                  {{ about_form.image }}
                 </div>
+              </div>
             </div>
-        </form>
+            <!-- ФОТОГАЛЕРЕЯ 1 -->
+            <h4 class="page-header mt-4">Фотогалерея</h4>
+            <div class="row" id="gallery1-container">
+              {# Добавляем ID для контейнера #}
+              {% for image in gallery1_images %}
+                <div class="col-2 text-center" id="image-container-{{ image.id }}">
+                  {# ID для каждого элемента с картинкой #}
+                  <img src="{{ image.image.url }}" alt="" class="mb-2 img-thumbnail" />
+                  <a href="{% url 'website:delete_gallery_image' image.id %}"
+                     class="text-danger delete-image-btn"
+                     data-image-id="{{ image.id }}"
+                     title="Удалить">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                </div>
+              {% endfor %}
+            </div>
+            <div class="mb-3 mt-3">
+              <label class="form-label" for="gallery1_files">Добавить фото (1200x1200)</label>
+              <input type="file"
+                     name="gallery1_files"
+                     id="gallery1_files"
+                     class="form-control"
+                     multiple
+                     accept="image/*" />
+            </div>
+            <!-- ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ -->
+            <h4 class="page-header mt-4">Дополнительная информация</h4>
+            <div class="mb-3">
+              <label class="form-label" for="{{ about_form.title2.id_for_label }}">Заголовок</label>
+              {{ about_form.title2 }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="{{ about_form.description2.id_for_label }}">
+                Краткий
+                текст
+              </label>
+              {{ about_form.description2 }}
+            </div>
+            <!-- ФОТОГАЛЕРЕЯ 2 -->
+            <h4 class="page-header mt-4">Дополнительная фотогалерея</h4>
+            <div class="row" id="gallery2-container">
+              {# Добавляем ID для контейнера #}
+              {% for image in gallery2_images %}
+                <div class="col-2 text-center" id="image-container-{{ image.id }}">
+                  {# ID для каждого элемента #}
+                  <img src="{{ image.image.url }}" alt="" class="mb-2 img-thumbnail" />
+                  <a href="{% url 'website:delete_gallery_image' image.id %}"
+                     class="text-danger delete-image-btn"
+                     data-image-id="{{ image.id }}"
+                     title="Удалить">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                </div>
+              {% endfor %}
+            </div>
+            <div class="mb-3 mt-3">
+              <label class="form-label" for="gallery2_files">Добавить фото (1200x1200)</label>
+              <input type="file"
+                     name="gallery2_files"
+                     id="gallery2_files"
+                     class="form-control"
+                     multiple
+                     accept="image/*" />
+            </div>
+            <h4 class="page-header mt-4">Документы</h4>
+            {{ docs_formset.management_form }}
+            <div id="document-forms-container">
+              {% for form in docs_formset %}
+                <div class="document-form-item"
+                     id="document-form-container-{{ forloop.counter0 }}">
+                  {{ form.id }}
+                  <div class="doc-preview">
+                    {# Сначала проверяем, есть ли вообще файл в поле 'document' #}
+                    {% if form.instance.document %}
+                      {# Если файл есть, получаем его URL #}
+                      {% with doc_url=form.instance.document.url %}
+                        {# Проверяем, является ли файл картинкой по расширению #}
+                        {% if doc_url|slice:"-4:"|lower in ".jpg,.jpeg,.png,.gif,.webp" %}
+                          <img src="{{ doc_url }}" alt="Превью" />
+                        {% else %}
+                          <i class="bi bi-file-earmark-text"></i>
+                        {% endif %}
+                      {% endwith %}
+                    {% else %}
+                      {# Если файла нет, просто показываем иконку #}
+                      <i class="bi bi-file-earmark-text"></i>
+                    {% endif %}
+                  </div>
+                  <div class="doc-fields">
+                    <div class="mb-2">
+                      <label for="{{ form.document.id_for_label }}">
+                        PDF, JPG (макс. размер 20
+                        Mb)
+                      </label>
+                      {{ form.document }}
+                      {{ form.document.errors }}
+                    </div>
+                    <div class="mb-2">
+                      <label for="{{ form.name.id_for_label }}">Название документа</label>
+                      {{ form.name }}
+                      {{ form.name.errors }}
+                    </div>
+                  </div>
+                  {% if form.instance.pk %}
+                    <button type="button"
+                            class="btn btn-link text-danger p-0 delete-document-btn delete-doc-btn"
+                            data-doc-id="{{ form.instance.pk }}"
+                            data-url="{% url 'website:delete_document' form.instance.pk %}">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+            <!-- Шаблон для новой формы документа -->
+            <template id="empty-document-form-template">
+              <div class="document-form-item" id="document-form-container-__prefix__">
+                {{ docs_formset.empty_form.id }}
+                <div class="doc-preview">
+                  <i class="bi bi-file-earmark-text"></i>
+                </div>
+                <div class="doc-fields">
+                  <div class="mb-2">
+                    <label for="id_{{ docs_formset.prefix }}-__prefix__-document">
+                      PDF, JPG (макс.
+                      размер 20 Mb)
+                    </label>
+                    {{ docs_formset.empty_form.document }}
+                  </div>
+                  <div class="mb-2">
+                    <label for="id_{{ docs_formset.prefix }}-__prefix__-name">
+                      Название
+                      документа
+                    </label>
+                    {{ docs_formset.empty_form.name }}
+                  </div>
+                </div>
+                <!-- У новых форм нет кнопки удаления -->
+              </div>
+            </template>
+            <button type="button" id="add-document-btn" class="btn btn-success mt-2">Добавить документ</button>
+            <!-- НАСТРОЙКИ SEO -->
+            <h4 class="page-header mt-4">Настройки SEO</h4>
+            <div class="mb-3">
+              <label class="form-label" for="{{ seo_form.title.id_for_label }}">Title</label>
+              {{ seo_form.title }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="{{ seo_form.description.id_for_label }}">Description</label>
+              {{ seo_form.description }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="{{ seo_form.keywords.id_for_label }}">Keywords</label>
+              {{ seo_form.keywords }}
+            </div>
+          </div>
+          <div class="card-footer text-center">
+            <a href="{% url 'website:admin_about' %}" class="btn btn-secondary">Отменить</a>
+            <button type="submit" class="btn btn-success">Сохранить</button>
+          </div>
+        </div>
+      </form>
     </div>
-</section>
-{% endblock %}
-
+  </section>
+{% endblock content %}
 {% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Находим все кнопки удаления
-    const deleteButtons = document.querySelectorAll('.delete-image-btn');
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Находим все кнопки удаления
+      const deleteButtons = document.querySelectorAll('.delete-image-btn');
 
-    deleteButtons.forEach(button => {
+      deleteButtons.forEach(button => {
         button.addEventListener('click', function(event) {
-            // Предотвращаем стандартное действие ссылки (переход по href)
-            event.preventDefault();
+          // Предотвращаем стандартное действие ссылки (переход по href)
+          event.preventDefault();
 
-            // Запрашиваем подтверждение
-            if (!confirm('Вы уверены, что хотите удалить это изображение?')) {
-                return;
-            }
+          // Запрашиваем подтверждение
+          if (!confirm('Вы уверены, что хотите удалить это изображение?')) {
+            return;
+          }
 
-            const url = this.href;
-            const imageId = this.dataset.imageId;
-            const imageContainer = document.getElementById(`image-container-${imageId}`);
+          const url = this.href;
+          const imageId = this.dataset.imageId;
+          const imageContainer = document.getElementById(`image-container-${imageId}`);
 
-            // Получаем CSRF-токен из формы
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+          // Получаем CSRF-токен из формы
+          const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-            // Отправляем AJAX-запрос
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json'
-                },
-                // Тело запроса не обязательно, но хорошая практика
-                body: JSON.stringify({id: imageId})
+          // Отправляем AJAX-запрос
+          fetch(url, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+              },
+              // Тело запроса не обязательно, но хорошая практика
+              body: JSON.stringify({
+                id: imageId
+              })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.status === 'success') {
-                    // В случае успеха, плавно удаляем блок с картинкой со страницы
-                    if (imageContainer) {
-                        imageContainer.style.transition = 'opacity 0.5s ease';
-                        imageContainer.style.opacity = '0';
-                        setTimeout(() => imageContainer.remove(), 500);
-                    }
-                } else {
-                    // В случае ошибки, выводим сообщение
-                    alert('Ошибка при удалении: ' + data.message);
+              if (data.status === 'success') {
+                // В случае успеха, плавно удаляем блок с картинкой со страницы
+                if (imageContainer) {
+                  imageContainer.style.transition = 'opacity 0.5s ease';
+                  imageContainer.style.opacity = '0';
+                  setTimeout(() => imageContainer.remove(), 500);
                 }
+              } else {
+                // В случае ошибки, выводим сообщение
+                alert('Ошибка при удалении: ' + data.message);
+              }
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('Произошла сетевая ошибка. Пожалуйста, попробуйте еще раз.');
+              console.error('Error:', error);
+              alert('Произошла сетевая ошибка. Пожалуйста, попробуйте еще раз.');
             });
         });
-    });
-// === ОБНОВЛЕННЫЙ СКРИПТ ДЛЯ ДОКУМЕНТОВ ===
-    const docFormsContainer = document.getElementById('document-forms-container');
-    const addDocButton = document.getElementById('add-document-btn');
-    const docTemplate = document.getElementById('empty-document-form-template');
-    const docFormsetPrefix = '{{ docs_formset.prefix }}';
+      });
+      // === ОБНОВЛЕННЫЙ СКРИПТ ДЛЯ ДОКУМЕНТОВ ===
+      const docFormsContainer = document.getElementById('document-forms-container');
+      const addDocButton = document.getElementById('add-document-btn');
+      const docTemplate = document.getElementById('empty-document-form-template');
+      const docFormsetPrefix = '{{ docs_formset.prefix }}';
 
-    // Функция для обработки AJAX-удаления
-    const initDocDeleteButtons = (container) => {
+      // Функция для обработки AJAX-удаления
+      const initDocDeleteButtons = (container) => {
         container.querySelectorAll('.delete-document-btn').forEach(button => {
-            // Предотвращаем двойное навешивание обработчика
-            const newButton = button.cloneNode(true);
-            button.parentNode.replaceChild(newButton, button);
+          // Предотвращаем двойное навешивание обработчика
+          const newButton = button.cloneNode(true);
+          button.parentNode.replaceChild(newButton, button);
 
-            newButton.addEventListener('click', function(event) {
-                event.preventDefault();
-                if (!confirm('Вы уверены, что хотите удалить этот документ?')) { return; }
+          newButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            if (!confirm('Вы уверены, что хотите удалить этот документ?')) {
+              return;
+            }
 
-                const url = this.dataset.url;
-                const formContainer = this.closest('.document-form-item'); // Ищем новый родительский класс
-                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const url = this.dataset.url;
+            const formContainer = this.closest('.document-form-item'); // Ищем новый родительский класс
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-                fetch(url, {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        formContainer.style.transition = 'opacity 0.3s ease';
-                        formContainer.style.opacity = '0';
-                        setTimeout(() => formContainer.remove(), 300);
-                    } else { alert('Ошибка: ' + data.message); }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Произошла сетевая ошибка.');
-                });
-            });
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                  'X-CSRFToken': csrfToken,
+                  'Content-Type': 'application/json'
+                },
+              })
+              .then(response => response.json())
+              .then(data => {
+                if (data.status === 'success') {
+                  formContainer.style.transition = 'opacity 0.3s ease';
+                  formContainer.style.opacity = '0';
+                  setTimeout(() => formContainer.remove(), 300);
+                } else {
+                  alert('Ошибка: ' + data.message);
+                }
+              })
+              .catch(error => {
+                console.error('Error:', error);
+                alert('Произошла сетевая ошибка.');
+              });
+          });
         });
-    };
+      };
 
-    initDocDeleteButtons(docFormsContainer);
+      initDocDeleteButtons(docFormsContainer);
 
-    // Логика добавления новой формы документа
-    addDocButton.addEventListener('click', function() {
+      // Логика добавления новой формы документа
+      addDocButton.addEventListener('click', function() {
         const totalFormsInput = document.getElementById(`id_${docFormsetPrefix}-TOTAL_FORMS`);
         let formIdx = parseInt(totalFormsInput.value);
 
@@ -309,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         docFormsContainer.appendChild(newFormNode);
         totalFormsInput.value = formIdx + 1;
+      });
     });
-});
-</script>
-{% endblock %}
+  </script>
+{% endblock scripts %}

@@ -16,6 +16,6 @@ $(document).ready(function(){
 //        thumbnail: false,
 //        selector: '.item',
 //        download: false,
-//        
+//
 //    });
 });

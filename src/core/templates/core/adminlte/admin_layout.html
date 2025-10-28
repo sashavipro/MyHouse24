@@ -1,80 +1,166 @@
 {% load static %}
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru-RU">
   <!--begin::Head-->
   <head>
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-    <meta charset="UTF-8">
-    <title>{% block title %}Мой Дом 24 - Панель Администратора{% endblock %}</title>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
+    <title>
+      {% block title %}
+        Мой Дом 24 - Панель Администратора
+      {% endblock title %}
+    </title>
     <!--begin::Meta Tags-->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, user-scalable=yes" />
     <meta name="color-scheme" content="light dark" />
     <!--end::Meta Tags-->
     <!--begin::Fonts-->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.0.12/index.css"
-      integrity="sha256-tXJfXfp6Ewt1ilPzLDtQnJV4hclT9XuaZUKyUvmyr+Q="
-      crossorigin="anonymous"
-    />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.0.12/index.css"
+          integrity="sha256-tXJfXfp6Ewt1ilPzLDtQnJV4hclT9XuaZUKyUvmyr+Q="
+          crossorigin="anonymous" />
     <!--end::Fonts-->
     <!--begin::Third Party Plugin(OverlayScrollbars)-->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/styles/overlayscrollbars.min.css"
-      crossorigin="anonymous"
-    />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/styles/overlayscrollbars.min.css"
+          crossorigin="anonymous" />
     <!--end::Third Party Plugin(OverlayScrollbars)-->
     <!--begin::Third Party Plugin(Bootstrap Icons)-->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-      crossorigin="anonymous"
-    />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+          crossorigin="anonymous" />
     <!--end::Third Party Plugin(Bootstrap Icons)-->
     <!--begin::Required Plugin(AdminLTE)-->
     <link rel="stylesheet" href="{% static 'core/adminlte/css/adminlte.css' %}" />
     <!--end::Required Plugin(AdminLTE)-->
     <!-- TinyMCE -->
-    <script src="https://cdn.tiny.cloud/1/3a1ahm886y0eixd3f1v77fit4267p9n4jdgovp88cy4ufgu7/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
-  <style>
-        .document-form-item {
-            display: flex;
-            align-items: flex-start;
-            padding: 1rem;
-            border: 1px solid #dee2e6;
-            border-radius: .25rem;
-            margin-bottom: 1rem;
-            position: relative;
-        }
-        .document-form-item .doc-preview {
-            flex-shrink: 0;
-            width: 60px;
-            height: 60px;
-            margin-right: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .document-form-item .doc-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: cover;
-            border-radius: .25rem;
-        }
-        .document-form-item .doc-preview .bi {
-            font-size: 2.5rem;
-            color: #6c757d;
-        }
-        .document-form-item .doc-fields {
-            flex-grow: 1;
-        }
-        .document-form-item .delete-doc-btn {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-        }
+    <script src="https://cdn.tiny.cloud/1/3a1ahm886y0eixd3f1v77fit4267p9n4jdgovp88cy4ufgu7/tinymce/7/tinymce.min.js"
+            referrerpolicy="origin"></script>
+    <style>
+      .document-form-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: .25rem;
+        margin-bottom: 1rem;
+        position: relative;
+      }
+
+      .document-form-item .doc-preview {
+        flex-shrink: 0;
+        width: 60px;
+        height: 60px;
+        margin-right: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .document-form-item .doc-preview img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: cover;
+        border-radius: .25rem;
+      }
+
+      .document-form-item .doc-preview .bi {
+        font-size: 2.5rem;
+        color: #6c757d;
+      }
+
+      .document-form-item .doc-fields {
+        flex-grow: 1;
+      }
+
+      .document-form-item .delete-doc-btn {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+      }
+
+      /* ... (ваши стили для документов) ... */
+      .image-preview-container {
+        border: 2px dashed #ddd;
+        border-radius: .25rem;
+        padding: .5rem;
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .image-preview-container img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      .image-preview-container .icon-placeholder {
+        font-size: 3rem;
+        color: #ddd;
+      }
+
+      /* Стили для маленьких превью */
+      .image-preview-sm {
+        height: 160px;
+      }
+
+      /* Стили для большого превью */
+      .image-preview-lg {
+        height: 326px;
+      }
+
+      /* Убираем подчеркивание у всех ссылок внутри breadcrumb */
+      .breadcrumb a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      /* Для таблицы в house_list.html */
+      .th-actions {
+        width: 100px;
+      }
+
+      /* Для таблицы в house_detail.html */
+      .th-info-label {
+        width: 150px;
+      }
+
+      /* Для картинок в house_detail.html */
+      .house-img-lg,
+      .house-img-placeholder-lg {
+        height: 326px;
+      }
+
+      .house-img-sm,
+      .house-img-placeholder-sm {
+        height: 155px;
+      }
+
+      .house-img {
+        width: 100%;
+        object-fit: cover;
+      }
+
+      .house-img-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .house-img-placeholder-lg .bi {
+        font-size: 5rem;
+      }
+
+      .house-img-placeholder-sm .bi {
+        font-size: 3rem;
+      }
     </style>
   </head>
   <!--end::Head-->
@@ -86,60 +172,56 @@
       <nav class="app-header navbar navbar-expand bg-body">
         <!--begin::Container-->
         <div class="container-fluid">
-            <!--begin::Start Navbar Links-->
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button">
-                        <i class="bi bi-list"></i>
-                    </a>
-                </li>
-                 <li class="nav-item d-none d-md-block">
-                    <span class="nav-link">Панель администратора</span>
-                </li>
-            </ul>
-            <!--end::Start Navbar Links-->
-
+          <!--begin::Start Navbar Links-->
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button">
+                <i class="bi bi-list"></i>
+              </a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <span class="nav-link">Панель администратора</span>
+            </li>
+          </ul>
+          <!--end::Start Navbar Links-->
           <!--begin::End Navbar Links-->
           <ul class="navbar-nav ms-auto">
             <!--begin::Notifications Dropdown Menu -->
             <li class="nav-item dropdown">
-                <a class="nav-link" data-bs-toggle="dropdown" href="#">
-                    <i class="bi bi-person-plus-fill"></i>
-                    <span class="navbar-badge badge text-bg-warning">1</span>
-                </a>
-                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
-                    <span class="dropdown-item dropdown-header">Новых пользователей: 1</span>
-                    <div class="dropdown-divider"></div>
-                    <a href="#" class="dropdown-item">
-                        Степанова Алена
-                    </a>
-                    <div class="dropdown-divider"></div>
-                    <a href="#" class="dropdown-item dropdown-footer">Перейти в раздел пользователей</a>
-                </div>
+              <a class="nav-link" data-bs-toggle="dropdown" href="#">
+                <i class="bi bi-person-plus-fill"></i>
+                <span class="navbar-badge badge text-bg-warning">1</span>
+              </a>
+              <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                <span class="dropdown-item dropdown-header">Новых пользователей: 1</span>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">Степанова Алена</a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item dropdown-footer">Перейти в раздел пользователей</a>
+              </div>
             </li>
             <!--end::Notifications Dropdown Menu -->
-
             <!--begin::User Menu Dropdown-->
             <li class="nav-item dropdown user-menu">
               <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                 <i class="bi bi-person-circle fs-4"></i>
                 <span class="d-none d-md-inline">Elon Musk</span>
               </a>
-                <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
-                    <!--begin::User Image-->
-                    <li class="user-header text-bg-primary">
-                        <i class="bi bi-person-circle fs-1"></i>
-                        <p>
-                            Elon Musk (Директор)
-                        </p>
-                    </li>
-                    <!--end::User Image-->
-                    <!--begin::Menu Footer-->
-                    <li class="user-footer">
-                        <a href="#" class="btn btn-default btn-flat">Профиль</a>
-                        <a href="#" class="btn btn-default btn-flat float-end">Выход</a>
-                    </li>
-                    <!--end::Menu Footer-->
+              <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                <!--begin::User Image-->
+                <li class="user-header text-bg-primary">
+                  <i class="bi bi-person-circle fs-1"></i>
+                  <p>Elon Musk (Директор)</p>
+                </li>
+                <!--end::User Image-->
+                <!--begin::Menu Footer-->
+                <li class="user-footer">
+                  <a href="{% url 'users:user_edit' request.user.pk %}"
+                     class="btn btn-default btn-flat">Профиль</a>
+                  <a href="{% url 'core:logout' %}"
+                     class="btn btn-default btn-flat float-end">Выход</a>
+                </li>
+                <!--end::Menu Footer-->
               </ul>
             </li>
             <!--end::User Menu Dropdown-->
@@ -149,186 +231,218 @@
         <!--end::Container-->
       </nav>
       <!--end::Header-->
-<!--begin::Sidebar-->
-<aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="white">
-    <!--begin::Sidebar Brand-->
-    <div class="sidebar-brand">
-        <a href="{% url 'core:admin_stats' %}" class="brand-link">
-            <img src="{% static 'core/adminlte/img/logo.svg' %}" alt="Мой Дом 24 Logo" class="brand-image">
+      <!--begin::Sidebar-->
+      <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="white">
+        <!--begin::Sidebar Brand-->
+        <div class="sidebar-brand">
+          <a href="{% url 'finance:admin_stats' %}" class="brand-link">
+            <img src="{% static 'core/adminlte/img/logo.svg' %}"
+                 alt="Мой Дом 24 Logo"
+                 class="brand-image" />
             <span class="brand-text fw-light"></span>
-        </a>
-    </div>
-    <!--end::Sidebar Brand-->
-    <!--begin::Sidebar Wrapper-->
-    <div class="sidebar-wrapper">
-        <nav class="mt-2">
+          </a>
+        </div>
+        <!--end::Sidebar Brand-->
+        <!--begin::Sidebar Wrapper-->
+        <div class="sidebar-wrapper">
+          <nav class="mt-2">
             <!--begin::Sidebar Menu-->
-            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="navigation" data-accordion="false">
-                <li class="nav-item">
-                    <a href="{% url 'core:admin_stats' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_stats' %}active{% endif %}">
-                        <i class="nav-icon bi bi-graph-up"></i><p>Статистика</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="nav-icon bi bi-cash-coin"></i><p>Касса</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="nav-icon bi bi-file-earmark-text"></i><p>Квитанции на оплату</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="nav-icon bi bi-credit-card"></i><p>Лицевые счета</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="nav-icon bi bi-key-fill"></i><p>Квартиры</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="nav-icon bi bi-people-fill"></i><p>Владельцы квартир</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="nav-icon bi bi-building"></i><p>Дома</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="nav-icon bi bi-envelope"></i><p>Сообщения</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="nav-icon bi bi-wrench"></i><p>Заявки вызова мастера</p>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="nav-icon bi bi-speedometer2"></i><p>Показания счетчиков</p>
-                    </a>
-                </li>
-
-                <!-- Меню "Управление сайтом" -->
-                {% with website_pages='admin_home,admin_about,admin_services,admin_tariff,admin_contacts' %}
+            <ul class="nav sidebar-menu flex-column"
+                data-lte-toggle="treeview"
+                role="navigation"
+                data-accordion="false">
+              <li class="nav-item">
+                <a href="{% url 'finance:admin_stats' %}"
+                   class="nav-link {% if request.resolver_match.url_name == 'admin_stats' %}active{% endif %}">
+                  <i class="nav-icon bi bi-graph-up"></i>
+                  <p>Статистика</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-cash-coin"></i>
+                  <p>Касса</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-file-earmark-text"></i>
+                  <p>Квитанции на оплату</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-credit-card"></i>
+                  <p>Лицевые счета</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-key-fill"></i>
+                  <p>Квартиры</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-people-fill"></i>
+                  <p>Владельцы квартир</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'building:house_list' %}" class="nav-link">
+                  <i class="nav-icon bi bi-building"></i>
+                  <p>Дома</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-envelope"></i>
+                  <p>Сообщения</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-wrench"></i>
+                  <p>Заявки вызова мастера</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-speedometer2"></i>
+                  <p>Показания счетчиков</p>
+                </a>
+              </li>
+              <!-- Меню "Управление сайтом" -->
+              {% with website_pages='admin_home,admin_about,admin_services,admin_tariff,admin_contacts' %}
                 <li class="nav-item {% if request.resolver_match.url_name in website_pages %}menu-open{% endif %}">
-                    <a href="#" class="nav-link {% if request.resolver_match.url_name in website_pages %}active{% endif %}">
-                        <i class="nav-icon bi bi-display"></i>
-                        <p>Управление сайтом<i class="nav-arrow bi bi-chevron-right"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <li class="nav-item">
-                            <a href="{% url 'core:admin_home' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_home' %}active{% endif %}">
-                                <i class="nav-icon bi bi-circle"></i><p>Главная страница</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{% url 'core:admin_about' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_about' %}active{% endif %}">
-                                <i class="nav-icon bi bi-circle"></i><p>О нас</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{% url 'core:admin_services' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_services' %}active{% endif %}">
-                                <i class="nav-icon bi bi-circle"></i><p>Услуги</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{% url 'core:admin_contacts' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_contacts' %}active{% endif %}">
-                                <i class="nav-icon bi bi-circle"></i><p>Контакты</p>
-                            </a>
-                        </li>
-                    </ul>
+                  <a href="#"
+                     class="nav-link {% if request.resolver_match.url_name in website_pages %}active{% endif %}">
+                    <i class="nav-icon bi bi-display"></i>
+                    <p>
+                      Управление сайтом<i class="nav-arrow bi bi-chevron-right"></i>
+                    </p>
+                  </a>
+                  <ul class="nav nav-treeview">
+                    <li class="nav-item">
+                      <a href="{% url 'website:admin_home' %}"
+                         class="nav-link {% if request.resolver_match.url_name == 'admin_home' %}active{% endif %}">
+                        <i class="nav-icon bi bi-circle"></i>
+                        <p>Главная страница</p>
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a href="{% url 'website:admin_about' %}"
+                         class="nav-link {% if request.resolver_match.url_name == 'admin_about' %}active{% endif %}">
+                        <i class="nav-icon bi bi-circle"></i>
+                        <p>О нас</p>
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a href="{% url 'website:admin_services' %}"
+                         class="nav-link {% if request.resolver_match.url_name == 'admin_services' %}active{% endif %}">
+                        <i class="nav-icon bi bi-circle"></i>
+                        <p>Услуги</p>
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a href="{% url 'website:admin_contacts' %}"
+                         class="nav-link {% if request.resolver_match.url_name == 'admin_contacts' %}active{% endif %}">
+                        <i class="nav-icon bi bi-circle"></i>
+                        <p>Контакты</p>
+                      </a>
+                    </li>
+                  </ul>
                 </li>
-                {% endwith %}
-                <!-- Конец меню "Управление сайтом" -->
-
-                <!-- Меню "Настройки системы" -->
-                 <li class="nav-item">
+              {% endwith %}
+              <!-- Конец меню "Управление сайтом" -->
+              <!-- Меню "Настройки системы" -->
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-gear-wide-connected"></i>
+                  <p>
+                    Настройки системы<i class="nav-arrow bi bi-chevron-right"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+                  <li class="nav-item">
+                    <a href="{% url 'finance:manage_services' %}" class="nav-link">
+                      <i class="nav-icon bi bi-briefcase"></i>
+                      <p>Услуги</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{% url 'finance:tariff_list' %}" class="nav-link">
+                      <i class="nav-icon bi bi-currency-dollar"></i>
+                      <p>Тарифы</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{% url 'users:admin_roles' %}" class="nav-link">
+                      <i class="nav-icon bi bi-person-badge"></i>
+                      <p>Роли</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{% url 'users:user_list' %}" class="nav-link">
+                      <i class="nav-icon bi bi-person-plus"></i>
+                      <p>Пользователи</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
                     <a href="#" class="nav-link">
-                        <i class="nav-icon bi bi-gear-wide-connected"></i>
-                        <p>Настройки системы<i class="nav-arrow bi bi-chevron-right"></i></p>
+                      <i class="nav-icon bi bi-credit-card-2-front"></i>
+                      <p>Платежные реквизиты</p>
                     </a>
-                    <ul class="nav nav-treeview">
-                        <li class="nav-item">
-                            <a href="#" class="nav-link">
-                                <i class="nav-icon bi bi-briefcase"></i><p>Услуги</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="#" class="nav-link">
-                                <i class="nav-icon bi bi-currency-dollar"></i><p>Тарифы</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="#" class="nav-link">
-                                <i class="nav-icon bi bi-person-plus"></i><p>Пользователи</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="#" class="nav-link">
-                                <i class="nav-icon bi bi-credit-card-2-front"></i><p>Платежные реквизиты</p>
-                            </a>
-                        </li>
-                         <li class="nav-item">
-                            <a href="#" class="nav-link">
-                                <i class="nav-icon bi bi-card-list"></i><p>Статьи платежей</p>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-                <!-- Конец меню "Настройки системы" -->
+                  </li>
+                  <li class="nav-item">
+                    <a href="#" class="nav-link">
+                      <i class="nav-icon bi bi-card-list"></i>
+                      <p>Статьи платежей</p>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <!-- Конец меню "Настройки системы" -->
             </ul>
             <!--end::Sidebar Menu-->
-        </nav>
-    </div>
-    <!--end::Sidebar Wrapper-->
-</aside>
-<!--end::Sidebar-->
+          </nav>
+        </div>
+        <!--end::Sidebar Wrapper-->
+      </aside>
+      <!--end::Sidebar-->
       <!--begin::App Main-->
       <main class="app-main">
-          {% block content %}
+        {% block content %}
           <!-- Ваш контент страницы будет здесь -->
-          {% endblock %}
+        {% endblock content %}
       </main>
       <!--end::App Main-->
       <!--begin::Footer-->
       <footer class="app-footer">
         <!--begin::Copyright-->
-            Разработано <a href="https://avada-media.ua/">AVADA-MEDIA</a>. На базе системы управления <a href="https://avada-media.ua/moydom24/">"МойДом24"</a>.
-            Документация API доступна <a href="#">по ссылке</a>.
+        Разработано <a href="https://avada-media.ua/">AVADA-MEDIA</a>. На базе системы управления <a href="https://avada-media.ua/moydom24/">"МойДом24"</a>.
+        Документация API доступна <a href="#">по ссылке</a>.
         <!--end::Copyright-->
       </footer>
       <!--end::Footer-->
     </div>
     <!--end::App Wrapper-->
-
     <!--begin::Script-->
-
+    <!-- jQuery ДОЛЖЕН БЫТЬ ПЕРВЫМ, так как DataTables и AdminLTE от него зависят -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"
+            crossorigin="anonymous"></script>
     <!--begin::Third Party Plugin(OverlayScrollbars)-->
-    <script
-      src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es6.min.js"
-      crossorigin="anonymous"
-    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es6.min.js"
+            crossorigin="anonymous"></script>
     <!--end::Third Party Plugin(OverlayScrollbars)-->
     <!--begin::Required Plugin(popperjs for Bootstrap 5)-->
-    <script
-      src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
-      crossorigin="anonymous"
-    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+            crossorigin="anonymous"></script>
     <!--end::Required Plugin(popperjs for Bootstrap 5)-->
     <!--begin::Required Plugin(Bootstrap 5)-->
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"
-      crossorigin="anonymous"
-    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"
+            crossorigin="anonymous"></script>
     <!--end::Required Plugin(Bootstrap 5)-->
-
     <!--begin::Required Plugin(AdminLTE)-->
     <script src="{% static 'core/adminlte/js/adminlte.js' %}"></script>
     <!--end::Required Plugin(AdminLTE)-->
@@ -340,7 +454,7 @@
         scrollbarAutoHide: 'leave',
         scrollbarClickScroll: true,
       };
-      document.addEventListener('DOMContentLoaded', function () {
+      document.addEventListener('DOMContentLoaded', function() {
         const sidebarWrapper = document.querySelector(SELECTOR_SIDEBAR_WRAPPER);
         if (sidebarWrapper && typeof OverlayScrollbarsGlobal?.OverlayScrollbars !== 'undefined') {
           OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {
@@ -356,7 +470,7 @@
     <!--end::OverlayScrollbars Configure-->
     <!-- Инициализация TinyMCE -->
     <script>
-      document.addEventListener('DOMContentLoaded', function () {
+      document.addEventListener('DOMContentLoaded', function() {
         tinymce.init({
           selector: 'textarea.tinymce-editor',
           plugins: 'code table lists link image',
@@ -365,8 +479,8 @@
           menubar: false, // Убираем верхнее меню File, Edit и т.д.
 
           // Эта функция будет вызвана ПЕРЕД тем, как форма будет отправлена на сервер.
-          setup: function (editor) {
-            editor.on('init change', function () {
+          setup: function(editor) {
+            editor.on('init change', function() {
               editor.save(); // Сохраняем контент из редактора в оригинальное textarea
             });
           }
@@ -374,7 +488,8 @@
       });
     </script>
     <!--end::Script-->
-     {% block scripts %}{% endblock %}
+    {% block scripts %}
+    {% endblock scripts %}
   </body>
   <!--end::Body-->
 </html>

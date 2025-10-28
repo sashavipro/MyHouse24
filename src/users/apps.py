@@ -1,6 +1,10 @@
+"""src/users/apps.py."""
+
 from django.apps import AppConfig
 
 
 class UsersConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'src.users'
+    """Users Config."""
+
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "src.users"

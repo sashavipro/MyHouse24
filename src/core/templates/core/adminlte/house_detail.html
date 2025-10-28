@@ -1,0 +1,164 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% block title %}
+  {{ house.title }}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <!-- Левая часть: Заголовок -->
+        <div class="col-sm-6">
+          <h1>Дом {{ house.title }}</h1>
+        </div>
+        <!-- Правая часть: Хлебные крошки -->
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}"><i class="bi bi-house-door-fill"></i> Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'building:house_list' %}">Дома</a>
+            </li>
+            <li class="breadcrumb-item active">{{ house.title }}</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <!-- Кнопка "Редактировать дом" -->
+      <div class="d-flex justify-content-end mb-3">
+        <a href="{% url 'building:house_edit' house.pk %}"
+           class="btn btn-primary">Редактировать дом</a>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="row">
+            <!-- Левая колонка с информацией -->
+            <div class="col-md-4">
+              <table class="table table-bordered">
+                <tbody>
+                  <tr>
+                    <th class="th-info-label">Название</th>
+                    <td>{{ house.title }}</td>
+                  </tr>
+                  <tr>
+                    <th>Адрес</th>
+                    <td>{{ house.address }}</td>
+                  </tr>
+                  <tr>
+                    <th>Секций</th>
+                    <td>{{ house.sections.count }}</td>
+                  </tr>
+                  <tr>
+                    <th>Этажей</th>
+                    <td>{{ house.floors.count }}</td>
+                  </tr>
+                  <tr>
+                    <th>Пользователи</th>
+                    <td>
+                      {% for staff in house.housestaff_set.all %}
+                        {{ staff.role_in_house }}: {{ staff.user.get_full_name }}
+                        <br />
+                      {% empty %}
+                        <span class="text-muted">Не назначены</span>
+                      {% endfor %}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Правая колонка: Изображения -->
+            <div class="col-md-8">
+              <div class="row g-3">
+                <!-- Главное изображение -->
+                <div class="col-md-7">
+                  {% if house.image1 %}
+                    <a href="{{ house.image1.url }}"
+                       data-toggle="lightbox"
+                       data-gallery="house-gallery">
+                      <img src="{{ house.image1.url }}"
+                           class="img-fluid rounded house-img house-img-lg"
+                           alt="{{ house.title }}" />
+                    </a>
+                  {% else %}
+                    <div class="border rounded bg-light house-img-placeholder house-img-placeholder-lg">
+                      <i class="bi bi-image text-muted"></i>
+                    </div>
+                  {% endif %}
+                </div>
+                <!-- Маленькие изображения -->
+                <div class="col-md-5">
+                  <div class="row g-3">
+                    <div class="col-6">
+                      {% if house.image2 %}
+                        <a href="{{ house.image2.url }}"
+                           data-toggle="lightbox"
+                           data-gallery="house-gallery">
+                          <img src="{{ house.image2.url }}"
+                               class="img-fluid rounded house-img house-img-sm"
+                               alt="" />
+                        </a>
+                      {% else %}
+                        <div class="border rounded bg-light house-img-placeholder house-img-placeholder-sm">
+                          <i class="bi bi-image text-muted"></i>
+                        </div>
+                      {% endif %}
+                    </div>
+                    <div class="col-6">
+                      {% if house.image3 %}
+                        <a href="{{ house.image3.url }}"
+                           data-toggle="lightbox"
+                           data-gallery="house-gallery">
+                          <img src="{{ house.image3.url }}"
+                               class="img-fluid rounded house-img house-img-sm"
+                               alt="" />
+                        </a>
+                      {% else %}
+                        <div class="border rounded bg-light house-img-placeholder house-img-placeholder-sm">
+                          <i class="bi bi-image text-muted"></i>
+                        </div>
+                      {% endif %}
+                    </div>
+                    <div class="col-6">
+                      {% if house.image4 %}
+                        <a href="{{ house.image4.url }}"
+                           data-toggle="lightbox"
+                           data-gallery="house-gallery">
+                          <img src="{{ house.image4.url }}"
+                               class="img-fluid rounded house-img house-img-sm"
+                               alt="" />
+                        </a>
+                      {% else %}
+                        <div class="border rounded bg-light house-img-placeholder house-img-placeholder-sm">
+                          <i class="bi bi-image text-muted"></i>
+                        </div>
+                      {% endif %}
+                    </div>
+                    <div class="col-6">
+                      {% if house.image5 %}
+                        <a href="{{ house.image5.url }}"
+                           data-toggle="lightbox"
+                           data-gallery="house-gallery">
+                          <img src="{{ house.image5.url }}"
+                               class="img-fluid rounded house-img house-img-sm"
+                               alt="" />
+                        </a>
+                      {% else %}
+                        <div class="border rounded bg-light house-img-placeholder house-img-placeholder-sm">
+                          <i class="bi bi-image text-muted"></i>
+                        </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}

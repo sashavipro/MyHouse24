@@ -1,190 +1,293 @@
 {% extends 'core/adminlte/admin_layout.html' %}
+
 {% load static %}
 
-{% block title %}Редактирование страницы "Услуги"{% endblock %}
-
+{% block title %}
+  Редактирование услуг
+{% endblock title %}
 {% block content %}
-
-<!-- Content Header -->
-<div class="content-header">
+  <section class="content-header">
     <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6"><h1 class="m-0">Редактирование страницы</h1></div>
-            <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-end">
-                    <li class="breadcrumb-item"><a href="{% url 'core:admin_stats' %}">Главная</a></li>
-                    <li class="breadcrumb-item active">Редактирование страницы "Услуги"</li>
-                </ol>
-            </div>
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Редактирование услуг</h1>
         </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Услуги</li>
+          </ol>
+        </div>
+      </div>
     </div>
-</div>
-<!-- /.content-header -->
-
-<section class="content">
+  </section>
+  <section class="content">
     <div class="container-fluid">
-        <div class="card card-primary card-outline">
-            <div class="card-header">
-                <h3 class="card-title">Редактирование страницы "Услуги"</h3>
-            </div>
-            <div class="card-body">
-                <form action="{% url 'core:admin_services' %}" method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-
-                    <!-- БЛОКИ УСЛУГ -->
-                    <h3 class="page-header">Услуги</h3>
-                    {{ formset.management_form }}
-                    <div class="row" id="service-forms-container">
-                        {% for form in formset %}
-                        <div class="col-md-4 service-form-item mb-4" id="service-form-container-{{ forloop.counter0 }}">
-                            {{ form.id }}
-                            <h4 class="d-flex justify-content-between align-items-center">
-                                <span>Услуга {{ forloop.counter }}</span>
-                                {% if form.instance.pk %}
-                                    <div class="d-none">{{ form.DELETE }}</div>
-                                    <button type="button" class="btn btn-link text-danger p-0 delete-service-btn" title="Отметить для удаления">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                {% endif %}
-                            </h4>
-
-                            {% if form.instance.image %}
-                                <img src="{{ form.instance.image.url }}" alt="Превью" class="img-fluid rounded mb-3">
-                            {% endif %}
-
-                            <div class="mb-3">
-                                <label for="{{ form.image.id_for_label }}">Рекомендуемый размер: (650x300)</label>
-                                {{ form.image }}
-                                {{ form.image.errors }}
+      <div class="card card-primary card-outline card-tabs">
+        <div class="card-header p-0 pt-1 border-bottom-0">
+          <ul class="nav nav-tabs" id="services-tabs" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link active"
+                 id="services-tab-link"
+                 data-bs-toggle="tab"
+                 href="#services-tab-content"
+                 role="tab">Услуги</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link"
+                 id="units-tab-link"
+                 data-bs-toggle="tab"
+                 href="#units-tab-content"
+                 role="tab">Единицы измерения</a>
+            </li>
+          </ul>
+        </div>
+        <div class="card-body">
+          <div class="tab-content" id="services-tabs-content">
+            <!-- ВКЛАДКА УСЛУГИ -->
+            <div class="tab-pane fade show active"
+                 id="services-tab-content"
+                 role="tabpanel">
+              <form method="post" class="form-container">
+                {% csrf_token %}
+                {{ service_formset.management_form }}
+                <div class="row">
+                  <div class="col-md-8">
+                    <div id="service-forms-container">
+                      {% for form in service_formset %}
+                        <div class="service-form-row mb-3">
+                          {{ form.id }}
+                          <!-- === ИСПРАВЛЕНИЕ #1: Выравниваем поля === -->
+                          <div class="row align-items-end">
+                            <div class="col-md-7">
+                              <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                              {{ form.name }}
+                              {{ form.name.errors }}
                             </div>
-                            <div class="mb-3">
-                                <label for="{{ form.title.id_for_label }}">Название услуги</label>
-                                {{ form.title }}
-                                {{ form.title.errors }}
+                            <div class="col-md-4">
+                              <label for="{{ form.unit.id_for_label }}">{{ form.unit.label }}</label>
+                              {{ form.unit }}
+                              {{ form.unit.errors }}
                             </div>
-                            <div class="mb-3">
-                                <label for="{{ form.description.id_for_label }}">Описание услуги</label>
-                                {{ form.description }}
-                                {{ form.description.errors }}
+                            <div class="col-md-1">
+                              <!-- === ИСПРАВЛЕНИЕ #2: Кнопка удаления === -->
+                              {% if form.instance.pk %}
+                                {{ form.DELETE }}
+                                <button type="button"
+                                        class="btn btn-danger delete-btn"
+                                        title="Пометить на удаление">
+                                  <i class="bi bi-trash"></i>
+                                </button>
+                              {% endif %}
                             </div>
+                          </div>
+                          <div class="form-check mt-2">
+                            {{ form.show_in_counters }}
+                            <label class="form-check-label"
+                                   for="{{ form.show_in_counters.id_for_label }}">
+                              {{ form.show_in_counters.label }}
+                            </label>
+                          </div>
                         </div>
-                        {% endfor %}
+                      {% endfor %}
                     </div>
-
-
-                    <!-- Скрытый шаблон для новой формы -->
-                     <template id="empty-form-template">
-                         <div class="col-md-4 service-form-item mb-4" id="service-form-container-__prefix__">
-                             {{ formset.empty_form.id }}
-                             <h4 class="d-flex justify-content-between align-items-center">
-                                 <span class="new-form-title">Новая услуга</span>
-                                 <!-- У новых форм нет кнопки удаления -->
-                             </h4>
-                             <div class="mb-3">
-                                 <label for="id_{{ formset.prefix }}-__prefix__-image">Рекомендуемый размер: (650x300)</label>
-                                 {{ formset.empty_form.image }}
-                             </div>
-                             <div class="mb-3">
-                                 <label for="id_{{ formset.prefix }}-__prefix__-title">Название услуги</label>
-                                 {{ formset.empty_form.title }}
-                             </div>
-                             <div class="mb-3">
-                                 <label for="id_{{ formset.prefix }}-__prefix__-description">Описание услуги</label>
-                                 {{ formset.empty_form.description }}
-                             </div>
-                         </div>
-                     </template>
-
-
-
-                    <!-- НАСТРОЙКИ SEO -->
-                    <h3 class="page-header mt-4">Настройки SEO</h3>
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ seo_form.title.id_for_label }}">Title</label>
-                        {{ seo_form.title }}
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ seo_form.description.id_for_label }}">Description</label>
-                        {{ seo_form.description }}
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ seo_form.keywords.id_for_label }}">Keywords</label>
-                        {{ seo_form.keywords }}
-                    </div>
-
-                    <hr>
-                    <div class="text-center mt-4">
-                        <a href="{% url 'core:admin_services' %}" class="btn btn-secondary">Отменить</a>
-                        <button type="button" id="add-service-form-btn" class="btn btn-success">Добавить услугу</button>
-                        <button type="submit" class="btn btn-success">Сохранить</button>
-                    </div>
-                </form>
+                    <button type="button" id="add-service-btn" class="btn btn-primary mt-2">Добавить</button>
+                  </div>
+                </div>
+                <div class="card-footer bg-transparent text-end mt-3">
+                  <a href="{% url 'finance:manage_services' %}" class="btn btn-secondary">Отменить</a>
+                  <button type="submit" name="save_services" class="btn btn-success">Сохранить</button>
+                </div>
+              </form>
             </div>
+            <!-- ВКЛАДКА ЕДИНИЦЫ ИЗМЕРЕНИЯ -->
+            <div class="tab-pane fade" id="units-tab-content" role="tabpanel">
+              <form method="post" class="form-container">
+                {% csrf_token %}
+                {{ unit_formset.management_form }}
+                <div class="row">
+                  <div class="col-md-8">
+                    <div id="unit-forms-container">
+                      {% for form in unit_formset %}
+                        <div class="unit-form-row mb-2">
+                          <div class="input-group">
+                            {{ form.id }}
+                            <span class="input-group-text">{{ form.name.label }}</span>
+                            {{ form.name }}
+                            {% if form.instance.pk %}
+                              {{ form.DELETE }}
+                              <button type="button"
+                                      class="btn btn-danger delete-btn"
+                                      title="Пометить на удаление">
+                                <i class="bi bi-trash"></i>
+                              </button>
+                            {% endif %}
+                          </div>
+                          {{ form.name.errors }}
+                        </div>
+                      {% endfor %}
+                    </div>
+                    <button type="button" id="add-unit-btn" class="btn btn-primary mt-2">Добавить</button>
+                  </div>
+                </div>
+                <div class="card-footer bg-transparent text-end mt-3">
+                  <a href="{% url 'finance:manage_services' %}" class="btn btn-secondary">Отменить</a>
+                  <button type="submit" name="save_units" class="btn btn-success">Сохранить</button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
-</section>
-
-{% endblock %}
-
-
+  </section>
+{% endblock content %}
 {% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
- const formsContainer = document.getElementById('service-forms-container');
- const formsetPrefix = '{{ formset.prefix }}';
+  <style>
+    /* Скрываем стандартные чекбоксы DELETE */
+    input[type="checkbox"][name$="-DELETE"] {
+      display: none;
+    }
 
- // Функция для обработки кнопок удаления
- const initDeleteFunctionality = (container) => {
-     container.querySelectorAll('.delete-service-btn').forEach(button => {
-         button.addEventListener('click', function() {
-             const formItem = this.closest('.service-form-item');
-             const deleteCheckbox = formItem.querySelector('input[type=checkbox][name$="-DELETE"]');
-             if (deleteCheckbox) {
-                 deleteCheckbox.checked = !deleteCheckbox.checked;
-                 formItem.style.opacity = deleteCheckbox.checked ? '0.5' : '1';
-                 formItem.style.textDecoration = deleteCheckbox.checked ? 'line-through' : 'none';
-             }
-         });
-     });
- };
+    /* Стили для строк, помеченных на удаление */
+    .form-row-delete {
+      opacity: 0.6;
+      background-color: #f8d7da;
+      /* легкий красный фон */
+      border-radius: .25rem;
+    }
 
- // Инициализируем для существующих форм
- initDeleteFunctionality(formsContainer);
+    .form-row-delete label,
+    .form-row-delete input,
+    .form-row-delete select {
+      text-decoration: line-through;
+    }
 
- // Логика добавления новой формы
- document.getElementById('add-service-form-btn').addEventListener('click', function() {
-     const template = document.getElementById('empty-form-template');
-     const totalFormsInput = document.getElementById(`id_${formsetPrefix}-TOTAL_FORMS`);
-     let formIdx = parseInt(totalFormsInput.value);
+    .form-row-delete .btn.delete-btn {
+      background-color: #6c757d;
+      /* серая кнопка для "отмены" удаления */
+      border-color: #6c757d;
+    }
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
 
-     // Клонируем содержимое шаблона
-     const newFormNode = template.content.cloneNode(true).firstElementChild;
+      /**
+       * Универсальная функция для добавления новой формы в формсет.
+       * @param {string} containerSelector - Селектор контейнера, куда добавлять формы.
+       * @param {string} totalFormsSelector - Селектор поля TOTAL_FORMS.
+       * @param {string} emptyFormHtml - HTML-шаблон пустой формы.
+       */
+      function addForm(containerSelector, totalFormsSelector, emptyFormHtml) {
+        const container = document.querySelector(containerSelector);
+        const totalFormsInput = document.querySelector(totalFormsSelector);
+        if (!container || !totalFormsInput) return;
 
-     // Заменяем __prefix__ на реальный индекс
-     newFormNode.innerHTML = newFormNode.innerHTML.replace(/__prefix__/g, formIdx);
+        let formIdx = parseInt(totalFormsInput.value);
 
-     // Обновляем заголовок
-     newFormNode.querySelector('.new-form-title').textContent = `Новая услуга ${formIdx + 1}`;
+        // Заменяем префикс '__prefix__' на новый индекс
+        const newFormHtml = emptyFormHtml.replace(/__prefix__/g, formIdx);
 
-     formsContainer.appendChild(newFormNode);
-     totalFormsInput.value = formIdx + 1;
+        // Вставляем новую форму в конец контейнера
+        container.insertAdjacentHTML('beforeend', newFormHtml);
 
-     // Инициализируем TinyMCE для нового поля
-     const newTextareaId = `id_${formsetPrefix}-${formIdx}-description`;
+        // Увеличиваем счетчик форм
+        totalFormsInput.value = formIdx + 1;
+      }
 
-     tinymce.init({
-         selector: `#${newTextareaId}`,
-         plugins: 'code table lists link',
-         toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | indent outdent | bullist numlist',
-         height: 250,
-         menubar: false,
-         setup: function (editor) {
-             editor.on('init change', function () {
-                 editor.save();
-             });
-         }
-     });
- });
-});
-</script>
-{% endblock %}
+      /**
+       * Инициализирует кастомные кнопки удаления для формсета.
+       * @param {string} containerSelector - Селектор общего контейнера для форм.
+       */
+      function initializeDeleteButtons(containerSelector) {
+        const container = document.querySelector(containerSelector);
+        if (!container) return;
+
+        container.addEventListener('click', function(event) {
+          const deleteButton = event.target.closest('.delete-btn');
+          if (!deleteButton) return; // Клик был не по кнопке
+
+          // Находим родительский блок для всей строки формы
+          const formRow = deleteButton.closest('.service-form-row, .unit-form-row');
+          if (!formRow) return;
+
+          // Находим скрытый чекбокс DELETE внутри этого блока
+          const deleteCheckbox = formRow.querySelector('input[type="checkbox"][name$="-DELETE"]');
+          if (!deleteCheckbox) return;
+
+          // Инвертируем состояние чекбокса
+          deleteCheckbox.checked = !deleteCheckbox.checked;
+
+          // Добавляем/убираем класс для визуального эффекта
+          formRow.classList.toggle('form-row-delete', deleteCheckbox.checked);
+        });
+      }
+
+      // --- Инициализация для обеих вкладок ---
+      initializeDeleteButtons('#services-tab-content');
+      initializeDeleteButtons('#units-tab-content');
+
+
+      // --- Логика для добавления УСЛУГ ---
+      const addServiceBtn = document.getElementById('add-service-btn');
+      if (addServiceBtn) {
+        // Шаблон для новой формы услуги, полностью соответствующий верстке
+        const serviceFormTemplate = `
+            <div class="service-form-row mb-3">
+                {{ service_formset.empty_form.id|safe }}
+                <div class="row align-items-end">
+                    <div class="col-md-7">
+                        <label for="id_services-__prefix__-name">Услуга</label>
+                        {{ service_formset.empty_form.name|safe }}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="id_services-__prefix__-unit">Ед. изм.</label>
+                        {{ service_formset.empty_form.unit|safe }}
+                    </div>
+                    <div class="col-md-1">
+                        <!-- Новые формы не имеют кнопки удаления, т.к. их можно просто не сохранять -->
+                    </div>
+                </div>
+                <div class="form-check mt-2">
+                    {{ service_formset.empty_form.show_in_counters|safe }}
+                    <label class="form-check-label" for="id_services-__prefix__-show_in_counters">Показывать в счетчиках</label>
+                </div>
+            </div>
+        `;
+
+        addServiceBtn.addEventListener('click', function() {
+          addForm(
+            '#service-forms-container',
+            '#id_services-TOTAL_FORMS',
+            serviceFormTemplate
+          );
+        });
+      }
+
+      // --- Логика для добавления ЕДИНИЦ ИЗМЕРЕНИЯ ---
+      const addUnitBtn = document.getElementById('add-unit-btn');
+      if (addUnitBtn) {
+        // Шаблон для новой формы единицы измерения
+        const unitFormTemplate = `
+            <div class="unit-form-row mb-2">
+                <div class="input-group">
+                    {{ unit_formset.empty_form.id|safe }}
+                    <span class="input-group-text">Ед. изм.</span>
+                    {{ unit_formset.empty_form.name|safe }}
+                </div>
+            </div>
+        `;
+
+        addUnitBtn.addEventListener('click', function() {
+          addForm(
+            '#unit-forms-container',
+            '#id_units-TOTAL_FORMS',
+            unitFormTemplate
+          );
+        });
+      }
+    });
+  </script>
+{% endblock scripts %}

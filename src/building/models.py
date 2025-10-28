@@ -1,113 +1,162 @@
-from django.db import models
+"""src/building/models.py."""
 
-from src import users, finance
-from src.finance.models import Tariff
-from src.users.models import User
+from django.db import models
 
 
 class House(models.Model):
-    """Модель дома/ЖК"""
+    """House."""
+
     title = models.CharField(max_length=255, verbose_name="Название")
     address = models.TextField(verbose_name="Адрес")
-    image1 = models.ImageField(upload_to='houses/', null=True, blank=True, verbose_name="Изображение 1")
-    image2 = models.ImageField(upload_to='houses/', null=True, blank=True, verbose_name="Изображение 2")
-    image3 = models.ImageField(upload_to='houses/', null=True, blank=True, verbose_name="Изображение 3")
-    image4 = models.ImageField(upload_to='houses/', null=True, blank=True, verbose_name="Изображение 4")
-    image5 = models.ImageField(upload_to='houses/', null=True, blank=True, verbose_name="Изображение 5")
-    staff = models.ManyToManyField('users.User', through='HouseStaff', verbose_name="Обслуживающий персонал")
+    image1 = models.ImageField(
+        upload_to="houses/", null=True, blank=True, verbose_name="Image 1"
+    )
+    image2 = models.ImageField(
+        upload_to="houses/", null=True, blank=True, verbose_name="Image 2"
+    )
+    image3 = models.ImageField(
+        upload_to="houses/", null=True, blank=True, verbose_name="Image 3"
+    )
+    image4 = models.ImageField(
+        upload_to="houses/", null=True, blank=True, verbose_name="Image 4"
+    )
+    image5 = models.ImageField(
+        upload_to="houses/", null=True, blank=True, verbose_name="Image 5"
+    )
+    staff = models.ManyToManyField(
+        "users.User", through="HouseStaff", verbose_name="Service staff"
+    )
 
     class Meta:
-        verbose_name = "Дом"
-        verbose_name_plural = "Дома"
+        """Meta class."""
+
+        verbose_name = "House"
+        verbose_name_plural = "Houses"
 
     def __str__(self):
+        """__str__."""
         return self.title
 
 
 class HouseStaff(models.Model):
-    """Промежуточная модель для связи Дома и Пользователей-сотрудников"""
-    house = models.ForeignKey(House, on_delete=models.CASCADE, verbose_name="Дом")
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, verbose_name="Сотрудник")
-    role_in_house = models.CharField(max_length=100, verbose_name="Должность в доме")
+    """House staff."""
+
+    house = models.ForeignKey(House, on_delete=models.CASCADE, verbose_name="House")
+    user = models.ForeignKey(
+        "users.User", on_delete=models.CASCADE, verbose_name="Employee"
+    )
+    role_in_house = models.CharField(max_length=100, verbose_name="Role in house")
 
     class Meta:
-        verbose_name = "Сотрудник дома"
-        verbose_name_plural = "Сотрудники домов"
-        unique_together = ('house', 'user')
+        """Meta class."""
+
+        verbose_name = "House staff"
+        verbose_name_plural = "House staff"
+        unique_together = ("house", "user")
+
+    def __str__(self):
+        """__str__."""
+        # Используем f-строку для форматирования
+        return f"{self.user.get_full_name()} в доме '{self.house.title}'"
 
 
 class Section(models.Model):
-    """Секция/подъезд в доме"""
-    name = models.CharField(max_length=100, verbose_name="Название секции")
-    house = models.ForeignKey(House, on_delete=models.CASCADE, related_name="sections", verbose_name="Дом")
+    """Section."""
+
+    name = models.CharField(max_length=100, verbose_name="Name")
+    house = models.ForeignKey(
+        House, on_delete=models.CASCADE, related_name="sections", verbose_name="House"
+    )
 
     class Meta:
-        verbose_name = "Секция"
-        verbose_name_plural = "Секции"
+        """Meta class."""
+
+        verbose_name = "Section"
+        verbose_name_plural = "Sections"
 
     def __str__(self):
+        """__str__."""
         return f"{self.name} ({self.house.title})"
 
 
 class Floor(models.Model):
-    """Этаж в секции"""
-    name = models.CharField(max_length=100, verbose_name="Номер этажа")
-    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="floors", verbose_name="Секция")
+    """Floor."""
+
+    name = models.CharField(max_length=100, verbose_name="Number floor")
+    house = models.ForeignKey(
+        House, on_delete=models.CASCADE, related_name="floors", verbose_name="house"
+    )
 
     class Meta:
-        verbose_name = "Этаж"
-        verbose_name_plural = "Этажи"
+        """Meta class."""
+
+        verbose_name = "Floor"
+        verbose_name_plural = "Floors"
 
     def __str__(self):
+        """__str__."""
         return f"Этаж {self.name} ({self.section.name})"
 
 
 class PersonalAccount(models.Model):
-    """Лицевой счет, привязанный к квартире"""
-    number = models.CharField(max_length=20, unique=True, verbose_name="Номер лицевого счета")
-    status = models.CharField(max_length=20, default='active', verbose_name="Статус")
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Баланс")
+    """Personal account."""
+
+    number = models.CharField(
+        max_length=20, unique=True, verbose_name="Personal account number"
+    )
+    status = models.CharField(max_length=20, default="active", verbose_name="Status")
+    balance = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.00, verbose_name="Balance"
+    )
 
     class Meta:
-        verbose_name = "Лицевой счет"
-        verbose_name_plural = "Лицевые счета"
+        """Meta class."""
+
+        verbose_name = "Personal account"
+        verbose_name_plural = "Personals accounts"
 
     def __str__(self):
+        """__str__."""
         return self.number
 
 
 class Apartment(models.Model):
-    """Модель квартиры"""
-    number = models.CharField(max_length=10, verbose_name="Номер квартиры")
-    area = models.FloatField(verbose_name="Площадь (кв.м.)")
+    """Apartment."""
 
-    house = models.ForeignKey(House, on_delete=models.CASCADE, verbose_name="Дом")
-    section = models.ForeignKey(Section, on_delete=models.CASCADE, verbose_name="Секция")
-    floor = models.ForeignKey(Floor, on_delete=models.CASCADE, verbose_name="Этаж")
+    number = models.CharField(max_length=10, verbose_name="Number")
+    area = models.FloatField(verbose_name="Area")
+
+    house = models.ForeignKey(House, on_delete=models.CASCADE, verbose_name="House")
+    section = models.ForeignKey(
+        Section, on_delete=models.CASCADE, verbose_name="Section"
+    )
+    floor = models.ForeignKey(Floor, on_delete=models.CASCADE, verbose_name="Floor")
 
     owner = models.ForeignKey(
-        'users.User',
+        "users.User",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="apartments",
-        verbose_name="Владелец"
+        verbose_name="Owner",
     )
     tariff = models.ForeignKey(
-        'finance.Tariff',
-        on_delete=models.PROTECT,
-        verbose_name="Тариф"
+        "finance.Tariff", on_delete=models.PROTECT, verbose_name="Tariff"
     )
     personal_account = models.OneToOneField(
-        PersonalAccount,
-        on_delete=models.CASCADE,
-        verbose_name="Лицевой счет"
+        PersonalAccount, on_delete=models.CASCADE, verbose_name="Personal account"
     )
 
     class Meta:
-        verbose_name = "Квартира"
-        verbose_name_plural = "Квартиры"
-        unique_together = ('house', 'number')  # Номер квартиры должен быть уникальным в пределах дома
+        """Meta class."""
+
+        verbose_name = "Apartment"
+        verbose_name_plural = "Apartments"
+        unique_together = (
+            "house",
+            "number",
+        )
 
     def __str__(self):
-        return f"Кв. {self.number}, {self.house.title}"
+        """__str__."""
+        return f"Apartment {self.number}, {self.house.title}"

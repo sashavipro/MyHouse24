@@ -1,0 +1,136 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  {{ page_title }}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>{{ page_title }}</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}"><i class="bi bi-house-door-fill"></i> Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'users:user_list' %}">Пользователи</a>
+            </li>
+            {% if user_obj %}
+              <li class="breadcrumb-item">
+                <a href="{% url 'users:user_detail' user_obj.pk %}">{{ user_obj.get_full_name }}</a>
+              </li>
+            {% endif %}
+            <li class="breadcrumb-item active">{{ page_title }}</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card card-primary card-outline">
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="row">
+              <!-- Левая колонка -->
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">{{ form.first_name.label }}</label>
+                  {{ form.first_name }}{{ form.first_name.errors }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">{{ form.last_name.label }}</label>
+                  {{ form.last_name }}{{ form.last_name.errors }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">{{ form.phone.label }}</label>
+                  {{ form.phone }}{{ form.phone.errors }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">{{ form.role.label }}</label>
+                  {{ form.role }}{{ form.role.errors }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">{{ form.status.label }}</label>
+                  {{ form.status }}{{ form.status.errors }}
+                </div>
+              </div>
+              <!-- Правая колонка -->
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">{{ form.email.label }}</label>
+                  {{ form.email }}{{ form.email.errors }}
+                </div>
+                <div class="mb-3">
+                  <label for="id_password">Пароль</label>
+                  <div class="input-group">
+                    {{ form.password }}
+                    <button class="btn btn-outline-secondary" type="button" id="generate-pass">Сгенерировать</button>
+                    <button class="btn btn-outline-secondary" type="button" id="toggle-pass">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  </div>
+                  {% if form.instance.pk %}<div class="form-text">Оставьте поля пустыми, если не хотите менять пароль.</div>{% endif %}
+                  <div class="text-danger small mt-1">{{ form.password.errors }}</div>
+                </div>
+                <div class="mb-3">
+                  <label for="id_password2">Подтверждение пароля</label>
+                  {{ form.password2 }}
+                  <div class="text-danger small mt-1">{{ form.password2.errors }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-footer text-end bg-transparent border-0 px-0">
+              <a href="{% url 'users:user_list' %}" class="btn btn-secondary">Отменить</a>
+              <button type="submit" class="btn btn-success">Сохранить</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // === ЛОГИКА ДЛЯ ГЕНЕРАЦИИ И ПОКАЗА ПАРОЛЯ (только для страницы создания) ===
+      const passField = document.getElementById('id_password') || document.getElementById('id_new_password1');
+      const passField2 = document.getElementById('id_password2') || document.getElementById('id_new_password2');
+      const generateBtn = document.getElementById('generate-pass');
+      const toggleBtn = document.getElementById('toggle-pass');
+
+      if (generateBtn && passField && passField2) {
+        generateBtn.addEventListener('click', function() {
+          const length = 12;
+          const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+          let newPass = "";
+          for (let i = 0, n = charset.length; i < length; ++i) {
+            newPass += charset.charAt(Math.floor(Math.random() * n));
+          }
+          passField.value = newPass;
+          passField2.value = newPass;
+        });
+      }
+
+      if (toggleBtn && passField) {
+        toggleBtn.addEventListener('click', function() {
+          const type = passField.getAttribute('type') === 'password' ? 'text' : 'password';
+          passField.setAttribute('type', type);
+          if (passField2) {
+            passField2.setAttribute('type', type);
+          }
+          const icon = this.querySelector('i');
+          icon.classList.toggle('bi-eye');
+          icon.classList.toggle('bi-eye-slash');
+        });
+      }
+    });
+  </script>
+{% endblock scripts %}

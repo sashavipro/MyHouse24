@@ -1,0 +1,458 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  {% if house %}
+    Редактирование дома
+  {% else %}
+    Новый дом
+  {% endif %}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>
+            {% if house %}
+              {{ house.title }}
+            {% else %}
+              Новый дом
+            {% endif %}
+          </h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}"><i class="bi bi-house-door-fill"></i> Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'building:house_list' %}">Дома</a>
+            </li>
+            {% if house %}
+              {# Если мы редактируем существующий дом #}
+              <li class="breadcrumb-item">
+                <a href="{% url 'building:house_detail' house.pk %}">Дом {{ house.title }}</a>
+              </li>
+              <li class="breadcrumb-item active">Редактирование</li>
+            {% else %}
+              {# Если мы создаем новый дом #}
+              <li class="breadcrumb-item active">Новый дом</li>
+            {% endif %}
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    {# djlint:off H025 #}
+    <div class="container-fluid">
+      {# djlint:on H025 #}
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="card card-primary card-outline">
+          <div class="card-body">
+            <div class="row">
+              <!-- Левая колонка: Название, Адрес, Файлы -->
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <label for="{{ form.title.id_for_label }}">Название</label>
+                  {{ form.title }}
+                </div>
+                <div class="mb-3">
+                  <label for="{{ form.address.id_for_label }}">Адрес</label>
+                  {{ form.address }}
+                </div>
+                <div class="mb-2">
+                  <label for="{{ form.image1.id_for_label }}">
+                    Изображение #1. Размер:
+                    (522x350)
+                  </label>
+                  {{ form.image1 }}
+                </div>
+                <div class="mb-2">
+                  <label for="{{ form.image2.id_for_label }}">
+                    Изображение #2. Размер:
+                    (248x160)
+                  </label>
+                  {{ form.image2 }}
+                </div>
+                <div class="mb-2">
+                  <label for="{{ form.image3.id_for_label }}">
+                    Изображение #3. Размер:
+                    (248x160)
+                  </label>
+                  {{ form.image3 }}
+                </div>
+                <div class="mb-2">
+                  <label for="{{ form.image4.id_for_label }}">
+                    Изображение #4. Размер:
+                    (248x160)
+                  </label>
+                  {{ form.image4 }}
+                </div>
+                <div class="mb-2">
+                  <label for="{{ form.image5.id_for_label }}">
+                    Изображение #5. Размер:
+                    (248x160)
+                  </label>
+                  {{ form.image5 }}
+                </div>
+              </div>
+              {# djlint:off H025 #}
+              <!-- Правая колонка: Превью изображений -->
+              <div class="col-md-8">
+                <div class="row">
+                  <div class="col-md-7 mb-3">
+                    <div class="image-preview-container image-preview-lg"
+                         data-for="{{ form.image1.id_for_label }}">
+                      {% if form.instance.image1 %}
+                        <img src="{{ form.instance.image1.url }}" alt="Превью 1" />
+                      {% else %}
+                        <i class="bi bi-image icon-placeholder"></i>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="row">
+                      <div class="col-6 mb-3">
+                        <div class="image-preview-container image-preview-sm"
+                             data-for="{{ form.image2.id_for_label }}">
+                          {% if form.instance.image2 %}
+                            <img src="{{ form.instance.image2.url }}" alt="Превью 2" />
+                          {% else %}
+                            <i class="bi bi-image icon-placeholder"></i>
+                          {% endif %}
+                        </div>
+                      </div>
+                      <div class="col-6 mb-3">
+                        <div class="image-preview-container image-preview-sm"
+                             data-for="{{ form.image3.id_for_label }}">
+                          {% if form.instance.image3 %}
+                            <img src="{{ form.instance.image3.url }}" alt="Превью 3" />
+                          {% else %}
+                            <i class="bi bi-image icon-placeholder"></i>
+                          {% endif %}
+                        </div>
+                      </div>
+                      <div class="col-6 mb-3">
+                        <div class="image-preview-container image-preview-sm"
+                             data-for="{{ form.image4.id_for_label }}">
+                          {% if form.instance.image4 %}
+                            <img src="{{ form.instance.image4.url }}" alt="Превью 4" />
+                          {% else %}
+                            <i class="bi bi-image icon-placeholder"></i>
+                          {% endif %}
+                        </div>
+                      </div>
+                      <div class="col-6 mb-3">
+                        <div class="image-preview-container image-preview-sm"
+                             data-for="{{ form.image5.id_for_label }}">
+                          {% if form.instance.image5 %}
+                            <img src="{{ form.instance.image5.url }}" alt="Превью 5" />
+                          {% else %}
+                            <i class="bi bi-image icon-placeholder"></i>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Табы -->
+              <div class="card card-primary card-outline card-tabs mt-4">
+                <div class="card-header p-0 pt-1 border-bottom-0">
+                  <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                      <a class="nav-link active" data-bs-toggle="tab" href="#sections-tab">Секции</a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link" data-bs-toggle="tab" href="#floors-tab">Этажи</a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link" data-bs-toggle="tab" href="#staff-tab">Пользователи</a>
+                    </li>
+                  </ul>
+                </div>
+                <div class="card-body">
+                  <div class="tab-content">
+                    <!-- ВКЛАДКА СЕКЦИИ -->
+                    <div class="tab-pane fade show active" id="sections-tab" role="tabpanel">
+                      {{ section_formset.management_form }}
+                      <div id="sections-forms-container">
+                        {% for form in section_formset %}
+                          <div class="input-group mb-2 dynamic-form-row">
+                            {{ form.id }}
+                            <span class="input-group-text">Название</span>
+                            {{ form.name }}
+                            {% if form.instance.pk %}<div class="d-none">{{ form.DELETE }}</div>{% endif %}
+                            <button type="button" class="btn btn-danger delete-form-btn">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        {% endfor %}
+                      </div>
+                      <button type="button"
+                              class="btn btn-success add-form-btn mt-2"
+                              data-formset-prefix="sections">Добавить</button>
+                    </div>
+                    <!-- ВКЛАДКА ЭТАЖИ -->
+                    <div class="tab-pane fade" id="floors-tab" role="tabpanel">
+                      {{ floor_formset.management_form }}
+                      <div id="floors-forms-container">
+                        {% for form in floor_formset %}
+                          <div class="input-group mb-2 dynamic-form-row">
+                            {{ form.id }}
+                            <span class="input-group-text">Название</span>
+                            {{ form.name }}
+                            {% if form.instance.pk %}<div class="d-none">{{ form.DELETE }}</div>{% endif %}
+                            <button type="button" class="btn btn-danger delete-form-btn">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        {% endfor %}
+                      </div>
+                      <button type="button"
+                              class="btn btn-success add-form-btn mt-2"
+                              data-formset-prefix="floors">Добавить</button>
+                    </div>
+                    <!-- ВКЛАДКА ПОЛЬЗОВАТЕЛИ -->
+                    <div class="tab-pane fade" id="staff-tab" role="tabpanel">
+                      {{ staff_formset.management_form }}
+                      <div id="staff-forms-container">
+                        {% for form in staff_formset %}
+                          <div class="row gx-2 mb-2 dynamic-form-row align-items-center">
+                            {{ form.id }}
+                            <div class="col">
+                              <label>ФИО</label>
+                              {{ form.user }}
+                            </div>
+                            <div class="col">
+                              <label>Роль</label>
+                              {{ form.role_in_house }}
+                            </div>
+                            <div class="col-auto">
+                              {% if form.instance.pk %}<div class="d-none">{{ form.DELETE }}</div>{% endif %}
+                              <button type="button" class="btn btn-danger delete-form-btn">
+                                <i class="bi bi-trash"></i>
+                              </button>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                      <button type="button"
+                              class="btn btn-success add-form-btn mt-2"
+                              data-formset-prefix="staff">Добавить</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card-footer text-end">
+              <a href="{% url 'building:house_list' %}" class="btn btn-secondary">Отменить</a>
+              <button type="submit" class="btn btn-success">Сохранить</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <!-- Шаблоны для динамических форм -->
+      <template id="sections-empty-form-template">
+        <div class="input-group mb-2 dynamic-form-row">
+          {{ section_formset.empty_form.id }}
+          <span class="input-group-text">Название</span>
+          {{ section_formset.empty_form.name }}
+          <button type="button" class="btn btn-danger delete-form-btn">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </template>
+      <template id="floors-empty-form-template">
+        <div class="input-group mb-2 dynamic-form-row">
+          {{ floor_formset.empty_form.id }}
+          <span class="input-group-text">Название</span>
+          {{ floor_formset.empty_form.name }}
+          <button type="button" class="btn btn-danger delete-form-btn">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </template>
+      <template id="staff-empty-form-template">
+        <div class="row gx-2 mb-2 dynamic-form-row align-items-center">
+          {{ staff_formset.empty_form.id }}
+          <div class="col">
+            <label>ФИО</label>
+            {{ staff_formset.empty_form.user }}
+          </div>
+          <div class="col">
+            <label>Роль</label>
+            {{ staff_formset.empty_form.role_in_house }}
+          </div>
+          <div class="col-auto">
+            <button type="button" class="btn btn-danger delete-form-btn">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </template>
+    </section>
+  {% endblock content %}
+  {% block scripts %}
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+
+        // --- ЛОГИКА ДЛЯ ПРЕВЬЮ ИЗОБРАЖЕНИЙ ---
+        document.querySelectorAll('.image-preview-container').forEach(container => {
+          const inputId = container.dataset.for;
+          const inputEl = document.getElementById(inputId);
+
+          if (inputEl) {
+            container.addEventListener('click', () => inputEl.click());
+
+            inputEl.addEventListener('change', function(event) {
+              const file = event.target.files[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                  container.innerHTML = `<img src="${e.target.result}" alt="Превью" />`;
+                }
+                reader.readAsDataURL(file);
+              }
+            });
+          }
+        });
+
+
+        // --- ЛОГИКА ДЛЯ ДИНАМИЧЕСКИХ ФОРМ (СЕКЦИИ, ЭТАЖИ, ПОЛЬЗОВАТЕЛИ) ---
+
+        // Контейнер для форм сотрудников, если он есть
+        const staffFormsContainer = document.getElementById('staff-forms-container');
+
+        // Функция для подстановки роли по выбранному пользователю
+        const initUserRoleFetching = (container) => {
+          container.querySelectorAll('.user-select').forEach(selectElement => {
+            // Удаляем старый обработчик, чтобы избежать дублирования при повторной инициализации
+            const newSelect = selectElement.cloneNode(true);
+            selectElement.parentNode.replaceChild(newSelect, selectElement);
+
+            newSelect.addEventListener('change', function() {
+              const userId = this.value;
+              const row = this.closest('.dynamic-form-row');
+              const roleInput = row.querySelector('.role-input');
+              if (userId) {
+                fetch(`{% url 'users:get_user_role_api' %}?user_id=${userId}`)
+                  .then(response => response.json())
+                  .then(data => {
+                    if (data.role_name) {
+                      roleInput.value = data.role_name;
+                    }
+                  })
+                  .catch(error => console.error('Error fetching role:', error));
+              } else {
+                roleInput.value = '';
+              }
+            });
+          });
+        };
+
+        // Функция для обновления доступных опций в выпадающих списках пользователей
+        const updateAvailableUsers = () => {
+          if (!staffFormsContainer) return; // Если вкладки нет, ничего не делаем
+
+          const allSelects = staffFormsContainer.querySelectorAll('.user-select');
+          const selectedUserIds = new Set();
+
+          // Собираем ID всех уже выбранных пользователей
+          allSelects.forEach(select => {
+            if (select.value) {
+              selectedUserIds.add(select.value);
+            }
+          });
+
+          // Обновляем опции в каждом списке
+          allSelects.forEach(select => {
+            select.querySelectorAll('option').forEach(option => {
+              if (option.value) { // Пропускаем пустую опцию "Выберите..."
+                // Отключаем опцию, если она выбрана в ДРУГОМ списке,
+                // но оставляем активной в ТЕКУЩЕМ.
+                option.disabled = selectedUserIds.has(option.value) && select.value !== option.value;
+              }
+            });
+          });
+        };
+
+        // Универсальная функция для добавления новой формы
+        const addForm = (button) => {
+          const prefix = button.dataset.formsetPrefix;
+          const container = document.getElementById(`${prefix}-forms-container`);
+          const totalFormsInput = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+          if (!container || !totalFormsInput) return;
+
+          let formIdx = parseInt(totalFormsInput.value);
+          const template = document.getElementById(`${prefix}-empty-form-template`);
+
+          const newFormNode = template.content.cloneNode(true).firstElementChild;
+          newFormNode.innerHTML = newFormNode.innerHTML.replace(/__prefix__/g, formIdx);
+
+          if (prefix === 'sections' || prefix === 'floors') {
+            const input = newFormNode.querySelector('input[type="text"]');
+            const placeholderText = (prefix === 'sections') ? 'Секция' : 'Этаж';
+            input.value = `${placeholderText} ${formIdx + 1}`;
+          }
+
+          container.appendChild(newFormNode);
+          totalFormsInput.value = formIdx + 1;
+
+          // Если добавили форму сотрудника, инициализируем для нее JS-логику
+          if (prefix === 'staff') {
+            initUserRoleFetching(newFormNode);
+            updateAvailableUsers();
+          }
+        };
+
+        // Универсальная функция для удаления формы
+        const deleteForm = (button) => {
+          const row = button.closest('.dynamic-form-row');
+          const deleteCheckbox = row.querySelector('input[type=checkbox][name$="-DELETE"]');
+          if (deleteCheckbox) {
+            // Если это существующая форма, отмечаем на удаление и скрываем
+            deleteCheckbox.checked = true;
+            row.style.display = 'none';
+          } else {
+            // Если это новая форма, просто удаляем из DOM
+            row.remove();
+          }
+          // В любом случае обновляем доступных пользователей
+          setTimeout(updateAvailableUsers, 10);
+        };
+
+        // --- ГЛАВНЫЕ ОБРАБОТЧИКИ СОБЫТИЙ ---
+
+        // Единый обработчик для кнопок "Добавить" и "Удалить"
+        document.querySelector('body').addEventListener('click', function(event) {
+          const addBtn = event.target.closest('.add-form-btn');
+          if (addBtn) {
+            addForm(addBtn);
+          }
+
+          const deleteBtn = event.target.closest('.delete-form-btn');
+          if (deleteBtn) {
+            deleteForm(deleteBtn);
+          }
+        });
+
+        // Обработчик для отслеживания изменений в списках пользователей
+        if (staffFormsContainer) {
+          staffFormsContainer.addEventListener('change', function(event) {
+            if (event.target.classList.contains('user-select')) {
+              updateAvailableUsers();
+            }
+          });
+
+          // Первоначальная инициализация при загрузке страницы
+          initUserRoleFetching(staffFormsContainer);
+          updateAvailableUsers();
+        }
+      });
+    </script>
+  {% endblock scripts %}

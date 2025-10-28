@@ -1,118 +1,128 @@
 {% extends 'core/adminlte/admin_layout.html' %}
+
 {% load static %}
 
-
-
 {% block content %}
-    <!-- Content Header -->
-<div class="content-header">
+  <!-- Content Header -->
+  <div class="content-header">
     <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6"><h1 class="m-0">Редактирование страницы</h1></div>
-            <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-end">
-                    <li class="breadcrumb-item"><a href="{% url 'core:admin_stats' %}">Главная</a></li>
-                    <li class="breadcrumb-item active">Редактирование страницы "Контакты"</li>
-                </ol>
-            </div>
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1 class="m-0">Редактирование страницы</h1>
         </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}"><i class="bi bi-house-door-fill"></i> Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Редактирование страницы "Контакты"</li>
+          </ol>
+        </div>
+      </div>
     </div>
-</div>
-<!-- /.content-header -->
-<section class="content">
+  </div>
+  <!-- /.content-header -->
+  <section class="content">
     <div class="container-fluid">
-        <div class="card card-primary card-outline">
-            <div class="card-header">
-                <h3 class="card-title">Редактирование страницы "Контакты"</h3>
-            </div>
+      <div class="card card-primary card-outline">
+        <div class="card-header">
+          <h3 class="card-title">Редактирование страницы "Контакты"</h3>
+        </div>
+        <div class="card-body">
+          <form action="{% url 'website:admin_contacts' %}"
+                method="post"
+                enctype="multipart/form-data">
+            {% csrf_token %}
             <div class="card-body">
-                <form action="{% url 'core:admin_contacts' %}" method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <div class="card-body">
-                        <h4>Контактная информация</h4>
-                        <hr>
-                        <div class="row">
-                            <!-- Левая колонка -->
-                            <div class="col-md-8">
-                                <div class="mb-3">
-                                    <label class="form-label" for="{{ form.title.id_for_label }}">Заголовок</label>
-                                    {{ form.title }}
-                                    {{ form.title.errors }}
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label" for="{{ form.description.id_for_label }}">Краткий текст</label>
-                                    {{ form.description }}
-                                    {{ form.description.errors }}
-                                </div>
-                                 <div class="mb-3">
-                                    <label class="form-label" for="{{ form.url.id_for_label }}">Официальный сайт компании</label>
-                                    {{ form.url }}
-                                    {{ form.url.errors }}
-                                </div>
-                            </div>
-                            <!-- Правая колонка -->
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label" for="{{ form.fullname.id_for_label }}">ФИО</label>
-                                    {{ form.fullname }}
-                                    {{ form.fullname.errors }}
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label" for="{{ form.location.id_for_label }}">Локация</label>
-                                    {{ form.location }}
-                                    {{ form.location.errors }}
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label" for="{{ form.address.id_for_label }}">Адрес</label>
-                                    {{ form.address }}
-                                    {{ form.address.errors }}
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label" for="{{ form.phone.id_for_label }}">Телефон</label>
-                                    {{ form.phone }}
-                                    {{ form.phone.errors }}
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label" for="{{ form.email.id_for_label }}">E-mail</label>
-                                    {{ form.email }}
-                                    {{ form.email.errors }}
-                                </div>
-                            </div>
-                        </div>
-                        <h4 class="mt-4">Карта</h4>
-                        <hr>
-                        <div class="mb-3">
-                            <label class="form-label" for="{{ form.map.id_for_label }}">Код карты</label>
-                            {{ form.map }}
-                            {{ form.map.errors }}
-                        </div>
-
-                        <!-- НАСТРОЙКИ SEO -->
-                        <h3 class="page-header mt-4">Настройки SEO</h3>
-                        <div class="mb-3">
-                            <label class="form-label" for="{{ seo_form.title.id_for_label }}">Title</label>
-                            {{ seo_form.title }}
-                            {{ seo_form.title.errors }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="{{ seo_form.description.id_for_label }}">Description</label>
-                            {{ seo_form.description }}
-                            {{ seo_form.description.errors }}
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="{{ seo_form.keywords.id_for_label }}">Keywords</label>
-                            {{ seo_form.keywords }}
-                            {{ seo_form.keywords.errors }}
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="card-footer text-center">
-                        <a href="{% url 'core:admin_contacts' %}" class="btn btn-secondary">Отменить</a>
-                        <button type="submit" class="btn btn-success">Сохранить</button>
-                    </div>
-                </form>
+              <h4>Контактная информация</h4>
+              <hr />
+              <div class="row">
+                <!-- Левая колонка -->
+                <div class="col-md-8">
+                  <div class="mb-3">
+                    <label class="form-label" for="{{ form.title.id_for_label }}">Заголовок</label>
+                    {{ form.title }}
+                    {{ form.title.errors }}
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="{{ form.description.id_for_label }}">
+                      Краткий
+                      текст
+                    </label>
+                    {{ form.description }}
+                    {{ form.description.errors }}
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="{{ form.url.id_for_label }}">
+                      Официальный сайт
+                      компании
+                    </label>
+                    {{ form.url }}
+                    {{ form.url.errors }}
+                  </div>
+                </div>
+                <!-- Правая колонка -->
+                <div class="col-md-4">
+                  <div class="mb-3">
+                    <label class="form-label" for="{{ form.fullname.id_for_label }}">ФИО</label>
+                    {{ form.fullname }}
+                    {{ form.fullname.errors }}
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="{{ form.location.id_for_label }}">Локация</label>
+                    {{ form.location }}
+                    {{ form.location.errors }}
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="{{ form.address.id_for_label }}">Адрес</label>
+                    {{ form.address }}
+                    {{ form.address.errors }}
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="{{ form.phone.id_for_label }}">Телефон</label>
+                    {{ form.phone }}
+                    {{ form.phone.errors }}
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="{{ form.email.id_for_label }}">E-mail</label>
+                    {{ form.email }}
+                    {{ form.email.errors }}
+                  </div>
+                </div>
+              </div>
+              <h4 class="mt-4">Карта</h4>
+              <hr />
+              <div class="mb-3">
+                <label class="form-label" for="{{ form.map.id_for_label }}">Код карты</label>
+                {{ form.map }}
+                {{ form.map.errors }}
+              </div>
+              <!-- НАСТРОЙКИ SEO -->
+              <h3 class="page-header mt-4">Настройки SEO</h3>
+              <div class="mb-3">
+                <label class="form-label" for="{{ seo_form.title.id_for_label }}">Title</label>
+                {{ seo_form.title }}
+                {{ seo_form.title.errors }}
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="{{ seo_form.description.id_for_label }}">Description</label>
+                {{ seo_form.description }}
+                {{ seo_form.description.errors }}
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="{{ seo_form.keywords.id_for_label }}">Keywords</label>
+                {{ seo_form.keywords }}
+                {{ seo_form.keywords.errors }}
+              </div>
             </div>
+            <hr />
+            <div class="card-footer text-center">
+              <a href="{% url 'website:admin_contacts' %}" class="btn btn-secondary">Отменить</a>
+              <button type="submit" class="btn btn-success">Сохранить</button>
+            </div>
+          </form>
         </div>
+      </div>
     </div>
-</section>
-{% endblock %}
+  </section>
+{% endblock content %}

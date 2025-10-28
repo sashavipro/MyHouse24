@@ -1,187 +1,317 @@
+"""src/finance/models.py."""
+
 from django.db import models
 from django.utils import timezone
 
-from src import building
-
-
 
 class Unit(models.Model):
-    """Единицы измерения (кВт, м3, и т.д.)"""
-    name = models.CharField(max_length=50, unique=True, verbose_name="Название (м3)")
+    """Unit."""
+
+    name = models.CharField(max_length=50, unique=True, verbose_name="name")
 
     class Meta:
-        verbose_name = "Единица измерения"
-        verbose_name_plural = "Единицы измерения"
+        """Meta class."""
+
+        verbose_name = "Unit"
+        verbose_name_plural = "Units"
 
     def __str__(self):
+        """__str__."""
         return self.name
 
 
 class Currency(models.Model):
-    """Валюты (грн, долл, и т.д.)"""
-    name = models.CharField(max_length=50, unique=True, verbose_name="Название (грн)")
+    """Currency."""
+
+    name = models.CharField(max_length=50, unique=True, verbose_name="Currency")
 
     class Meta:
-        verbose_name = "Валюта"
-        verbose_name_plural = "Валюты"
+        """Meta class."""
+
+        verbose_name = "Currency"
+        verbose_name_plural = "Currency"
 
     def __str__(self):
+        """__str__."""
         return self.name
 
 
 class Service(models.Model):
-    """Справочник услуг (Холодная вода, Электроэнергия)"""
-    name = models.CharField(max_length=255, unique=True, verbose_name="Название услуги")
-    show_in_counters = models.BooleanField(default=True, verbose_name="Показывать в счетчиках")
-    unit = models.ForeignKey(Unit, on_delete=models.PROTECT, verbose_name="Ед. измерения")
+    """Service."""
+
+    name = models.CharField(max_length=255, unique=True, verbose_name="Service")
+    show_in_counters = models.BooleanField(
+        default=True, verbose_name="Show in counters"
+    )
+    unit = models.ForeignKey(Unit, on_delete=models.PROTECT, verbose_name="Unit")
 
     class Meta:
-        verbose_name = "Услуга"
-        verbose_name_plural = "Услуги"
+        """Meta class."""
+
+        verbose_name = "Service"
+        verbose_name_plural = "Service"
 
     def __str__(self):
+        """__str__."""
         return self.name
 
 
 class Tariff(models.Model):
-    """Тариф, который является набором услуг с ценами"""
-    name = models.CharField(max_length=255, verbose_name="Название тарифа")
-    description = models.TextField(blank=True, verbose_name="Описание")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
-    services = models.ManyToManyField(Service, through='TariffService', verbose_name="Услуги")
+    """Tariff."""
+
+    name = models.CharField(max_length=255, verbose_name="Tariff")
+    description = models.TextField(blank=True, verbose_name="description")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="created_at")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="updated_at")
+    services = models.ManyToManyField(
+        Service, through="TariffService", verbose_name="Service"
+    )
 
     class Meta:
-        verbose_name = "Тариф"
-        verbose_name_plural = "Тарифы"
+        """Meta class."""
+
+        verbose_name = "Tariff"
+        verbose_name_plural = "Tariffs"
 
     def __str__(self):
+        """__str__."""
         return self.name
 
 
 class TariffService(models.Model):
-    """Промежуточная модель для связи Тарифа и Услуги с указанием цены"""
-    tariff = models.ForeignKey(Tariff, on_delete=models.CASCADE, verbose_name="Тариф")
-    service = models.ForeignKey(Service, on_delete=models.CASCADE, verbose_name="Услуга")
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")
-    currency = models.ForeignKey(Currency, on_delete=models.PROTECT, verbose_name="Валюта")
+    """TariffService."""
+
+    tariff = models.ForeignKey(Tariff, on_delete=models.CASCADE, verbose_name="Tariff")
+    service = models.ForeignKey(
+        Service, on_delete=models.CASCADE, verbose_name="Service"
+    )
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="price")
+    currency = models.ForeignKey(
+        Currency, on_delete=models.PROTECT, verbose_name="currency"
+    )
 
     class Meta:
-        verbose_name = "Услуга в тарифе"
-        verbose_name_plural = "Услуги в тарифах"
-        unique_together = ('tariff', 'service')  # Услуга может быть в тарифе только один раз
+        """Meta class."""
+
+        verbose_name = "Service included in the tariff"
+        verbose_name_plural = "Service included in the tariffs"
+        unique_together = (
+            "tariff",
+            "service",
+        )
 
     def __str__(self):
+        """__str__."""
         return f"{self.service.name} в {self.tariff.name}"
 
 
 class Counter(models.Model):
-    """Физический прибор-счетчик в квартире"""
-    serial_number = models.CharField(max_length=100, unique=True, verbose_name="Серийный номер")
-    apartment = models.ForeignKey('building.Apartment', on_delete=models.CASCADE, related_name="counters", verbose_name="Квартира")
-    service = models.ForeignKey(Service, on_delete=models.PROTECT, verbose_name="Услуга (что измеряет)")
-    is_active = models.BooleanField(default=True, verbose_name="Активен")
+    """Counter."""
+
+    serial_number = models.CharField(
+        max_length=100, unique=True, verbose_name="Serial Number"
+    )
+    apartment = models.ForeignKey(
+        "building.Apartment",
+        on_delete=models.CASCADE,
+        related_name="counters",
+        verbose_name="Apartment",
+    )
+    service = models.ForeignKey(
+        Service, on_delete=models.PROTECT, verbose_name="Service"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="is active")
 
     class Meta:
-        verbose_name = "Счетчик"
-        verbose_name_plural = "Счетчики"
+        """Meta class."""
+
+        verbose_name = "Counter"
+        verbose_name_plural = "Counters"
 
     def __str__(self):
+        """__str__."""
         return f"{self.service.name} ({self.serial_number}) в {self.apartment}"
 
 
 class CounterReading(models.Model):
-    """История показаний для каждого счетчика"""
-    STATUS_CHOICES = (
-        ('new', 'Новое'),
-        ('considered', 'Учтено'),
-        ('zero', 'Нулевое'),
+    """CounterReading."""
+
+    class CounterStatus(models.TextChoices):
+        """Counter status."""
+
+        NEW = "new", "Новое"
+        CONSIDERED = "considered", "Учтено"
+        ZERO = "zero", "Нулевое"
+
+    counter = models.ForeignKey(
+        Counter,
+        on_delete=models.CASCADE,
+        related_name="readings",
+        verbose_name="Counter",
     )
-    counter = models.ForeignKey(Counter, on_delete=models.CASCADE, related_name="readings", verbose_name="Счетчик")
-    date = models.DateField(verbose_name="Дата снятия")
-    value = models.DecimalField(max_digits=12, decimal_places=3, verbose_name="Показание")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new', verbose_name="Статус")
+    date = models.DateField(verbose_name="Date of removal")
+    value = models.DecimalField(
+        max_digits=12, decimal_places=3, verbose_name="Indication"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=CounterStatus.choices,
+        default=CounterStatus.NEW,
+        verbose_name="status",
+    )
 
     class Meta:
-        verbose_name = "Показание счетчика"
-        verbose_name_plural = "Показания счетчиков"
-        ordering = ['-date']
+        """Meta class."""
+
+        verbose_name = "Meter reading"
+        verbose_name_plural = "Meter reading"
+        ordering = ["-date"]
 
     def __str__(self):
-        return f"Показание {self.value} от {self.date}"
+        """__str__."""
+        return f"Indication {self.value} от {self.date}"
 
 
 class Receipt(models.Model):
-    """Квитанция на оплату за определенный период"""
-    STATUS_CHOICES = (
-        ('unpaid', 'Не оплачено'),
-        ('partially_paid', 'Частично оплачено'),
-        ('paid', 'Оплачено'),
-    )
-    apartment = models.ForeignKey('building.Apartment', on_delete=models.PROTECT, related_name="receipts", verbose_name="Квартира")
-    month = models.PositiveIntegerField(verbose_name="Месяц (число)")
-    year = models.PositiveIntegerField(verbose_name="Год")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='unpaid', verbose_name="Статус оплаты")
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Итоговая сумма")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    """Receipt."""
 
-    services = models.ManyToManyField(Service, through='ReceiptItem', verbose_name="Услуги в квитанции")
+    class ReceiptStatus(models.TextChoices):
+        """Receipt status."""
+
+        UNPAID = "unpaid", "He оплачено"
+        PARTIALLY_PAID = "partially_paid", "Частично оплачено"
+        PAID = "paid", "Оплачено"
+
+    apartment = models.ForeignKey(
+        "building.Apartment",
+        on_delete=models.PROTECT,
+        related_name="receipts",
+        verbose_name="apartment",
+    )
+    month = models.PositiveIntegerField(verbose_name="month")
+    year = models.PositiveIntegerField(verbose_name="year")
+    status = models.CharField(
+        max_length=20,
+        choices=ReceiptStatus.choices,
+        default=ReceiptStatus.UNPAID,
+        verbose_name="status",
+    )
+    total_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, verbose_name="total amount"
+    )
+    created_at = models.DateField(auto_now_add=True, verbose_name="created_at")
+
+    services = models.ManyToManyField(
+        Service, through="ReceiptItem", verbose_name="services"
+    )
 
     class Meta:
-        verbose_name = "Квитанция"
-        verbose_name_plural = "Квитанции"
-        unique_together = ('apartment', 'month', 'year')
+        """Meta class."""
+
+        verbose_name = "Receipt"
+        verbose_name_plural = "Receipts"
+        unique_together = ("apartment", "month", "year")
 
     def __str__(self):
+        """__str__."""
         return f"Квитанция для {self.apartment} за {self.month}.{self.year}"
 
 
 class ReceiptItem(models.Model):
-    """Строка в квитанции - начисление по конкретной услуге"""
-    receipt = models.ForeignKey(Receipt, on_delete=models.CASCADE, verbose_name="Квитанция")
-    service = models.ForeignKey(Service, on_delete=models.PROTECT, verbose_name="Услуга")
-    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Сумма начисления")
-    consumption = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True,
-                                      verbose_name="Потребление")
-    price_per_unit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
-                                         verbose_name="Цена за ед.")
+    """A line item within a receipt, detailing a specific service."""
+
+    receipt = models.ForeignKey(
+        Receipt, on_delete=models.CASCADE, verbose_name="Receipt"
+    )
+    service = models.ForeignKey(
+        Service, on_delete=models.PROTECT, verbose_name="Service"
+    )
+    amount = models.DecimalField(
+        max_digits=10, decimal_places=2, verbose_name="Amount charged"
+    )
+    consumption = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        verbose_name="consumption",
+    )
+    price_per_unit = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="price per unit.",
+    )
 
     class Meta:
-        verbose_name = "Строка квитанции"
-        verbose_name_plural = "Строки квитанций"
-        unique_together = ('receipt', 'service')
+        """Meta class."""
+
+        verbose_name = "Receipt line"
+        verbose_name_plural = "Receipts line"
+        unique_together = ("receipt", "service")
+
+    def __str__(self):
+        """Return a string representation of the receipt item."""
+        # E501: Line too long - перенесено на новую строку
+        return (
+            f"{self.service.name}: {self.amount} in receipt " f"№{self.receipt.number}"
+        )
 
 
 class Article(models.Model):
-    """Справочник статей приходов/расходов"""
-    TYPE_CHOICES = (
-        ('income', 'Приход'),
-        ('expense', 'Расход'),
+    """An article for income or expense tracking."""
+
+    class ArticleType(models.TextChoices):
+        """Article type."""
+
+        INCOME = "income", "Приход"
+        EXPENSE = "expense", "Расход"
+
+    name = models.CharField(max_length=255, verbose_name="name")
+    type = models.CharField(
+        max_length=10, choices=ArticleType.choices, verbose_name="type"
     )
-    name = models.CharField(max_length=255, verbose_name="Название статьи")
-    type = models.CharField(max_length=10, choices=TYPE_CHOICES, verbose_name="Тип")
 
     class Meta:
-        verbose_name = "Статья прихода/расхода"
-        verbose_name_plural = "Статьи приходов/расходов"
+        """Meta class."""
+
+        verbose_name = "Revenue/expense item"
+        verbose_name_plural = "Revenue/expense item"
 
     def __str__(self):
+        """Return the name of the article."""
         return self.name
 
 
 class CashBox(models.Model):
-    """Запись о движении средств (транзакция)"""
-    personal_account = models.ForeignKey('building.PersonalAccount', on_delete=models.PROTECT, verbose_name="Лицевой счет")
-    article = models.ForeignKey(Article, on_delete=models.PROTECT, verbose_name="Статья")
-    receipt = models.ForeignKey(Receipt, on_delete=models.SET_NULL, null=True, blank=True,
-                                verbose_name="Квитанция (если оплата)")
-    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Сумма")
-    date = models.DateTimeField(default=timezone.now, verbose_name="Дата транзакции")
-    comment = models.TextField(blank=True, verbose_name="Комментарий")
+    """CashBox."""
+
+    personal_account = models.ForeignKey(
+        "building.PersonalAccount",
+        on_delete=models.PROTECT,
+        verbose_name="personal account",
+    )
+    article = models.ForeignKey(
+        Article, on_delete=models.PROTECT, verbose_name="Article"
+    )
+    receipt = models.ForeignKey(
+        Receipt,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="receipt",
+    )
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="amount")
+    date = models.DateTimeField(default=timezone.now, verbose_name="Transaction date")
+    comment = models.TextField(blank=True, verbose_name="comment")
 
     class Meta:
-        verbose_name = "Транзакция по кассе"
-        verbose_name_plural = "Транзакции по кассе"
+        """Meta class."""
+
+        verbose_name = "Cash transaction"
+        verbose_name_plural = "Cash transaction"
 
     def __str__(self):
-        return f"{self.article.get_type_display()} на {self.amount} по счету {self.personal_account}"
+        """Return a string representation of the receipt item."""
+        return f"{self.service.name}: {self.amount} " f"in receipt №{self.receipt.id}"

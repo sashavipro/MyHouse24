@@ -1,0 +1,389 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Пользователи
+{% endblock title %}
+{% block content %}
+  {% csrf_token %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Пользователи</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Пользователи</li>
+          </ol>
+        </div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-sm-12 text-end">
+          <a href="{% url 'users:user_add' %}" class="btn btn-success">Создать пользователя</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="d-flex justify-content-end p-2">
+          <button type="button" class="btn btn-outline-secondary" id="reset-filter-btn">Очистить</button>
+        </div>
+        <div class="table-responsive">
+          <table id="users-table" class="table table-hover users-table-custom">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Пользователь</th>
+                <th>Роль</th>
+                <th>Телефон</th>
+                <th>Email (логин)</th>
+                <th>Статус</th>
+                <th class="th-info-label"></th>
+              </tr>
+              <tr class="filter-row">
+                <td></td>
+                <td>
+                  <input type="text"
+                         id="full_name_filter"
+                         class="form-control form-control-sm" />
+                </td>
+                <td>
+                  <select id="role_filter" class="form-select form-select-sm">
+                    <option value=""></option>
+                    {% for role in all_roles %}<option value="{{ role.id }}">{{ role.name }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <input type="text" id="phone_filter" class="form-control form-control-sm" />
+                </td>
+                <td>
+                  <input type="text" id="email_filter" class="form-control form-control-sm" />
+                </td>
+                <td>
+                  <select id="status_filter" class="form-select form-select-sm">
+                    <option value=""></option>
+                    {% for value, label in all_statuses %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td></td>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Динамически заполняется через DataTables -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  <style>
+    /* Убираем ВСЕ иконки сортировки и элементы управления */
+    table.dataTable thead>tr>th.sorting::before,
+    table.dataTable thead>tr>th.sorting::after,
+    table.dataTable thead>tr>th.sorting_asc::before,
+    table.dataTable thead>tr>th.sorting_asc::after,
+    table.dataTable thead>tr>th.sorting_desc::before,
+    table.dataTable thead>tr>th.sorting_desc::after,
+    table.dataTable thead>tr>th::before,
+    table.dataTable thead>tr>th::after,
+    table.dataTable thead .dt-column-order,
+    span.dt-column-order {
+      content: "" !important;
+      display: none !important;
+      visibility: hidden !important;
+    }
+
+    /* Убираем padding справа от заголовков */
+    table.dataTable thead>tr>th,
+    table.dataTable thead>tr>th.dt-orderable-none,
+    table.dataTable thead>tr>th.dt-orderable-asc,
+    table.dataTable thead>tr>th.dt-orderable-desc {
+      padding-right: 12px !important;
+    }
+
+    /* Убираем курсор указатель с заголовков */
+    table.dataTable thead>tr>th {
+      cursor: default !important;
+    }
+
+    /* Стиль для кликабельных строк */
+    #users-table tbody tr {
+      cursor: pointer;
+    }
+
+    #users-table tbody a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    #users-table tbody a:hover {
+      text-decoration: underline;
+      color: #0d6efd;
+    }
+
+    .users-table-custom {
+      width: 100%;
+    }
+  </style>
+  <!-- DataTables -->
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Получение CSRF токена
+      function getCSRFToken() {
+        const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (tokenInput) return tokenInput.value;
+
+        const cookieValue = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('csrftoken='));
+        if (cookieValue) return cookieValue.split('=')[1];
+
+        return null;
+      }
+
+      const csrfToken = getCSRFToken();
+
+      if (!csrfToken) {
+        console.error('CSRF token not found!');
+        alert('Ошибка: CSRF токен не найден. Обновите страницу.');
+      }
+
+      const userDetailUrlTemplate = "{% url 'users:user_detail' 0 %}";
+      const userEditUrlTemplate = "{% url 'users:user_edit' 0 %}";
+      const userDeleteUrl = "/api/v1/users/delete";
+
+      const table = new DataTable('#users-table', {
+        processing: true,
+        serverSide: true,
+        pagingType: 'simple_numbers',
+        ajax: {
+          url: "/api/v1/users/list",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          data: function(d) {
+            d.full_name = document.getElementById('full_name_filter').value;
+            d.role = document.getElementById('role_filter').value;
+            d.phone = document.getElementById('phone_filter').value;
+            d.email = document.getElementById('email_filter').value;
+            d.status = document.getElementById('status_filter').value;
+          }
+        },
+        columns: [{
+          data: 'pk',
+          orderable: false
+        }, {
+          data: 'full_name',
+          orderable: false
+        }, {
+          data: 'role',
+          orderable: false
+        }, {
+          data: 'phone',
+          orderable: false
+        }, {
+          data: 'email',
+          orderable: false
+        }, {
+          data: 'status',
+          orderable: false,
+          render: function(data) {
+            if (data === 'active') return '<span class="badge bg-success">Активен</span>';
+            if (data === 'new') return '<span class="badge bg-warning">Новый</span>';
+            if (data === 'inactive') return '<span class="badge bg-danger">Отключен</span>';
+            return data;
+          }
+        }, {
+          data: 'pk',
+          orderable: false,
+          className: 'text-end',
+          render: function(data, type, row) {
+            const editUrl = userEditUrlTemplate.replace('0', data);
+            return `
+                <a href="#" class="btn btn-sm btn-secondary resend-invite-btn" title="Отправить приглашение" data-user-id="${data}">
+                  <i class="bi bi-arrow-repeat"></i>
+                </a>
+                <a href="${editUrl}" class="btn btn-sm btn-primary edit-user-link" title="Редактировать">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <button type="button" class="btn btn-sm btn-danger delete-user-btn" title="Удалить" data-user-id="${data}" data-user-name="${row.full_name}">
+                    <i class="bi bi-trash"></i>
+                </button>`;
+          }
+        }],
+        order: [
+          [0, 'asc']
+        ],
+        language: {
+          "processing": "Подождите...",
+          "info": "Количество пользователей: _TOTAL_",
+          "infoEmpty": "Количество пользователей: 0",
+          "zeroRecords": "Записи отсутствуют.",
+          "emptyTable": "В таблице отсутствуют данные",
+          "paginate": {
+            "previous": "‹",
+            "next": "›"
+          }
+        },
+        searching: false,
+        dom: '<"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+      });
+
+      // Логика фильтров
+      const filterInputs = document.querySelectorAll('.filter-row input, .filter-row select');
+      let debounceTimer;
+      const reloadTable = () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          table.ajax.reload();
+        }, 500);
+      };
+      filterInputs.forEach(input => {
+        if (input.tagName === 'SELECT') {
+          input.addEventListener('change', () => table.ajax.reload());
+        } else {
+          input.addEventListener('keyup', reloadTable);
+        }
+      });
+
+      document.getElementById('reset-filter-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        filterInputs.forEach(input => {
+          input.value = '';
+        });
+        table.ajax.reload();
+      });
+
+      // Обработчик кликов
+      document.querySelector('#users-table tbody').addEventListener('click', function(event) {
+        console.log('Click detected on:', event.target);
+
+        const deleteButton = event.target.closest('.delete-user-btn');
+        const editLink = event.target.closest('.edit-user-link');
+        const resendInvite = event.target.closest('.resend-invite-btn');
+
+        // Кнопка повторной отправки приглашения
+        if (resendInvite) {
+          event.preventDefault();
+          event.stopPropagation();
+          console.log('Resend invite clicked');
+          alert('Функция отправки приглашения в разработке');
+          return;
+        }
+
+        // Ссылка редактирования
+        if (editLink) {
+          console.log('Edit link clicked');
+          event.stopPropagation();
+          return;
+        }
+
+        // Кнопка удаления
+        if (deleteButton) {
+          console.log('Delete button clicked!');
+          event.preventDefault();
+          event.stopPropagation();
+
+          const userId = deleteButton.dataset.userId;
+          const userName = deleteButton.dataset.userName;
+
+          console.log('User ID:', userId);
+          console.log('User Name:', userName);
+
+          if (!confirm(`Вы уверены, что хотите удалить пользователя "${userName}"?`)) {
+            console.log('User cancelled deletion');
+            return;
+          }
+
+          if (!csrfToken) {
+            alert('Ошибка: CSRF токен не найден. Обновите страницу.');
+            return;
+          }
+
+          console.log('Sending delete request...');
+
+          const formData = new FormData();
+          formData.append('user_id', userId);
+
+          fetch(userDeleteUrl, {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': csrfToken,
+                'Accept': 'application/json'
+              },
+              body: formData
+            })
+            .then(res => {
+              console.log('Response status:', res.status);
+              return res.text().then(text => {
+                console.log('Response body:', text);
+                try {
+                  const data = JSON.parse(text);
+                  return {
+                    ok: res.ok,
+                    status: res.status,
+                    data: data
+                  };
+                } catch (e) {
+                  console.error('JSON parse error:', e);
+                  return {
+                    ok: res.ok,
+                    status: res.status,
+                    data: null,
+                    error: text
+                  };
+                }
+              });
+            })
+            .then(result => {
+              console.log('Processing result:', result);
+
+              if (!result.ok) {
+                throw new Error(`Сервер вернул ошибку ${result.status}: ${result.error || JSON.stringify(result.data)}`);
+              }
+
+              if (result.data && result.data.status === 'success') {
+                console.log('Success!');
+                alert(result.data.message);
+                table.ajax.reload(null, false);
+              } else {
+                console.error('Unexpected response:', result.data);
+                alert('Ошибка: ' + (result.data?.message || 'Неизвестная ошибка'));
+              }
+            })
+            .catch((error) => {
+              console.error('Error during deletion:', error);
+              alert('Произошла ошибка при удалении:\n\n' + error.message);
+            });
+          return;
+        }
+
+        // Клик по строке
+        const row = event.target.closest('tr');
+        if (row && !row.classList.contains('filter-row')) {
+          const rowData = table.row(row).data();
+          if (rowData && rowData.pk) {
+            console.log('Row clicked, navigating to:', rowData.pk);
+            window.location.href = userDetailUrlTemplate.replace('0', rowData.pk);
+          }
+        }
+      });
+
+      console.log('Script initialization complete');
+    });
+  </script>
+{% endblock scripts %}

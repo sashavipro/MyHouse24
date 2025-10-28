@@ -1,9 +1,10 @@
-"""
-URL configuration for Config project.
+"""URL configuration for Config project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
+
+Examples
+--------
 Function views
     1. Add an import:  from my_app import views
     2. Add a URL to urlpatterns:  path('', views.home, name='home')
@@ -13,20 +14,24 @@ Class-based views
 Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+
 """
-from django.contrib import admin
-from django.urls import path, include
+
 from django.conf import settings
 from django.conf.urls.static import static
-from django.conf.urls.i18n import i18n_patterns
+from django.urls import include
+from django.urls import path
+from .api import api
 
 urlpatterns = [
-                  path('', include('src.core.urls')),
-              ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    path("api/v1/", api.urls),
+    path("", include("src.core.urls")),
+    path("", include("src.website.urls")),
+    path("", include("src.building.urls")),
+    path("", include("src.users.urls")),
+    path("", include("src.finance.urls")),
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
-urlpatterns += i18n_patterns(
-    path('', include('src.core.urls')),
-)
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

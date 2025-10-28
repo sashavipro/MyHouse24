@@ -1,134 +1,197 @@
+"""src/users/models.py."""
+
 import uuid
-from django.db import models
+
 from django.contrib.auth.models import AbstractUser
-
-from src import building
-
+from django.db import models
 
 
 class Role(models.Model):
-    """
-    Модель Ролей. Определяет, что может делать пользователь в системе.
-    Например: "Директор", "Бухгалтер", "Владелец квартиры".
-    """
-    name = models.CharField(max_length=100, unique=True, verbose_name="Название роли")
+    """Role."""
 
-    # Здесь можно добавить поля с правами доступа, как на вашем макете
-    has_statistics = models.BooleanField(default=False, verbose_name="Доступ к статистике")
-    has_cashbox = models.BooleanField(default=False, verbose_name="Доступ к кассе")
-    has_receipt = models.BooleanField(default=False, verbose_name="Доступ к квитанции")
-    has_personal_account = models.BooleanField(default=False, verbose_name="Доступ к лицевому счету")
-    has_apartment = models.BooleanField(default=False, verbose_name="Доступ к квартире")
-    has_owner = models.BooleanField(default=False, verbose_name="Доступ к владельцу")
-    has_house = models.BooleanField(default=False, verbose_name="Доступ к домам")
-    has_messege = models.BooleanField(default=False, verbose_name="Доступ к сообщениям")
-    has_ticket = models.BooleanField(default=False, verbose_name="Доступ к заявкам")
-    has_counters = models.BooleanField(default=False, verbose_name="Доступ к счетчику")
-    has_management = models.BooleanField(default=False, verbose_name="Доступ к управлению сайтом")
-    has_service = models.BooleanField(default=False, verbose_name="Доступ к услуге")
-    has_tariff = models.BooleanField(default=False, verbose_name="Доступ к тарифу")
-    has_role = models.BooleanField(default=False, verbose_name="Доступ к роле")
-    has_user = models.BooleanField(default=False, verbose_name="Доступ к пользователю")
-    has_payment_details = models.BooleanField(default=False, verbose_name="Доступ к платежным реквизитам")
+    name = models.CharField(max_length=100, unique=True, verbose_name="Name role")
+    has_statistics = models.BooleanField(
+        default=False, verbose_name="Access to statistics"
+    )
+    has_cashbox = models.BooleanField(default=False, verbose_name="Access to cashbox")
+    has_receipt = models.BooleanField(default=False, verbose_name="Access to receipt")
+    has_personal_account = models.BooleanField(
+        default=False, verbose_name="Access to personal account"
+    )
+    has_apartment = models.BooleanField(
+        default=False, verbose_name="Access to apartment"
+    )
+    has_owner = models.BooleanField(default=False, verbose_name="Access to owner")
+    has_house = models.BooleanField(default=False, verbose_name="Access to house")
+    has_message = models.BooleanField(default=False, verbose_name="Access to message")
+    has_ticket = models.BooleanField(default=False, verbose_name="Access to ticket")
+    has_counters = models.BooleanField(default=False, verbose_name="Access to counters")
+    has_management = models.BooleanField(
+        default=False, verbose_name="Access to management site"
+    )
+    has_service = models.BooleanField(default=False, verbose_name="Access to service")
+    has_tariff = models.BooleanField(default=False, verbose_name="Access to tariff")
+    has_role = models.BooleanField(default=False, verbose_name="Access to role")
+    has_user = models.BooleanField(default=False, verbose_name="Access to user")
+    has_payment_details = models.BooleanField(
+        default=False, verbose_name="Access to payment details"
+    )
 
     class Meta:
-        verbose_name = "Роль"
-        verbose_name_plural = "Роли"
+        """Meta class."""
+
+        verbose_name = "Role"
+        verbose_name_plural = "Roles"
 
     def __str__(self):
+        """__str__."""
         return self.name
 
 
 class User(AbstractUser):
-    """
-    Кастомная модель Пользователя. Расширяет стандартную модель Django.
-    """
-    USER_TYPE_CHOICES = (
-        ('employee', 'Сотрудник'),
-        ('owner', 'Владелец'),
-    )
-    USER_STATUS_CHOICES = (
-        ('active', 'Активен'),
-        ('inactive', 'Отключен'),
-        ('new', 'Новый'),
-    )
+    """User."""
 
-    middle_name = models.CharField(max_length=150, blank=True, verbose_name="Отчество")
-    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='owner',
-                                 verbose_name="Тип пользователя")
-    status = models.CharField(max_length=10, choices=USER_STATUS_CHOICES, default='new', verbose_name="Статус")
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True, verbose_name="Изображение профиля")
-    birthday = models.DateField(null=True, blank=True, verbose_name="Дата рождения")
-    description = models.TextField(blank=True, verbose_name="Заметки о владельце")
-    phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
+    class UserType(models.TextChoices):
+        """User type."""
+
+        EMPLOYEE = "employee", "Сотрудник"
+        OWNER = "owner", "Владелец"
+
+    class UserStatus(models.TextChoices):
+        """User status."""
+
+        ACTIVE = "active", "Активен"
+        INACTIVE = "inactive", "Отключен"
+        NEW = "new", "Новый"
+
+    user_id = models.UUIDField(
+        default=uuid.uuid4, editable=False, unique=True, verbose_name="Unique ID"
+    )
+    middle_name = models.CharField(
+        max_length=150, blank=True, verbose_name="Middle name"
+    )
+    user_type = models.CharField(
+        max_length=10,
+        choices=UserType.choices,
+        default=UserType.OWNER,
+        verbose_name="Type of user",
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=UserStatus.choices,
+        default=UserStatus.NEW,
+        verbose_name="Status",
+    )
+    avatar = models.ImageField(
+        upload_to="avatars/", null=True, blank=True, verbose_name="Profile image"
+    )
+    birthday = models.DateField(null=True, blank=True, verbose_name="Birthday")
+    description = models.TextField(blank=True, verbose_name="Description")
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Phone")
     viber = models.CharField(max_length=20, blank=True, verbose_name="Viber")
     telegram = models.CharField(max_length=50, blank=True, verbose_name="Telegram")
-
-    # Связь с ролью. У одного пользователя - одна роль.
     role = models.ForeignKey(
-        Role,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name="Роль"
+        Role, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Role"
     )
 
     def get_full_name(self):
+        """Get full name."""
         return f"{self.last_name} {self.first_name} {self.middle_name}".strip()
 
     def __str__(self):
+        """__str__."""
         return self.get_full_name() or self.username
 
 
 class Ticket(models.Model):
-    """Заявка на вызов мастера"""
-    STATUS_CHOICES = (
-        ('new', 'Новое'),
-        ('in_progress', 'В работе'),
-        ('done', 'Выполнено'),
+    """A ticket for a master call."""
+
+    class TicketStatus(models.TextChoices):
+        """Ticket status."""  # <-- ИСПРАВЛЕНО D106
+
+        NEW = "new", "Новое"
+        IN_PROGRESS = "in_progress", "B работе"
+        DONE = "done", "Выполнено"
+
+    role = models.ForeignKey(
+        Role, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Role"
     )
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new', verbose_name="Статус")
-    apartment = models.ForeignKey('building.Apartment', on_delete=models.CASCADE, verbose_name="Квартира")
-    author = models.ForeignKey(User, related_name="created_tickets", on_delete=models.PROTECT,
-                               verbose_name="Автор заявки")
-    master = models.ForeignKey(User, related_name="assigned_tickets", on_delete=models.SET_NULL, null=True, blank=True,
-                               verbose_name="Назначенный мастер")
-    description = models.TextField(verbose_name="Описание проблемы")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    status = models.CharField(
+        max_length=20,
+        choices=TicketStatus.choices,
+        default=TicketStatus.NEW,
+        verbose_name="Status",
+    )
+    apartment = models.ForeignKey(
+        "building.Apartment", on_delete=models.CASCADE, verbose_name="Apartment"
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name="User (author/master)"
+    )
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Phone")
+    description = models.TextField(verbose_name="Description")
+    date = models.DateField(auto_now_add=True, verbose_name="Date")
+    time = models.TimeField(auto_now_add=True, verbose_name="Time")
 
     class Meta:
-        verbose_name = "Заявка"
-        verbose_name_plural = "Заявки"
+        """Meta class."""
+
+        verbose_name = "Application"
+        verbose_name_plural = "Applications"
+        ordering = ["-date", "-time"]
 
     def __str__(self):
-        return f"Заявка №{self.id} от {self.apartment}"
+        """__str__."""
+        return f"Application №{self.id}"
 
 
 class Message(models.Model):
-    """Сообщение в системе"""
-    sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="sent_messages",
-                               verbose_name="Отправитель")
-    recipients = models.ManyToManyField(User, through='MessageRecipient', related_name="received_messages",
-                                        verbose_name="Получатели")
-    title = models.CharField(max_length=255, verbose_name="Тема")
-    text = models.TextField(verbose_name="Текст сообщения")
-    date = models.DateTimeField(auto_now_add=True, verbose_name="Дата отправки")
+    """Message."""
+
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="sent_messages",
+        verbose_name="sender",
+    )
+    recipients = models.ManyToManyField(
+        User,
+        through="MessageRecipient",
+        related_name="received_messages",
+        verbose_name="Recipients",
+    )
+    title = models.CharField(max_length=255, verbose_name="Title")
+    text = models.TextField(verbose_name="Text")
+    date = models.DateField(auto_now_add=True, verbose_name="Date")
 
     class Meta:
-        verbose_name = "Сообщение"
-        verbose_name_plural = "Сообщения"
+        """Meta class."""
+
+        verbose_name = "Message"
+        verbose_name_plural = "Messages"
+        ordering = ["-date"]
 
     def __str__(self):
+        """__str__."""
         return self.title
 
 
 class MessageRecipient(models.Model):
-    """Промежуточная модель для получателей сообщений"""
-    message = models.ForeignKey(Message, on_delete=models.CASCADE, verbose_name="Сообщение")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Получатель")
+    """MessageRecipient."""
+
+    message = models.ForeignKey(
+        Message, on_delete=models.CASCADE, verbose_name="Message"
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Sender")
 
     class Meta:
-        verbose_name = "Получатель сообщения"
-        verbose_name_plural = "Получатели сообщений"
-        unique_together = ('message', 'user')
+        """Meta class."""
+
+        verbose_name = "Message recipient"
+        verbose_name_plural = "Messages recipients"
+        unique_together = ("message", "user")
+
+    def __str__(self):
+        """__str__."""
+        return f"Recipient '{self.user}' for message '{self.message.title}'"
