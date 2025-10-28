@@ -252,16 +252,15 @@ class AdminAboutPageView(LoginRequiredMixin, UpdateView):
 
 
 class AdminServicesPageView(LoginRequiredMixin, View):
-    """Handle the editing of the 'Services' page and services list."""
+    """Handle the 'Services' admin page."""
 
     template_name = "core/adminlte/admin_services_page.html"
     success_url = reverse_lazy("website:admin_services")
 
     def get(self, request, *args, **kwargs):
-        """Handle GET requests: instantiate blank versions of the forms."""
+        """Handle GET request: instantiate and display the forms."""
         service_page, _ = ServicePage.objects.get_or_create(
-            id=1,
-            defaults={"seo_block": SeoBlock.objects.create(title="Услуги")},
+            id=1, defaults={"seo_block": SeoBlock.objects.create(title="Услуги")}
         )
 
         seo_form = SeoBlockForm(instance=service_page.seo_block, prefix="seo")
@@ -271,7 +270,7 @@ class AdminServicesPageView(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
-        """Handle POST requests: instantiate form instances with data."""
+        """Handle POST request: validate and save the form data."""
         service_page = ServicePage.objects.get(id=1)
 
         seo_form = SeoBlockForm(

@@ -33,7 +33,7 @@ class AdminStatsView(LoginRequiredMixin, TemplateView):
 class ManageServicesView(LoginRequiredMixin, View):
     """Handle GET and POST requests for managing Services and Units."""
 
-    template_name = "core/adminlte/admin_services_page.html"
+    template_name = "core/adminlte/admin_services.html"
 
     def get(self, request, *args, **kwargs):
         """Display formsets for editing all services and units."""

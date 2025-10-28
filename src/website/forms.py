@@ -82,7 +82,7 @@ class ImageForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        """Make the image field optional."""  # <-- ИСПРАВЛЕНО D401
+        """Make the image field optional."""
         super().__init__(*args, **kwargs)
         self.fields["image"].required = False
 
@@ -219,5 +219,5 @@ DocumentFormSet = forms.modelformset_factory(
 
 
 ServiceBlockFormSet = forms.inlineformset_factory(
-    ServicePage, ServiceBlock, form=ServiceBlockForm, extra=1, can_delete=True
+    ServicePage, ServiceBlock, form=ServiceBlockForm, extra=0, can_delete=True
 )
