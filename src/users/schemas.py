@@ -38,3 +38,9 @@ class StatusResponse(Schema):
 
     status: str
     message: str
+
+
+class RoleResponseSchema(Schema):
+    """Define the data structure for a role name response."""
+
+    role_name: str

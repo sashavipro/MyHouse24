@@ -3,14 +3,16 @@
 {% load static %}
 
 {% block title %}
-  Пользователь: {{ user.get_full_name }}
+  {# === ИСПРАВЛЕНИЕ: Используем user_obj === #}
+  Пользователь: {{ user_obj.get_full_name }}
 {% endblock title %}
 {% block content %}
   <section class="content-header">
     <div class="container-fluid">
       <div class="row mb-2">
         <div class="col-sm-6">
-          <h1>Пользователь: {{ user.get_full_name }}</h1>
+          {# === ИСПРАВЛЕНИЕ: Используем user_obj === #}
+          <h1>Пользователь: {{ user_obj.get_full_name }}</h1>
         </div>
         <div class="col-sm-6">
           <ol class="breadcrumb float-sm-end">
@@ -20,7 +22,8 @@
             <li class="breadcrumb-item">
               <a href="{% url 'users:user_list' %}">Пользователи</a>
             </li>
-            <li class="breadcrumb-item active">{{ user.get_full_name }}</li>
+            {# === ИСПРАВЛЕНИЕ: Используем user_obj === #}
+            <li class="breadcrumb-item active">{{ user_obj.get_full_name }}</li>
           </ol>
         </div>
       </div>
@@ -29,46 +32,49 @@
   <section class="content">
     <div class="container-fluid">
       <div class="d-flex justify-content-end mb-3">
-        <a href="{% url 'users:user_edit' user.pk %}" class="btn btn-primary">Редактировать пользователя</a>
+        {# === ИСПРАВЛЕНИЕ: Используем user_obj === #}
+        <a href="{% url 'users:user_edit' user_obj.pk %}"
+           class="btn btn-primary">Редактировать пользователя</a>
       </div>
       <div class="card">
         <div class="card-body">
           <!-- Основная информация о пользователе -->
           <table class="table table-bordered mb-4 user-info-table">
             <tbody>
+              {# === ИСПРАВЛЕНИЕ: Используем user_obj везде ниже === #}
               <tr>
                 <th>ФИО</th>
-                <td>{{ user.get_full_name }}</td>
+                <td>{{ user_obj.get_full_name }}</td>
               </tr>
               <tr>
                 <th>Роль</th>
-                <td>{{ user.role.name|default:"-" }}</td>
+                <td>{{ user_obj.role.name|default:"-" }}</td>
               </tr>
               <tr>
                 <th>Email (логин)</th>
-                <td>{{ user.email }}</td>
+                <td>{{ user_obj.email }}</td>
               </tr>
               <tr>
                 <th>Телефон</th>
-                <td>{{ user.phone|default:"-" }}</td>
+                <td>{{ user_obj.phone|default:"-" }}</td>
               </tr>
               <tr>
                 <th>Статус</th>
                 <td>
-                  {% if user.status == 'active' %}
+                  {% if user_obj.status == 'active' %}
                     <span class="badge bg-success">Активен</span>
-                  {% elif user.status == 'new' %}
+                  {% elif user_obj.status == 'new' %}
                     <span class="badge bg-warning">Новый</span>
-                  {% elif user.status == 'inactive' %}
+                  {% elif user_obj.status == 'inactive' %}
                     <span class="badge bg-danger">Отключен</span>
                   {% else %}
-                    {{ user.status }}
+                    {{ user_obj.status }}
                   {% endif %}
                 </td>
               </tr>
               <tr>
                 <th>Дата регистрации</th>
-                <td>{{ user.date_joined|date:"d.m.Y - H:i" }}</td>
+                <td>{{ user_obj.date_joined|date:"d.m.Y - H:i" }}</td>
               </tr>
             </tbody>
           </table>

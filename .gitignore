@@ -1,4 +1,22 @@
-.venv
 .idea
-.env
 .media
+
+__pycache__/
+*.pyc
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# Django
+*.log
+
+# Environment variables
+.env
+
+# User-uploaded files
+media/
+
+# Static files (собранные collectstatic)
+staticfiles/

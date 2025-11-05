@@ -1,0 +1,101 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Лицевой счет №{{ account.number }}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Лицевой счет №{{ account.number }}</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="#">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'building:personal_account_list' %}">Лицевые счета</a>
+            </li>
+            <li class="breadcrumb-item active">№{{ account.number }}</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h3 class="card-title">Просмотр лицевого счета</h3>
+            <div>
+              <a href="#" class="btn btn-sm btn-success disabled"><i class="bi bi-currency-dollar"></i> Принять платеж</a>
+              <a href="#" class="btn btn-sm btn-info disabled"><i class="bi bi-file-earmark-text"></i> Оформить квитанцию</a>
+              <a href="{% url 'building:personal_account_edit' account.pk %}"
+                 class="btn btn-sm btn-primary">Редактировать счет</a>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-bordered">
+            <tbody>
+              <tr>
+                <th class="details-label">Номер</th>
+                <td>{{ account.number }}</td>
+              </tr>
+              <tr>
+                <th>Статус</th>
+                <td>
+                  {% if account.status == 'active' %}
+                    <span class="badge bg-success">Активен</span>
+                  {% else %}
+                    <span class="badge bg-danger">Неактивен</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% with apartment=account.apartment %}
+                <tr>
+                  <th>Дом</th>
+                  <td>{{ apartment.house.title|default:"(не привязан)" }}</td>
+                </tr>
+                <tr>
+                  <th>Секция</th>
+                  <td>{{ apartment.section.name|default:"(не привязана)" }}</td>
+                </tr>
+                <tr>
+                  <th>Квартира</th>
+                  <td>{{ apartment.number|default:"(не привязана)" }}</td>
+                </tr>
+                <tr>
+                  <th>Владелец</th>
+                  <td>{{ apartment.owner.get_full_name|default:"(не привязан)" }}</td>
+                </tr>
+              {% endwith %}
+              <tr>
+                <th>Остаток, грн</th>
+                <td class="{% if account.balance < 0 %}text-danger{% endif %}">{{ account.balance|floatformat:2 }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer">
+          <a href="#" class="me-3 disabled">Посмотреть показания счетчиков</a>
+          <a href="#" class="me-3 disabled">Посмотреть приходы</a>
+          <a href="#" class="me-3 disabled">Посмотреть квитанции</a>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <style>
+    .details-label {
+      width: 250px;
+    }
+  </style>
+{% endblock scripts %}

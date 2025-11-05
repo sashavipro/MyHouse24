@@ -95,7 +95,7 @@ class Floor(models.Model):
 
     def __str__(self):
         """__str__."""
-        return f"Этаж {self.name} ({self.section.name})"
+        return f"{self.name} ({self.house.title})"
 
 
 class PersonalAccount(models.Model):
@@ -124,13 +124,15 @@ class Apartment(models.Model):
     """Apartment."""
 
     number = models.CharField(max_length=10, verbose_name="Number")
-    area = models.FloatField(verbose_name="Area")
+    area = models.FloatField(verbose_name="Area", null=True, blank=True)
 
     house = models.ForeignKey(House, on_delete=models.CASCADE, verbose_name="House")
     section = models.ForeignKey(
-        Section, on_delete=models.CASCADE, verbose_name="Section"
+        Section, on_delete=models.CASCADE, verbose_name="Section", null=True, blank=True
     )
-    floor = models.ForeignKey(Floor, on_delete=models.CASCADE, verbose_name="Floor")
+    floor = models.ForeignKey(
+        Floor, on_delete=models.CASCADE, verbose_name="Floor", null=True, blank=True
+    )
 
     owner = models.ForeignKey(
         "users.User",
@@ -141,10 +143,18 @@ class Apartment(models.Model):
         verbose_name="Owner",
     )
     tariff = models.ForeignKey(
-        "finance.Tariff", on_delete=models.PROTECT, verbose_name="Tariff"
+        "finance.Tariff",
+        on_delete=models.PROTECT,
+        verbose_name="Tariff",
+        null=True,
+        blank=True,
     )
     personal_account = models.OneToOneField(
-        PersonalAccount, on_delete=models.CASCADE, verbose_name="Personal account"
+        PersonalAccount,
+        on_delete=models.CASCADE,
+        verbose_name="Personal account",
+        null=True,
+        blank=True,
     )
 
     class Meta:

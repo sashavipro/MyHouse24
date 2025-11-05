@@ -6,8 +6,10 @@
   Дома
 {% endblock title %}
 {% block content %}
-  {% csrf_token %}
-  <section class="content-header">
+  <section class="content"
+           id="house-list-page-data"
+           data-csrf-token="{{ csrf_token }}"
+           data-api-delete-url-template="/api/v1/buildings/house/0">
     <div class="container-fluid">
       <div class="row mb-2">
         <div class="col-sm-6">
@@ -22,7 +24,7 @@
           </ol>
         </div>
       </div>
-      <div class="row mb-2">
+      <div class="row mb-3">
         <div class="col-sm-12 text-end">
           <a href="{% url 'building:house_add' %}" class="btn btn-success">Добавить дом</a>
         </div>
@@ -32,32 +34,31 @@
   <section class="content">
     <div class="card">
       <div class="card-body p-0">
-        <div class="d-flex justify-content-end p-2">
-          <button type="button" class="btn btn-outline-secondary" id="reset-filter-btn">Очистить</button>
+        <div class="d-flex justify-content-end p-3 border-bottom">
+          <button type="button"
+                  class="btn btn-outline-secondary"
+                  id="clear-filters-btn">Очистить</button>
         </div>
         <div class="table-responsive">
-          <table id="houses-table" class="table table-hover houses-table-custom">
+          <table id="houses-table" class="table table-hover mb-0" width="100%">
             <thead>
               <tr>
-                <th>#</th>
+                <th class="id-column">#</th>
                 <th>Название</th>
                 <th>Адрес</th>
-                <th class="th-actions"></th>
+                <th class="actions-column"></th>
               </tr>
               <tr class="filter-row">
                 <td></td>
                 <td>
-                  <input type="text" id="title_filter" class="form-control form-control-sm" />
+                  <input type="text" id="filter_title" class="form-control form-control-sm" />
                 </td>
                 <td>
-                  <input type="text" id="address_filter" class="form-control form-control-sm" />
+                  <input type="text" id="filter_address" class="form-control form-control-sm" />
                 </td>
                 <td></td>
               </tr>
             </thead>
-            <tbody>
-              <!-- Динамически заполняется через DataTables -->
-            </tbody>
           </table>
         </div>
       </div>
@@ -65,286 +66,142 @@
   </section>
 {% endblock content %}
 {% block scripts %}
-  <style>
-    /* Убираем ВСЕ иконки сортировки и элементы управления */
-    table.dataTable thead>tr>th.sorting::before,
-    table.dataTable thead>tr>th.sorting::after,
-    table.dataTable thead>tr>th.sorting_asc::before,
-    table.dataTable thead>tr>th.sorting_asc::after,
-    table.dataTable thead>tr>th.sorting_desc::before,
-    table.dataTable thead>tr>th.sorting_desc::after,
-    table.dataTable thead>tr>th::before,
-    table.dataTable thead>tr>th::after,
-    table.dataTable thead .dt-column-order,
-    span.dt-column-order {
-      content: "" !important;
-      display: none !important;
-      visibility: hidden !important;
-    }
-
-    /* Убираем padding справа от заголовков */
-    table.dataTable thead>tr>th,
-    table.dataTable thead>tr>th.dt-orderable-none,
-    table.dataTable thead>tr>th.dt-orderable-asc,
-    table.dataTable thead>tr>th.dt-orderable-desc {
-      padding-right: 12px !important;
-    }
-
-    /* Убираем курсор указатель с заголовков */
-    table.dataTable thead>tr>th {
-      cursor: default !important;
-    }
-
-    /* Курсор pointer только для строк таблицы */
-    #houses-table tbody tr {
-      cursor: pointer;
-    }
-
-    .houses-table-custom {
-      width: 100%;
-    }
-  </style>
-  <!-- DataTables -->
+  {{ block.super }}
   <link rel="stylesheet"
         href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Улучшенный способ получения CSRF токена
-      function getCSRFToken() {
-        const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
-        if (tokenInput) {
-          console.log('CSRF token found in input:', tokenInput.value);
-          return tokenInput.value;
-        }
-
-        const cookieValue = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('csrftoken='));
-
-        if (cookieValue) {
-          const token = cookieValue.split('=')[1];
-          console.log('CSRF token found in cookie:', token);
-          return token;
-        }
-
-        const metaToken = document.querySelector('meta[name="csrf-token"]');
-        if (metaToken) {
-          console.log('CSRF token found in meta:', metaToken.content);
-          return metaToken.content;
-        }
-
-        console.error('CSRF token not found!');
-        return null;
-      }
-
-      const csrfToken = getCSRFToken();
-
-      if (!csrfToken) {
-        console.error('CRITICAL: CSRF token is missing!');
-        alert('Ошибка: CSRF токен не найден. Обновите страницу.');
-      }
-
-      const houseDetailUrlTemplate = "{% url 'building:house_detail' 0 %}";
-      const houseEditUrlTemplate = "{% url 'building:house_edit' 0 %}";
-      const houseDeleteUrl = "/api/v1/buildings/delete";
-
-      console.log('Delete URL:', houseDeleteUrl);
-      console.log('CSRF Token:', csrfToken ? 'Present' : 'MISSING');
-
-      const table = new DataTable('#houses-table', {
-        processing: true,
+    $(document).ready(function() {
+      const table = $('#houses-table').DataTable({
         serverSide: true,
-        pagingType: 'simple_numbers',
+        processing: true,
+        searching: false,
+        ordering: false,
         ajax: {
-          url: "/api/v1/buildings/list",
+          url: "{% url 'building:ajax_datatable_houses' %}",
           type: 'POST',
           headers: {
-            'X-CSRFToken': csrfToken
+            'X-CSRFToken': '{{ csrf_token }}'
           },
           data: function(d) {
-            d.title = document.getElementById('title_filter').value;
-            d.address = document.getElementById('address_filter').value;
+            d.title = $('#filter_title').val();
+            d.address = $('#filter_address').val();
           }
         },
         columns: [{
           data: 'pk',
-          orderable: false
+          width: '50px'
         }, {
-          data: 'title',
-          orderable: false
+          data: 'title'
         }, {
-          data: 'address',
-          orderable: false
+          data: 'address'
         }, {
-          data: 'pk',
-          orderable: false,
-          className: 'text-end',
-          render: function(data, type, row) {
-            const editUrl = houseEditUrlTemplate.replace('0', data);
-            // УБРАЛИ onclick из HTML - обрабатываем все через addEventListener
-            return `
-            <a href="${editUrl}" class="btn btn-sm btn-primary edit-house-link" title="Редактировать">
-              <i class="bi bi-pencil"></i>
-            </a>
-            <button type="button" class="btn btn-sm btn-danger delete-house-btn" title="Удалить" data-house-id="${data}" data-house-title="${row.title}">
-                <i class="bi bi-trash"></i>
-            </button>`;
-          }
+          data: 'actions',
+          width: '120px'
         }],
-        order: [
-          [0, 'asc']
+        pageLength: 10,
+        lengthMenu: [
+          [10, 25, 50, 100],
+          [10, 25, 50, 100]
         ],
         language: {
-          "processing": "Подождите...",
-          "info": "Количество домов: _TOTAL_",
-          "infoEmpty": "Количество домов: 0",
-          "zeroRecords": "Дома не найдены.",
-          "emptyTable": "В таблице отсутствуют данные",
-          "paginate": {
-            "previous": "‹",
-            "next": "›"
+          processing: "Загрузка...",
+          info: "Показано _START_-_END_ из _TOTAL_",
+          infoEmpty: "Нет данных",
+          zeroRecords: "Записи отсутствуют",
+          emptyTable: "В таблице нет данных",
+          paginate: {
+            first: "«",
+            previous: "‹",
+            next: "›",
+            last: "»"
           }
         },
-        searching: false,
-        dom: '<"row"<"col-sm-12"tr>><"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
       });
 
-      // Логика фильтров
-      const filterInputs = document.querySelectorAll('.filter-row input');
       let debounceTimer;
-      const reloadTable = () => {
+      $('.filter-row input').on('keyup', function() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
           table.ajax.reload();
         }, 500);
-      };
-      filterInputs.forEach(input => {
-        input.addEventListener('keyup', reloadTable);
       });
-      document.getElementById('reset-filter-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        filterInputs.forEach(input => {
-          input.value = '';
-        });
+
+      $('#clear-filters-btn').on('click', function() {
+        $('.filter-row input').val('');
         table.ajax.reload();
       });
+      $(document).on('click', '.delete-house-btn', function(e) {
+        e.stopPropagation();
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        if (!confirm(`Вы уверены, что хотите удалить дом "${name}"?`)) return;
 
-      // ПРАВИЛЬНАЯ обработка кликов
-      document.querySelector('#houses-table tbody').addEventListener('click', function(event) {
-        console.log('Click detected on:', event.target);
+        const deleteUrl = `/api/v1/buildings/house/${id}`;
 
-        // Проверяем клик по кнопке удаления или её иконке
-        const deleteButton = event.target.closest('.delete-house-btn');
-        const editLink = event.target.closest('.edit-house-link');
-
-        // Если кликнули на кнопку редактирования - не мешаем
-        if (editLink) {
-          console.log('Edit link clicked - allowing default behavior');
-          event.stopPropagation(); // Останавливаем всплытие, чтобы не сработал переход к детальной странице
-          return;
-        }
-
-        // Если кликнули на кнопку удаления
-        if (deleteButton) {
-          console.log('Delete button clicked!');
-          event.preventDefault();
-          event.stopPropagation();
-
-          const houseId = deleteButton.dataset.houseId;
-          const houseTitle = deleteButton.dataset.houseTitle;
-
-          console.log('House ID:', houseId);
-          console.log('House Title:', houseTitle);
-
-          if (!confirm(`Вы уверены, что хотите удалить дом "${houseTitle}"?`)) {
-            console.log('User cancelled deletion');
-            return;
+        $.ajax({
+          url: deleteUrl,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          success: function(res) {
+            if (res.status === 'success') {
+              alert(res.message);
+              table.ajax.reload(null, false);
+            } else {
+              alert('Ошибка: ' + res.message);
+            }
+          },
+          error: function() {
+            alert('Произошла ошибка при удалении дома');
           }
+        });
+      });
+      $('#houses-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a').length > 0 || $(this).hasClass('filter-row')) return;
 
-          if (!csrfToken) {
-            alert('Ошибка: CSRF токен не найден. Обновите страницу.');
-            return;
-          }
+        const rowData = table.row(this).data();
 
-          console.log('Sending delete request...');
-          console.log('URL:', houseDeleteUrl);
+        const detailUrl = rowData?.DT_RowAttr?.['data-detail-url'];
 
-          const formData = new FormData();
-          formData.append('house_id', houseId);
-
-          fetch(houseDeleteUrl, {
-              method: 'POST',
-              headers: {
-                'X-CSRFToken': csrfToken,
-                'Accept': 'application/json'
-              },
-              body: formData
-            })
-            .then(res => {
-              console.log('Response received');
-              console.log('Status:', res.status);
-              console.log('OK:', res.ok);
-
-              return res.text().then(text => {
-                console.log('Response body:', text);
-
-                try {
-                  const data = JSON.parse(text);
-                  console.log('Parsed data:', data);
-                  return {
-                    ok: res.ok,
-                    status: res.status,
-                    data: data
-                  };
-                } catch (e) {
-                  console.error('JSON parse error:', e);
-                  return {
-                    ok: res.ok,
-                    status: res.status,
-                    data: null,
-                    error: text
-                  };
-                }
-              });
-            })
-            .then(result => {
-              console.log('Processing result:', result);
-
-              if (!result.ok) {
-                throw new Error(`Сервер вернул ошибку ${result.status}: ${result.error || JSON.stringify(result.data)}`);
-              }
-
-              if (result.data && result.data.status === 'success') {
-                console.log('Success!');
-                alert(result.data.message);
-                table.ajax.reload(null, false);
-              } else {
-                console.error('Unexpected response:', result.data);
-                alert('Ошибка: ' + (result.data?.message || 'Неизвестная ошибка'));
-              }
-            })
-            .catch((error) => {
-              console.error('Error during deletion:', error);
-              alert('Произошла ошибка при удалении дома:\n\n' + error.message);
-            });
-
-          return;
-        }
-
-        // Клик по строке (но не по кнопкам) - переход к детальной странице
-        const row = event.target.closest('tr');
-        if (row && !row.classList.contains('filter-row')) {
-          const rowData = table.row(row).data();
-          if (rowData && rowData.pk) {
-            console.log('Row clicked, navigating to:', rowData.pk);
-            window.location.href = houseDetailUrlTemplate.replace('0', rowData.pk);
-          }
+        if (detailUrl) {
+          window.location.href = detailUrl;
         }
       });
-
-      console.log('Script initialization complete');
     });
   </script>
+  <style>
+    .id-column {
+      width: 50px;
+    }
+
+    .actions-column {
+      width: 120px;
+    }
+
+    table.dataTable thead th::before,
+    table.dataTable thead th::after {
+      display: none !important;
+    }
+
+    table.dataTable thead th {
+      cursor: default !important;
+    }
+
+    #houses-table tbody tr {
+      cursor: pointer;
+    }
+
+    #houses-table td {
+      white-space: nowrap !important;
+    }
+
+    .filter-row td {
+      padding: 8px !important;
+      background-color: #f8f9fa;
+    }
+  </style>
 {% endblock scripts %}

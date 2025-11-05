@@ -315,3 +315,20 @@ class CashBox(models.Model):
     def __str__(self):
         """Return a string representation of the receipt item."""
         return f"{self.service.name}: {self.amount} " f"in receipt №{self.receipt.id}"
+
+
+class PaymentDetails(models.Model):
+    """A singleton model to store company payment details."""
+
+    company_name = models.CharField(max_length=255, verbose_name="Название компании")
+    info = models.TextField(verbose_name="Информация")
+
+    class Meta:
+        """Meta class."""
+
+        verbose_name = "Платежные реквизиты"
+        verbose_name_plural = "Платежные реквизиты"
+
+    def __str__(self):
+        """Str."""
+        return self.company_name

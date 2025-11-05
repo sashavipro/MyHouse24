@@ -11,10 +11,14 @@ from django.views.generic import ListView
 from django.views.generic import TemplateView
 from django.views.generic import UpdateView
 
+from src.finance.forms import ArticleForm
+from src.finance.forms import PaymentDetailsForm
 from src.finance.forms import ServiceFormSet
 from src.finance.forms import TariffForm
 from src.finance.forms import TariffServiceFormSet
 from src.finance.forms import UnitFormSet
+from src.finance.models import Article
+from src.finance.models import PaymentDetails
 from src.finance.models import Service
 from src.finance.models import Tariff
 from src.finance.models import Unit
@@ -163,3 +167,49 @@ class TariffUpdateView(LoginRequiredMixin, UpdateView):
             services_formset.save()
             return redirect(self.get_success_url())
         return self.form_invalid(form)
+
+
+class ArticleListView(LoginRequiredMixin, ListView):
+    """Displays the page with the list of payment articles."""
+
+    model = Article
+    template_name = "core/adminlte/article_list.html"
+
+
+class ArticleCreateView(LoginRequiredMixin, CreateView):
+    """Displays the form for creating a new article."""
+
+    model = Article
+    form_class = ArticleForm
+    template_name = "core/adminlte/article_form.html"
+    success_url = reverse_lazy("finance:article_list")
+
+
+class ArticleUpdateView(LoginRequiredMixin, UpdateView):
+    """Displays the form for editing an existing article."""
+
+    model = Article
+    form_class = ArticleForm
+    template_name = "core/adminlte/article_form.html"
+    success_url = reverse_lazy("finance:article_list")
+
+
+class PaymentDetailsUpdateView(LoginRequiredMixin, UpdateView):
+    """Handles displaying and updating the singleton PaymentDetails object.
+
+    This view manages the single PaymentDetails instance used throughout
+    the application, creating it if it doesn't exist.
+    """
+
+    model = PaymentDetails
+    form_class = PaymentDetailsForm
+    template_name = "core/adminlte/payment_details_form.html"
+    success_url = reverse_lazy("finance:payment_details")
+
+    def get_object(self, queryset=None):
+        """Return the single PaymentDetails instance, creating it if needed.
+
+        This implements the singleton pattern for PaymentDetails.
+        """
+        obj, created = self.model.objects.get_or_create(pk=1)
+        return obj

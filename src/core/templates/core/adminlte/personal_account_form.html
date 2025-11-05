@@ -1,0 +1,214 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  {% if form.instance.pk %}
+    Редактирование счета
+  {% else %}
+    Новый лицевой счет
+  {% endif %}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>
+            {% if form.instance.pk %}
+              Редактирование счета №{{ form.instance.number }}
+            {% else %}
+              Новый лицевой счет
+            {% endif %}
+          </h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="#">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'building:personal_account_list' %}">Лицевые счета</a>
+            </li>
+            <li class="breadcrumb-item active">
+              {% if form.instance.pk %}
+                Редактирование
+              {% else %}
+                Новый лицевой счет
+              {% endif %}
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post">
+        {% csrf_token %}
+        {{ form.apartment }} {# Скрытое поле для ID квартиры #}
+        <div class="card">
+          <div class="card-body">
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="row align-items-center mb-3">
+              <div class="col-md-1">
+                <label for="{{ form.number.id_for_label }}" class="form-label mb-0">{{ form.number.label }}</label>
+              </div>
+              <div class="col-md-3">
+                {{ form.number }}
+                {% if form.number.errors %}<div class="text-danger small mt-1">{{ form.number.errors }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="form-group mb-3">
+              <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+              {{ form.status }}
+              {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors }}</div>{% endif %}
+            </div>
+            <div class="form-group mb-3">
+              <label for="id_house">Дом</label>
+              <select id="id_house" class="form-select">
+                <option value="">Выберите...</option>
+                {% for house in houses %}<option value="{{ house.pk }}">{{ house.title }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group mb-3">
+              <label for="id_section">Секция</label>
+              <select id="id_section" class="form-select" disabled>
+                <option value="">Выберите...</option>
+              </select>
+            </div>
+            <div class="form-group mb-3">
+              <label for="id_apartment_select">Квартира</label>
+              <select id="id_apartment_select" class="form-select" disabled>
+                <option value="">Выберите...</option>
+              </select>
+            </div>
+            <p class="mb-1">
+              <strong>Владелец:</strong> <span id="owner-name">не выбран</span>
+            </p>
+            <p>
+              <strong>Телефон:</strong> <span id="owner-phone">не выбран</span>
+            </p>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{% url 'building:personal_account_list' %}"
+               class="btn btn-secondary">Отменить</a>
+            <button type="submit" class="btn btn-success">Сохранить</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script>
+    $(document).ready(function() {
+      // --- НАЧАЛО НОВОГО БЛОКА JS ---
+      const houseSelect = $('#id_house');
+      const sectionSelect = $('#id_section');
+      const apartmentSelect = $('#id_apartment_select');
+      const hiddenApartmentInput = $('#{{ form.apartment.id_for_label }}');
+      const ownerNameSpan = $('#owner-name');
+      const ownerPhoneSpan = $('#owner-phone');
+
+      // Данные для предзаполнения (если мы редактируем существующую запись)
+      const initialData = {
+        houseId: '{{ initial_data.house_id|default_if_none:"" }}',
+        sectionId: '{{ initial_data.section_id|default_if_none:"" }}',
+        apartmentId: '{{ initial_data.apartment_id|default_if_none:"" }}'
+      };
+
+      function resetApartmentInfo() {
+        apartmentSelect.prop('disabled', true).html('<option value="">Выберите...</option>');
+        hiddenApartmentInput.val('');
+        ownerNameSpan.text('не выбран');
+        ownerPhoneSpan.text('не выбран');
+      }
+
+      function updateOwnerInfo() {
+        const selectedOption = apartmentSelect.find('option:selected');
+        const apartmentId = selectedOption.val();
+
+        hiddenApartmentInput.val(apartmentId);
+
+        if (!apartmentId) {
+          ownerNameSpan.text('не выбран');
+          ownerPhoneSpan.text('не выбран');
+          return;
+        }
+
+        // Запрашиваем детали квартиры, включая владельца
+        $.get(`/api/v1/buildings/apartment/${apartmentId}/details`, function(details) {
+          ownerNameSpan.text(details.owner_name || 'не выбран');
+          ownerPhoneSpan.text(details.owner_phone || 'не выбран');
+        });
+      }
+
+      function loadApartments(houseId, sectionId, selectedApartmentId = null) {
+        apartmentSelect.prop('disabled', true).html('<option value="">Загрузка...</option>');
+
+        // В URL добавляем ID текущего счета, чтобы API вернул нам и ту квартиру,
+        // которая уже привязана к этому счету.
+        const accountId = '{{ form.instance.pk|default_if_none:"" }}';
+        let url = `/api/v1/buildings/house/${houseId}/apartments?account_id=${accountId}`;
+        if (sectionId) url += `&section=${sectionId}`;
+
+        $.get(url, function(apartments) {
+          apartmentSelect.prop('disabled', false).html('<option value="">Выберите...</option>');
+          apartments.forEach(apt => {
+            apartmentSelect.append(`<option value="${apt.id}">${apt.number}</option>`);
+          });
+
+          if (selectedApartmentId) {
+            apartmentSelect.val(selectedApartmentId);
+            apartmentSelect.trigger('change');
+          }
+        });
+      }
+
+      function loadSections(houseId, selectedSectionId = null, callback = null) {
+        sectionSelect.prop('disabled', true).html('<option value="">Загрузка...</option>');
+        $.get(`/api/v1/buildings/house/${houseId}/sections`, function(sections) {
+          sectionSelect.prop('disabled', false).html('<option value="">Выберите...</option>');
+          sections.forEach(s => sectionSelect.append(`<option value="${s.id}">${s.name}</option>`));
+
+          if (selectedSectionId) {
+            sectionSelect.val(selectedSectionId);
+          }
+          if (callback) {
+            callback();
+          }
+        });
+      }
+
+      houseSelect.on('change', function() {
+        const houseId = $(this).val();
+        sectionSelect.prop('disabled', true).html('<option value="">Сначала выберите дом</option>');
+        resetApartmentInfo();
+        if (!houseId) return;
+        loadSections(houseId);
+      });
+
+      sectionSelect.on('change', function() {
+        const houseId = houseSelect.val();
+        const sectionId = $(this).val();
+        resetApartmentInfo();
+        if (houseId) {
+          loadApartments(houseId, sectionId);
+        }
+      });
+
+      apartmentSelect.on('change', updateOwnerInfo);
+
+      // --- ЛОГИКА ПРЕДЗАПОЛНЕНИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
+      if (initialData.houseId) {
+        houseSelect.val(initialData.houseId);
+        loadSections(initialData.houseId, initialData.sectionId, function() {
+          // Эта функция вызовется после загрузки секций
+          loadApartments(initialData.houseId, initialData.sectionId, initialData.apartmentId);
+        });
+      }
+    });
+  </script>
+{% endblock scripts %}

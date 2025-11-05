@@ -1,7 +1,6 @@
 """src/users/views.py."""
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.urls import reverse_lazy
@@ -11,7 +10,10 @@ from django.views.generic import ListView
 from django.views.generic import UpdateView
 from django.views.generic import View
 
+from src.building.models import House
+
 from .forms import CustomUserForm
+from .forms import OwnerForm
 from .forms import RoleFormSet
 from .models import Role
 from .models import User
@@ -114,17 +116,73 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class GetUserRoleApiView(LoginRequiredMixin, View):
-    """Return the user's role in JSON format for AJAX requests."""
+class OwnerListView(LoginRequiredMixin, ListView):
+    """Displays the page with the list of owners, populated via AJAX."""
 
-    def get(self, request, *args, **kwargs):
-        """Find a user by ID and returns their role name."""
-        user_id = request.GET.get("user_id")
-        if not user_id:
-            return JsonResponse({"error": "User ID not provided"}, status=400)
-        try:
-            user = User.objects.get(id=user_id)
-            role_name = user.role.name if user.role else "Роль не назначена"
-            return JsonResponse({"role_name": role_name})
-        except User.DoesNotExist:
-            return JsonResponse({"error": "User not found"}, status=404)
+    model = User
+    template_name = "core/adminlte/owner_list.html"
+
+    def get_context_data(self, **kwargs):
+        """Provide data for filter dropdowns to the template context."""
+        context = super().get_context_data(**kwargs)
+        context["all_houses"] = House.objects.all()
+        context["all_statuses"] = User.UserStatus.choices
+        return context
+
+
+class OwnerDetailView(LoginRequiredMixin, DetailView):
+    """Displays detailed information about an owner."""
+
+    model = User
+    template_name = "core/adminlte/owner_detail.html"
+    context_object_name = "owner_obj"
+
+    def get_queryset(self):
+        """Ensure that only users of type 'owner' can be accessed."""
+        return super().get_queryset().filter(user_type="owner")
+
+
+class OwnerCreateView(LoginRequiredMixin, CreateView):
+    """Handles the creation of a new owner."""
+
+    model = User
+    form_class = OwnerForm
+    template_name = "core/adminlte/owner_form.html"
+    success_url = reverse_lazy("users:owner_list")
+
+    def get_context_data(self, **kwargs):
+        """Add a page title to the context."""
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = "Новый владелец"
+        return context
+
+    def form_valid(self, form):
+        """Set the user type to 'owner' and saves the new user."""
+        user = form.save(commit=False)
+        user.user_type = User.UserType.OWNER
+        user.is_staff = False
+        user.save()
+        return redirect(self.success_url)
+
+
+class OwnerUpdateView(LoginRequiredMixin, UpdateView):
+    """Handles editing an existing owner."""
+
+    model = User
+    form_class = OwnerForm
+    template_name = "core/adminlte/owner_form.html"
+    context_object_name = "owner_obj"
+
+    def get_queryset(self):
+        """Ensure that only users of type 'owner' can be accessed."""
+        return super().get_queryset().filter(user_type="owner")
+
+    def get_success_url(self):
+        """Redirects to the owner's detail page after a successful update."""
+        return reverse_lazy("users:owner_detail", kwargs={"pk": self.object.pk})
+
+    def get_context_data(self, **kwargs):
+        """Add a page title to the context."""
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = "Редактирование профиля владельца"
+        return context

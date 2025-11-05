@@ -1,7 +1,5 @@
 """src/users/models.py."""
 
-import uuid
-
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -64,9 +62,14 @@ class User(AbstractUser):
         INACTIVE = "inactive", "Отключен"
         NEW = "new", "Новый"
 
-    user_id = models.UUIDField(
-        default=uuid.uuid4, editable=False, unique=True, verbose_name="Unique ID"
+    user_id = models.CharField(
+        max_length=20,
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name="ID Владельца (ручной ввод)",
     )
+
     middle_name = models.CharField(
         max_length=150, blank=True, verbose_name="Middle name"
     )
@@ -107,7 +110,7 @@ class Ticket(models.Model):
     """A ticket for a master call."""
 
     class TicketStatus(models.TextChoices):
-        """Ticket status."""  # <-- ИСПРАВЛЕНО D106
+        """Ticket status."""
 
         NEW = "new", "Новое"
         IN_PROGRESS = "in_progress", "B работе"

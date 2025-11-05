@@ -1,0 +1,274 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Владельцы квартир
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Владельцы квартир</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Владельцы квартир</li>
+          </ol>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-sm-12 text-end">
+          <div class="btn-group">
+            <button type="button"
+                    class="btn btn-success dropdown-toggle dropdown-toggle-split"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
+              Выберете действие
+              <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <a class="dropdown-item" href="{% url 'users:owner_add' %}">Добавить владельца</a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="#">Отправить сообщение должникам</a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="#">Отправить приглашение</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="d-flex justify-content-end p-3 border-bottom">
+          <button type="button"
+                  class="btn btn-outline-secondary"
+                  id="clear-filters-btn">Очистить</button>
+        </div>
+        <div class="table-responsive">
+          <table id="owners-table" class="table table-hover mb-0" width="100%">
+            <thead>
+              <tr>
+                <th class="d-none">PK</th>
+                <th class="id-column">ID</th>
+                <th>ФИО</th>
+                <th>Телефон</th>
+                <th>Email</th>
+                <th>Дом</th>
+                <th>Квартира</th>
+                <th>Добавлен</th>
+                <th class="status-column">Статус</th>
+                <th class="debt-column">Есть долг</th>
+                <th class="actions-column"></th>
+              </tr>
+              <tr class="filter-row">
+                <td class="d-none"></td>
+                <td>
+                  <input type="text"
+                         id="filter_id"
+                         class="form-control form-control-sm"
+                         placeholder="ID" />
+                </td>
+                <td>
+                  <input type="text"
+                         id="filter_full_name"
+                         class="form-control form-control-sm"
+                         placeholder="ФИО" />
+                </td>
+                <td>
+                  <input type="text"
+                         id="filter_phone"
+                         class="form-control form-control-sm"
+                         placeholder="Телефон" />
+                </td>
+                <td>
+                  <input type="text"
+                         id="filter_email"
+                         class="form-control form-control-sm"
+                         placeholder="Email" />
+                </td>
+                <td>
+                  <select id="filter_house" class="form-select form-select-sm">
+                    <option value="">Все дома</option>
+                    {% for house in all_houses %}<option value="{{ house.pk }}">{{ house.title }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <input type="text"
+                         id="filter_apartment"
+                         class="form-control form-control-sm"
+                         placeholder="№ кв." />
+                </td>
+                <td>
+                  <input type="text"
+                         id="filter_date_joined"
+                         class="form-control form-control-sm"
+                         placeholder="2024 или 2024-11-04" />
+                </td>
+                <td>
+                  <select id="filter_status" class="form-select form-select-sm">
+                    <option value="">Все</option>
+                    {% for value, label in all_statuses %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <select id="filter_has_debt" class="form-select form-select-sm">
+                    <option value="">Все</option>
+                    <option value="yes">Да</option>
+                  </select>
+                </td>
+                <td></td>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <script>
+    $(document).ready(function() {
+      const csrfToken = '{{ csrf_token }}';
+      const table = $('#owners-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false,
+        ordering: false,
+        ajax: {
+          url: "{% url 'users:ajax_datatable_owners' %}",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          data: function(d) {
+            d.user_id = $('#filter_id').val();
+            d.full_name = $('#filter_full_name').val();
+            d.phone = $('#filter_phone').val();
+            d.email = $('#filter_email').val();
+            d.house = $('#filter_house').val();
+            d.apartment = $('#filter_apartment').val();
+            d.date_joined = $('#filter_date_joined').val();
+            d.status = $('#filter_status').val();
+            d.has_debt = $('#filter_has_debt').val();
+          }
+        },
+        columns: [{
+          data: 'pk',
+          visible: false
+        }, {
+          data: 'owner_id_display'
+        }, {
+          data: 'full_name'
+        }, {
+          data: 'phone'
+        }, {
+          data: 'email'
+        }, {
+          data: 'house'
+        }, {
+          data: 'apartment'
+        }, {
+          data: 'date_joined'
+        }, {
+          data: 'status'
+        }, {
+          data: 'has_debt'
+        }, {
+          data: 'actions',
+          orderable: false
+        }],
+        order: [
+          [0, 'asc']
+        ],
+        pageLength: 10,
+        language: {
+          "processing": "Загрузка...",
+          "zeroRecords": "Записи отсутствуют",
+          "info": "Показано _START_-_END_ из _TOTAL_",
+          "infoEmpty": "Нет данных"
+        },
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+      });
+      let debounceTimer;
+      $('.filter-row input').on('keyup', function() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          table.ajax.reload();
+        }, 500);
+      });
+      $('.filter-row select').on('change', function() {
+        table.ajax.reload();
+      });
+      $('#clear-filters-btn').on('click', function() {
+        $('.filter-row input, .filter-row select').val('');
+        table.ajax.reload();
+      });
+      $(document).on('click', '.delete-owner-btn', function(e) {
+        e.stopPropagation();
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        if (!confirm(`Вы уверены, что хотите удалить владельца "${name}"?`)) return;
+        const deleteUrl = `/api/v1/users/owner/${id}`;
+
+        $.ajax({
+          url: deleteUrl,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          success: function(res) {
+            if (res.status === 'success') {
+              alert(res.message);
+              table.ajax.reload(null, false);
+            } else {
+              alert('Ошибка: ' + res.message);
+            }
+          },
+          error: function() {
+            alert('Произошла ошибка при удалении.');
+          }
+        });
+      });
+      $('#owners-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a').length > 0 || $(this).hasClass('filter-row')) return;
+        const data = table.row(this).data();
+        if (data && data.DT_RowAttr && data.DT_RowAttr['data-detail-url']) {
+          window.location.href = data.DT_RowAttr['data-detail-url'];
+        }
+      });
+    });
+  </script>
+  <style>
+    .id-column {
+      width: 80px;
+    }
+
+    .status-column {
+      width: 120px;
+    }
+
+    .debt-column {
+      width: 100px;
+    }
+
+    .actions-column {
+      width: 140px;
+    }
+  </style>
+{% endblock scripts %}

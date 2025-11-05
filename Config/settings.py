@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "src.users",
     "src.website",
     "ninja",
+    "ajax_datatable",
 ]
 
 MIDDLEWARE = [

@@ -2,7 +2,9 @@
 
 from django import forms
 
+from .models import Article
 from .models import Currency
+from .models import PaymentDetails
 from .models import Service
 from .models import Tariff
 from .models import TariffService
@@ -106,3 +108,39 @@ class TariffServiceForm(forms.ModelForm):
 TariffServiceFormSet = forms.inlineformset_factory(
     Tariff, TariffService, form=TariffServiceForm, extra=1, can_delete=True
 )
+
+
+class ArticleForm(forms.ModelForm):
+    """A form for creating and editing payment Article objects."""
+
+    class Meta:
+        """Provides metadata for the ArticleForm."""
+
+        model = Article
+        fields = ["name", "type"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "type": forms.Select(attrs={"class": "form-select"}),
+        }
+        labels = {
+            "name": "Название",
+            "type": "Приход/расход",
+        }
+
+
+class PaymentDetailsForm(forms.ModelForm):
+    """A form for updating the singleton PaymentDetails object."""
+
+    class Meta:
+        """Provides metadata for the PaymentDetailsForm."""
+
+        model = PaymentDetails
+        fields = ["company_name", "info"]
+        widgets = {
+            "company_name": forms.TextInput(attrs={"class": "form-control"}),
+            "info": forms.Textarea(attrs={"class": "form-control", "rows": 5}),
+        }
+        labels = {
+            "company_name": "Название компании",
+            "info": "Информация",
+        }

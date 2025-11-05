@@ -1,0 +1,72 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  {% if form.instance.pk %}
+    Редактирование статьи
+  {% else %}
+    Добавление статьи
+  {% endif %}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>
+            {% if form.instance.pk %}
+              Редактирование
+            {% else %}
+              Добавление статьи
+            {% endif %}
+          </h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:article_list' %}">Статьи приходов/расходов</a>
+            </li>
+            <li class="breadcrumb-item active">
+              {% if form.instance.pk %}
+                Редактирование
+              {% else %}
+                Добавление
+              {% endif %}
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post">
+        {% csrf_token %}
+        <div class="card card-primary card-outline">
+          <div class="card-body">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                {{ form.name }}
+                {{ form.name.errors }}
+              </div>
+              <div class="mb-3">
+                <label for="{{ form.type.id_for_label }}">{{ form.type.label }}</label>
+                {{ form.type }}
+                {{ form.type.errors }}
+              </div>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{% url 'finance:article_list' %}" class="btn btn-secondary">Отменить</a>
+            <button type="submit" class="btn btn-success">Сохранить</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}

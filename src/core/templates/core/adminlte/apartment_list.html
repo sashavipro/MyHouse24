@@ -1,0 +1,275 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Квартиры
+{% endblock title %}
+{% block content %}
+  {% csrf_token %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Квартиры</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Квартиры</li>
+          </ol>
+        </div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-sm-12 text-end">
+          <a href="{% url 'building:apartment_add' %}" class="btn btn-success">Добавить квартиру</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="d-flex justify-content-end p-3 border-bottom">
+          <button type="button"
+                  class="btn btn-outline-secondary"
+                  id="clear-filters-btn">Очистить</button>
+        </div>
+        <div class="table-responsive">
+          <table id="apartments-table" class="table table-hover mb-0" width="100%">
+            <thead>
+              <tr>
+                <th>№ квартиры</th>
+                <th>Дом</th>
+                <th>Секция</th>
+                <th>Этаж</th>
+                <th>Владелец</th>
+                <th>Остаток (грн)</th>
+                <th class="actions-column"></th>
+              </tr>
+              <tr class="filter-row">
+                <td>
+                  <input type="text" id="filter_number" class="form-control form-control-sm" />
+                </td>
+                <td>
+                  <select id="filter_house" class="form-select form-select-sm">
+                    <option value="">Все дома</option>
+                    {% for house in houses %}<option value="{{ house.pk }}">{{ house.title }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <select id="filter_section" class="form-select form-select-sm" disabled>
+                    <option value="">Сначала выберите дом</option>
+                  </select>
+                </td>
+                <td>
+                  <select id="filter_floor" class="form-select form-select-sm" disabled>
+                    <option value="">Сначала выберите дом</option>
+                  </select>
+                </td>
+                <td>
+                  <select id="filter_owner" class="form-select form-select-sm">
+                    <option value="">Все владельцы</option>
+                    {% for owner in owners %}<option value="{{ owner.pk }}">{{ owner.get_full_name }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <select id="filter_balance" class="form-select form-select-sm">
+                    <option value="">Все</option>
+                    <option value="debt">Есть долг</option>
+                    <option value="no_debt">Нет долга</option>
+                  </select>
+                </td>
+                <td></td>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <script>
+    $(document).ready(function() {
+      const table = $('#apartments-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false,
+        ordering: false,
+        ajax: {
+          url: "{% url 'building:ajax_datatable_apartments' %}",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          data: d => ({
+            ...d,
+            number: $('#filter_number').val(),
+            house: $('#filter_house').val(),
+            section: $('#filter_section').val(),
+            floor: $('#filter_floor').val(),
+            owner: $('#filter_owner').val(),
+            balance: $('#filter_balance').val()
+          })
+        },
+        columns: [{
+          data: 'number'
+        }, {
+          data: 'house'
+        }, {
+          data: 'section'
+        }, {
+          data: 'floor'
+        }, {
+          data: 'owner'
+        }, {
+          data: 'balance'
+        }, {
+          data: 'actions',
+          width: '120px'
+        }],
+        pageLength: 10,
+        language: {
+          processing: "Загрузка...",
+          info: "Показано _START_-_END_ из _TOTAL_",
+          infoEmpty: "Нет данных",
+          zeroRecords: "Записи отсутствуют",
+          emptyTable: "В таблице нет данных",
+          paginate: {
+            first: "«",
+            previous: "‹",
+            next: "›",
+            last: "»"
+          }
+        },
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+      });
+
+      // Логика фильтров (без изменений)
+      let timer;
+      $('.filter-row input').on('keyup', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => table.ajax.reload(), 500);
+      });
+      $('#filter_owner, #filter_balance, #filter_section, #filter_floor').on('change', () => table.ajax.reload());
+      $('#clear-filters-btn').on('click', () => {
+        $('.filter-row input, .filter-row select').val('');
+        $('#filter_section, #filter_floor').html('<option value="">Сначала выберите дом</option>').prop('disabled', true);
+        table.ajax.reload();
+      });
+      $('#filter_house').on('change', function() {
+        const houseId = $(this).val();
+        const loadDeps = (url, sel, label) => {
+          sel.html('<option value="">Загрузка...</option>').prop('disabled', true);
+          if (houseId) {
+            $.get(url, data => {
+              sel.html(`<option value="">Все ${label}</option>`);
+              data.forEach(i => sel.append(new Option(i.name, i.id)));
+              sel.prop('disabled', false);
+            });
+          } else {
+            sel.html(`<option value="">Сначала выберите дом</option>`);
+          }
+        };
+        loadDeps(`/api/v1/buildings/house/${houseId}/sections`, $('#filter_section'), 'секции');
+        loadDeps(`/api/v1/buildings/house/${houseId}/floors`, $('#filter_floor'), 'этажи');
+        table.ajax.reload();
+      });
+
+      // AJAX-запрос на удаление теперь RESTful ===
+      $(document).on('click', '.delete-apartment-btn', function(e) {
+        e.stopPropagation();
+        const apartmentId = $(this).data('id');
+        const apartmentName = $(this).data('name');
+        if (!confirm(`Вы уверены, что хотите удалить квартиру "${apartmentName}"?`)) return;
+
+        const deleteUrl = `/api/v1/buildings/apartment/${apartmentId}`;
+
+        $.ajax({
+          url: deleteUrl,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          success: (res) => {
+            alert(res.message);
+            if (res.status === 'success') {
+              table.ajax.reload(null, false);
+            }
+          },
+          error: () => alert('Ошибка при удалении квартиры')
+        });
+      });
+
+      // Клик по строке (без изменений)
+      $('#apartments-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a').length || $(this).hasClass('filter-row')) return;
+        const url = table.row(this).data()?.DT_RowAttr?.['data-detail-url'];
+        if (url) window.location.href = url;
+      });
+    });
+  </script>
+  <style>
+    .actions-column {
+      width: 120px;
+    }
+
+    table.dataTable thead th::before,
+    table.dataTable thead th::after,
+    table.dataTable thead .dt-column-order {
+      display: none !important;
+    }
+
+    table.dataTable thead th {
+      cursor: default !important;
+      padding-right: 12px !important;
+      white-space: nowrap;
+    }
+
+    #apartments-table tbody tr {
+      cursor: pointer;
+    }
+
+    #apartments-table tbody tr.filter-row {
+      cursor: default;
+    }
+
+    #apartments-table td {
+      white-space: nowrap !important;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 250px;
+      vertical-align: middle;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    .filter-row td {
+      padding: 8px !important;
+      background-color: #f8f9fa;
+    }
+
+    .btn-sm {
+      margin: 0 2px;
+    }
+
+    .pagination {
+      margin-bottom: 0;
+    }
+
+    #apartments-table th,
+    #apartments-table td {
+      vertical-align: middle !important;
+    }
+  </style>
+{% endblock scripts %}

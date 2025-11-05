@@ -162,6 +162,8 @@
         font-size: 3rem;
       }
     </style>
+    {% block styles %}
+    {% endblock styles %}
   </head>
   <!--end::Head-->
   <!--begin::Body-->
@@ -271,19 +273,19 @@
                 </a>
               </li>
               <li class="nav-item">
-                <a href="#" class="nav-link">
+                <a href="{% url 'building:personal_account_list' %}" class="nav-link">
                   <i class="nav-icon bi bi-credit-card"></i>
                   <p>Лицевые счета</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="#" class="nav-link">
+                <a href="{% url 'building:apartment_list' %}" class="nav-link">
                   <i class="nav-icon bi bi-key-fill"></i>
                   <p>Квартиры</p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="#" class="nav-link">
+                <a href="{% url 'users:owner_list' %}" class="nav-link">
                   <i class="nav-icon bi bi-people-fill"></i>
                   <p>Владельцы квартир</p>
                 </a>
@@ -389,13 +391,13 @@
                     </a>
                   </li>
                   <li class="nav-item">
-                    <a href="#" class="nav-link">
+                    <a href="{% url 'finance:payment_details' %}" class="nav-link">
                       <i class="nav-icon bi bi-credit-card-2-front"></i>
                       <p>Платежные реквизиты</p>
                     </a>
                   </li>
                   <li class="nav-item">
-                    <a href="#" class="nav-link">
+                    <a href="{% url 'finance:article_list' %}" class="nav-link">
                       <i class="nav-icon bi bi-card-list"></i>
                       <p>Статьи платежей</p>
                     </a>

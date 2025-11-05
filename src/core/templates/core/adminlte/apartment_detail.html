@@ -1,0 +1,121 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Квартира №{{ apartment.number }}, {{ apartment.house.title }}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Квартира №{{ apartment.number }}, {{ apartment.house.title }}</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'building:apartment_list' %}">Квартиры</a>
+            </li>
+            <li class="breadcrumb-item active">Квартира №{{ apartment.number }}</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h3 class="card-title">Просмотр квартиры</h3>
+            <div>
+              <a href="#" class="btn btn-sm btn-success">
+                <i class="bi bi-currency-dollar"></i> Принять платеж
+              </a>
+              <a href="#" class="btn btn-sm btn-info">
+                <i class="bi bi-file-earmark-text"></i> Оформить квитанцию
+              </a>
+              <a href="{% url 'building:apartment_edit' apartment.pk %}"
+                 class="btn btn-sm btn-primary">Редактировать квартиру</a>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-bordered">
+            <tbody>
+              <tr>
+                <th class="details-label">Лицевой счет</th>
+                <td>
+                  {% if apartment.personal_account %}
+                    <a href="#">{{ apartment.personal_account.number }}</a>
+                  {% else %}
+                    <span class="text-muted">Не назначен</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Номер квартиры</th>
+                <td>{{ apartment.number }}</td>
+              </tr>
+              <tr>
+                <th>Площадь</th>
+                <td>{{ apartment.area|default:"Не указана" }}</td>
+              </tr>
+              <tr>
+                <th>Дом</th>
+                <td>
+                  <a href="{% url 'building:house_detail' apartment.house.pk %}">{{ apartment.house.title }}</a>
+                </td>
+              </tr>
+              <tr>
+                <th>Секция</th>
+                <td>{{ apartment.section.name|default:"Не указана" }}</td>
+              </tr>
+              <tr>
+                <th>Этаж</th>
+                <td>{{ apartment.floor.name|default:"Не указана" }}</td>
+              </tr>
+              <tr>
+                <th>Владелец</th>
+                <td>
+                  {% if apartment.owner %}
+                    <a href="{% url 'users:user_detail' apartment.owner.pk %}">{{ apartment.owner.get_full_name }}</a>
+                  {% else %}
+                    <span class="text-muted">Не назначен</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Тариф</th>
+                <td>
+                  {% if apartment.tariff %}
+                    <a href="{% url 'finance:tariff_detail' apartment.tariff.pk %}">{{ apartment.tariff.name }}</a>
+                  {% else %}
+                    <span class="text-muted">Не назначен</span>
+                  {% endif %}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer">
+          <a href="#" class="me-3">Посмотреть показания счетчиков</a>
+          <a href="#" class="me-3">Посмотреть приходы</a>
+          <a href="#">Посмотреть квитанции</a>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <style>
+    .details-label {
+      width: 250px;
+    }
+  </style>
+{% endblock scripts %}

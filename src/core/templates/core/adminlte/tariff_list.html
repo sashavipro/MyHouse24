@@ -6,7 +6,6 @@
   Тарифы
 {% endblock title %}
 {% block content %}
-  {% csrf_token %} {# Добавляем токен для AJAX-запросов #}
   <section class="content-header">
     <div class="container-fluid">
       <div class="row mb-2">
@@ -22,7 +21,7 @@
           </ol>
         </div>
       </div>
-      <div class="row mb-2">
+      <div class="row mb-3">
         <div class="col-sm-12 text-end">
           <a href="{% url 'finance:tariff_add' %}" class="btn btn-success">Добавить тариф</a>
         </div>
@@ -32,19 +31,35 @@
   <section class="content">
     <div class="card">
       <div class="card-body p-0">
+        <div class="d-flex justify-content-end align-items-center p-3 border-bottom">
+          <button type="button"
+                  class="btn btn-outline-secondary"
+                  id="clear-filters-btn">Очистить</button>
+        </div>
         <div class="table-responsive">
-          <table id="tariffs-table" class="table table-hover tariffs-table-custom">
+          <table id="tariffs-table" class="table table-hover mb-0" width="100%">
             <thead>
               <tr>
-                <th class="text-start">Название тарифа</th>
-                <th class="text-start">Описание тарифа</th>
+                <th class="id-column">#</th>
+                <th>Название тарифа</th>
+                <th>Описание тарифа</th>
                 <th>Дата редактирования</th>
-                <th class="th-actions"></th>
+                <th class="actions-column"></th>
+              </tr>
+              <tr class="filter-row">
+                <td></td>
+                <td>
+                  <input type="text" id="filter_name" class="form-control form-control-sm" />
+                </td>
+                <td>
+                  <input type="text"
+                         id="filter_description"
+                         class="form-control form-control-sm" />
+                </td>
+                <td></td>
+                <td></td>
               </tr>
             </thead>
-            <tbody>
-              <!-- Тело таблицы будет заполнено через AJAX -->
-            </tbody>
           </table>
         </div>
       </div>
@@ -52,201 +67,215 @@
   </section>
 {% endblock content %}
 {% block scripts %}
-  <style>
-    /* Стиль для кликабельных строк и ссылок */
-    #tariffs-table tbody tr {
-      cursor: pointer;
-    }
-
-    #tariffs-table tbody a {
-      text-decoration: none;
-      color: inherit;
-    }
-
-    #tariffs-table tbody a:hover {
-      text-decoration: underline;
-      color: #0d6efd;
-    }
-
-    /* Убираем ромбики сортировки для всех колонок кроме "Название тарифа" */
-    #tariffs-table thead th:not(:first-child)::before,
-    #tariffs-table thead th:not(:first-child)::after {
-      display: none !important;
-    }
-
-    /* Убираем возможность сортировки для колонки с действиями */
-    #tariffs-table thead th.th-actions::before,
-    #tariffs-table thead th.th-actions::after {
-      display: none !important;
-    }
-
-    .tariffs-table-custom {
-      width: 100%;
-    }
-  </style>
-  <!-- DataTables -->
+  {{ block.super }}
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <link rel="stylesheet"
         href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // --- НАСТРОЙКА (аналогично user_list.html) ---
-      function getCSRFToken() {
-        const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
-        if (tokenInput) return tokenInput.value;
-        const cookieValue = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
-        if (cookieValue) return cookieValue.split('=')[1];
-        return null;
-      }
-      const csrfToken = getCSRFToken();
-      if (!csrfToken) {
-        console.error('CSRF token not found!');
-      }
-
-      const tariffDetailUrlTemplate = "{% url 'finance:tariff_detail' 0 %}";
-      const tariffEditUrlTemplate = "{% url 'finance:tariff_edit' 0 %}";
-      const tariffDeleteUrl = "/api/v1/finance/delete";
-
-      // --- ИНИЦИАЛИЗАЦИЯ DATATABLES (аналогично user_list.html) ---
-      const table = new DataTable('#tariffs-table', {
-        processing: true,
+    $(document).ready(function() {
+      const table = $('#tariffs-table').DataTable({
         serverSide: true,
-        paging: false,
-        info: false,
+        processing: true,
+        searching: false,
+        ordering: true,
         ajax: {
-          url: "/api/v1/finance/list",
+          url: "{% url 'finance:ajax_datatable_tariffs' %}",
           type: 'POST',
           headers: {
-            'X-CSRFToken': csrfToken
+            'X-CSRFToken': '{{ csrf_token }}'
           },
+          data: function(d) {
+            d.name = $('#filter_name').val();
+            d.description = $('#filter_description').val();
+          }
         },
         columns: [{
-          data: 'name',
-          className: 'text-start'
-        }, {
-          data: 'description',
-          className: 'text-start',
-          orderable: false
-        }, {
-          data: 'updated_at',
-          orderable: false,
-          render: function(data) {
-            const date = new Date(data);
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${day}.${month}.${year} - ${hours}:${minutes}`;
-          }
-        }, {
           data: 'pk',
-          orderable: false,
-          className: 'text-end',
-          render: function(data, type, row) {
-            const editUrl = tariffEditUrlTemplate.replace('0', data);
-            return `
-                <a href="${editUrl}" class="btn btn-sm btn-primary edit-tariff-link" title="Редактировать">
-                    <i class="bi bi-pencil"></i>
-                </a>
-                <button type="button" class="btn btn-sm btn-danger delete-tariff-btn" title="Удалить" data-tariff-id="${data}" data-tariff-name="${row.name}">
-                    <i class="bi bi-trash"></i>
-                </button>`;
-          }
+          width: '50px'
+        }, {
+          data: 'name'
+        }, {
+          data: 'description'
+        }, {
+          data: 'updated_at'
+        }, {
+          data: 'actions',
+          width: '120px'
         }],
-        order: [
-          [0, 'asc']
+        pageLength: 10,
+        lengthMenu: [
+          [10, 25, 50, 100],
+          [10, 25, 50, 100]
         ],
         language: {
-          "processing": "Подождите...",
-          "zeroRecords": "Тарифы не найдены.",
-          "emptyTable": "В таблице отсутствуют данные"
+          /* ... (ваш код локализации) ... */
         },
-        searching: false,
-        dom: 't',
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
       });
 
-      // --- ОБРАБОТЧИК КЛИКОВ (полная аналогия с user_list.html) ---
-      document.querySelector('#tariffs-table tbody').addEventListener('click', function(event) {
+      // Debounce для фильтров
+      let debounceTimer;
+      $('.filter-row input[type="text"]').on('keyup', function() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          table.ajax.reload();
+        }, 500);
+      });
 
-        const deleteButton = event.target.closest('.delete-tariff-btn');
-        const editLink = event.target.closest('.edit-tariff-link');
+      // Кнопка "Очистить"
+      $('#clear-filters-btn').on('click', function() {
+        $('.filter-row input').val('');
+        table.ajax.reload();
+      });
 
-        // Ссылка редактирования
-        if (editLink) {
-          event.stopPropagation();
-          return;
-        }
-
-        // Кнопка удаления
-        if (deleteButton) {
-          event.preventDefault();
-          event.stopPropagation();
-
-          const tariffId = deleteButton.dataset.tariffId;
-          const tariffName = deleteButton.dataset.tariffName;
-
-          if (!confirm(`Вы уверены, что хотите удалить тариф "${tariffName}"?`)) return;
-          if (!csrfToken) {
-            alert('Ошибка: CSRF токен не найден.');
-            return;
+      // Удаление тарифа (RESTful)
+      $(document).on('click', '.delete-tariff-btn', function(e) {
+        e.stopPropagation();
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        if (!confirm(`Вы уверены, что хотите удалить тариф "${name}"?`)) return;
+        const deleteUrl = `/api/v1/finance/tariff/${id}`;
+        $.ajax({
+          url: deleteUrl,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          statusCode: {
+            200: function(response) {
+              alert(response.message);
+              table.ajax.reload(null, false);
+            },
+            400: function(xhr) {
+              alert('Ошибка: ' + (xhr.responseJSON?.message || 'Неверный запрос'));
+            },
+            500: function(xhr) {
+              alert('Внутренняя ошибка сервера: ' + (xhr.responseJSON?.message || 'Попробуйте позже'));
+            }
+          },
+          error: function(xhr) {
+            if (!xhr.responseJSON) {
+              alert('Произошла сетевая ошибка или сервер недоступен.');
+            }
           }
+        });
+      });
 
-          const formData = new FormData();
-          formData.append('tariff_id', tariffId);
-
-          fetch(tariffDeleteUrl, {
-              method: 'POST',
-              headers: {
-                'X-CSRFToken': csrfToken,
-                'Accept': 'application/json'
-              },
-              body: formData
-            })
-            .then(res => res.text().then(text => {
-              try {
-                return {
-                  ok: res.ok,
-                  status: res.status,
-                  data: JSON.parse(text)
-                };
-              } catch (e) {
-                return {
-                  ok: res.ok,
-                  status: res.status,
-                  data: null,
-                  error: text
-                };
-              }
-            }))
-            .then(result => {
-              if (!result.ok) {
-                throw new Error(`Сервер вернул ошибку ${result.status}: ${result.error || JSON.stringify(result.data)}`);
-              }
-              if (result.data && result.data.status === 'success') {
-                alert(result.data.message);
-                table.ajax.reload(null, false);
-              } else {
-                alert('Ошибка: ' + (result.data?.message || 'Неизвестная ошибка'));
-              }
-            })
-            .catch((error) => {
-              console.error('Error during deletion:', error);
-              alert('Произошла ошибка при удалении:\n\n' + error.message);
-            });
-          return;
-        }
-
-        // Клик по строке
-        const row = event.target.closest('tr');
-        if (row) {
-          const rowData = table.row(row).data();
-          if (rowData && rowData.pk) {
-            window.location.href = tariffDetailUrlTemplate.replace('0', rowData.pk);
-          }
+      // Клик по строке
+      $('#tariffs-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a').length > 0 || $(this).hasClass('filter-row')) return;
+        const data = table.row(this).data();
+        if (data && data.pk) {
+          window.location.href = "{% url 'finance:tariff_detail' 0 %}".replace('0', data.pk);
         }
       });
     });
   </script>
+  <style>
+    .id-column {
+      width: 50px;
+    }
+
+    .actions-column {
+      width: 120px;
+    }
+
+    /* Убираем иконки сортировки */
+    table.dataTable thead th::before,
+    table.dataTable thead th::after,
+    table.dataTable thead .dt-column-order {
+      display: none !important;
+    }
+
+    table.dataTable thead th {
+      cursor: default !important;
+      padding-right: 12px !important;
+      white-space: nowrap;
+      /* заголовки в одну строку */
+    }
+
+    /* Курсор для строк */
+    #tariffs-table tbody tr {
+      cursor: pointer;
+    }
+
+    #tariffs-table tbody tr.filter-row {
+      cursor: default;
+    }
+
+    /* Таблица без переноса текста */
+    #tariffs-table td {
+      white-space: nowrap !important;
+      /* не переносим строки */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      /* добавляем "..." если текст не помещается */
+      max-width: 250px;
+      /* ограничиваем ширину ячеек */
+      vertical-align: middle;
+    }
+
+    /* Делаем таблицу горизонтально скроллируемой */
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    /* Фильтр */
+    .filter-row td {
+      padding: 8px !important;
+      background-color: #f8f9fa;
+    }
+
+    /* Кнопки и пагинация */
+    .btn-sm {
+      margin: 0 2px;
+    }
+
+    .pagination {
+      margin-bottom: 0;
+    }
+
+    .page-link {
+      padding: 0.375rem 0.75rem;
+    }
+
+    /* Поле поиска */
+    .dataTables_filter {
+      display: inline-block;
+    }
+
+    .dataTables_filter label {
+      font-weight: normal;
+      white-space: nowrap;
+      text-align: left;
+    }
+
+    .dataTables_filter input {
+      display: inline-block;
+      width: auto;
+      margin-left: 0.5em;
+    }
+
+    .gap-2 {
+      gap: 0.5rem;
+    }
+
+    .dataTables_wrapper {
+      width: 100%;
+    }
+
+    /* Кнопки действий */
+    #tariffs-table .btn {
+      margin: 0 1px;
+      white-space: nowrap;
+    }
+
+    /* Центрируем контент */
+    #tariffs-table th,
+    #tariffs-table td {
+      vertical-align: middle !important;
+    }
+  </style>
 {% endblock scripts %}

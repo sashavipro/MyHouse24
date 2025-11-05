@@ -1,0 +1,124 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Статьи приходов/расходов
+{% endblock title %}
+{% block content %}
+  {% csrf_token %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Статьи приходов/расходов</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Статьи приходов/расходов</li>
+          </ol>
+        </div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-sm-12 text-end">
+          <a href="{% url 'finance:article_add' %}" class="btn btn-success">Добавить статью</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table id="articles-table" class="table table-hover w-100">
+            <thead>
+              <tr>
+                <th class="text-start">Название</th>
+                <th class="text-start">Приход/расход</th>
+                <th class="th-actions"></th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <script>
+    $(document).ready(function() {
+      const table = $('#articles-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false,
+        ordering: false,
+        ajax: {
+          url: "{% url 'finance:ajax_datatable_articles' %}",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        },
+        columns: [{
+          data: 'name'
+        }, {
+          data: 'type'
+        }, {
+          data: 'actions'
+        }],
+        paging: false,
+        info: false,
+        dom: 't',
+        language: {
+          processing: "Загрузка...",
+          zeroRecords: "Записи отсутствуют",
+          emptyTable: "В таблице нет данных",
+        },
+      });
+      $(document).on('click', '.delete-article-btn', function(e) {
+        e.stopPropagation();
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        if (!confirm(`Вы уверены, что хотите удалить статью "${name}"?`)) return;
+
+        const deleteUrl = `/api/v1/finance/article/${id}`;
+
+        $.ajax({
+          url: deleteUrl,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          success: function(response) {
+            if (response.status === 'success') {
+              alert(response.message);
+              table.ajax.reload(null, false);
+            } else {
+              alert('Ошибка: ' + response.message);
+            }
+          },
+          error: function() {
+            alert('Ошибка при удалении статьи');
+          }
+        });
+      });
+      $('#articles-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a').length > 0) return;
+        const rowData = table.row(this).data();
+        const detailUrl = rowData?.DT_RowAttr?.['data-detail-url'];
+        if (detailUrl) {
+          window.location.href = detailUrl;
+        }
+      });
+    });
+  </script>
+{% endblock scripts %}

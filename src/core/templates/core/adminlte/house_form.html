@@ -340,7 +340,7 @@
               const row = this.closest('.dynamic-form-row');
               const roleInput = row.querySelector('.role-input');
               if (userId) {
-                fetch(`{% url 'users:get_user_role_api' %}?user_id=${userId}`)
+                fetch(`/api/v1/users/get-role/?user_id=${userId}`)
                   .then(response => response.json())
                   .then(data => {
                     if (data.role_name) {

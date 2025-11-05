@@ -1,0 +1,53 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Платежные реквизиты
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Платежные реквизиты</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Платежные реквизиты</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post">
+        {% csrf_token %}
+        <div class="card card-primary card-outline">
+          <div class="card-body">
+            <div class="col-md-8">
+              <div class="mb-3">
+                <label for="{{ form.company_name.id_for_label }}">{{ form.company_name.label }}</label>
+                {{ form.company_name }}
+                {{ form.company_name.errors }}
+              </div>
+              <div class="mb-3">
+                <label for="{{ form.info.id_for_label }}">{{ form.info.label }}</label>
+                {{ form.info }}
+                {{ form.info.errors }}
+              </div>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{% url 'finance:payment_details' %}" class="btn btn-secondary">Отменить</a>
+            <button type="submit" class="btn btn-success">Сохранить</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}

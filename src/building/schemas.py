@@ -25,3 +25,24 @@ class StatusResponse(Schema):
 
     status: str
     message: str
+
+
+class ApartmentSchema(Schema):
+    """Define the data structure for a single Apartment object."""
+
+    pk: int
+    number: str
+    house_title: str | None = None
+    section_name: str | None = None
+    floor_name: str | None = None
+    owner_full_name: str | None = None
+    balance: float | None = None
+
+
+class ApartmentListResponseSchema(Schema):
+    """Define the response structure for an apartment list required by DataTables."""
+
+    draw: int
+    records_total: int
+    records_filtered: int
+    data: list[ApartmentSchema]

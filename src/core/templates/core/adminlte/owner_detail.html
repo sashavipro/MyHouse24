@@ -1,0 +1,126 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% block title %}
+  Профиль владельца: {{ owner_obj.get_full_name }}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Профиль владельца</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="#">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'users:owner_list' %}">Владельцы квартир</a>
+            </li>
+            <li class="breadcrumb-item active">Профиль владельца</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card">
+        <div class="card-header d-flex justify-content-end">
+          <a href="#" class="btn btn-secondary me-2">Перейти в кабинет</a>
+          <a href="{% url 'users:owner_edit' owner_obj.pk %}"
+             class="btn btn-primary">Редактировать профиль</a>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3 text-center">
+              {% if owner_obj.avatar %}
+                <img src="{{ owner_obj.avatar.url }}"
+                     class="img-fluid rounded-circle avatar-placeholder"
+                     alt="Avatar" />
+              {% else %}
+                <div class="bi bi-image text-muted avatar-icon-placeholder"></div>
+              {% endif %}
+            </div>
+            <div class="col-md-9">
+              <table class="table table-bordered">
+                <tbody>
+                  <tr>
+                    <th class="details-label">Статус</th>
+                    <td>
+                      <span class="badge bg-success">{{ owner_obj.get_status_display }}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>ID</th>
+                    <td>{{ owner_obj.user_id|default:"-" }}</td>
+                  </tr>
+                  <tr>
+                    <th>Фамилия</th>
+                    <td>{{ owner_obj.last_name|default:"-" }}</td>
+                  </tr>
+                  <tr>
+                    <th>Имя</th>
+                    <td>{{ owner_obj.first_name|default:"-" }}</td>
+                  </tr>
+                  <tr>
+                    <th>Отчество</th>
+                    <td>{{ owner_obj.middle_name|default:"-" }}</td>
+                  </tr>
+                  <tr>
+                    <th>Дата рождения</th>
+                    <td>{{ owner_obj.birthday|date:"d.m.Y"|default:"-" }}</td>
+                  </tr>
+                  <tr>
+                    <th>О владельце (заметки)</th>
+                    <td>{{ owner_obj.description|default:"-" }}</td>
+                  </tr>
+                  <tr>
+                    <th>Телефон</th>
+                    <td>{{ owner_obj.phone|default:"-" }}</td>
+                  </tr>
+                  <tr>
+                    <th>Viber</th>
+                    <td>{{ owner_obj.viber|default:"-" }}</td>
+                  </tr>
+                  <tr>
+                    <th>Telegram</th>
+                    <td>{{ owner_obj.telegram|default:"-" }}</td>
+                  </tr>
+                  <tr>
+                    <th>Email</th>
+                    <td>{{ owner_obj.email|default:"-" }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <style>
+    .avatar-placeholder {
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+    }
+
+    .avatar-icon-placeholder {
+      font-size: 150px;
+      width: 150px;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .details-label {
+      width: 200px;
+    }
+  </style>
+{% endblock scripts %}

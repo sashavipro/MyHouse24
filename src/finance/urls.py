@@ -3,6 +3,8 @@
 from django.urls import path
 
 from . import views
+from .datatables import ArticleAjaxDatatableView
+from .datatables import TariffAjaxDatatableView
 
 app_name = "finance"
 
@@ -22,5 +24,29 @@ urlpatterns = [
         "adminlte/tariffs/<int:pk>/edit/",
         views.TariffUpdateView.as_view(),
         name="tariff_edit",
+    ),
+    path(
+        "ajax-datatable/tariffs/",
+        TariffAjaxDatatableView.as_view(),
+        name="ajax_datatable_tariffs",
+    ),
+    path("adminlte/articles/", views.ArticleListView.as_view(), name="article_list"),
+    path(
+        "adminlte/articles/add/", views.ArticleCreateView.as_view(), name="article_add"
+    ),
+    path(
+        "adminlte/articles/<int:pk>/edit/",
+        views.ArticleUpdateView.as_view(),
+        name="article_edit",
+    ),
+    path(
+        "ajax-datatable/articles/",
+        ArticleAjaxDatatableView.as_view(),
+        name="ajax_datatable_articles",
+    ),
+    path(
+        "adminlte/payment-details/",
+        views.PaymentDetailsUpdateView.as_view(),
+        name="payment_details",
     ),
 ]

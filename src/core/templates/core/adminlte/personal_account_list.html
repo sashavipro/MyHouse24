@@ -1,0 +1,310 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Лицевые счета
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Лицевые счета</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="#">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Лицевые счета</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="row mb-3">
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <div class="card text-white gradient-card-1">
+            <div class="card-body">
+              <h3 class="mb-0">{{ total_balance|floatformat:2 }} грн</h3>
+              <p class="mb-0">Состояние кассы</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <div class="card text-white gradient-card-2">
+            <div class="card-body">
+              <h3 class="mb-0">{{ total_accounts_balance|floatformat:2 }} грн</h3>
+              <p class="mb-0">Баланс по счетам</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <div class="card text-white gradient-card-3">
+            <div class="card-body">
+              <h3 class="mb-0">{{ total_debt|floatformat:2 }} грн</h3>
+              <p class="mb-0">Задолженность по счетам</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex justify-content-end mb-3">
+        <div class="dropdown">
+          <button class="btn btn-success dropdown-toggle"
+                  type="button"
+                  id="actionsDropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false">Выберите действие</button>
+          <ul class="dropdown-menu" aria-labelledby="actionsDropdown">
+            <li>
+              <a class="dropdown-item"
+                 href="{% url 'building:personal_account_add' %}">
+                <i class="bi bi-plus-circle me-2"></i>Добавить лицевой счет
+              </a>
+            </li>
+            <li>
+              <hr class="dropdown-divider" />
+            </li>
+            <li>
+              <a class="dropdown-item" href="#" id="export-excel-btn">
+                <i class="bi bi-file-earmark-excel me-2"></i>Выгрузить в Excel
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="d-flex justify-content-end p-3 border-bottom">
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    id="clear-filters-btn">Очистить</button>
+          </div>
+          <div class="table-responsive">
+            <table id="accounts-table" class="table table-hover mb-0" width="100%">
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Статус</th>
+                  <th>Квартира</th>
+                  <th>Дом</th>
+                  <th>Секция</th>
+                  <th>Владелец</th>
+                  <th>Остаток (грн)</th>
+                  <th></th>
+                </tr>
+                <tr class="filter-row">
+                  <td>
+                    <input type="text" id="filter_number" class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <select id="filter_status" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      <option value="active">Активен</option>
+                      <option value="inactive">Неактивен</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input type="text"
+                           id="filter_apartment_number"
+                           class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <select id="filter_house" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      {% for house in houses %}<option value="{{ house.pk }}">{{ house.title }}</option>{% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <select id="filter_section" class="form-select form-select-sm" disabled>
+                      <option value="">Сначала выберите дом</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select id="filter_owner" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      {% for owner in owners %}<option value="{{ owner.pk }}">{{ owner.get_full_name }}</option>{% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <select id="filter_balance" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      <option value="debt">Есть долг</option>
+                      <option value="no_debt">Нет долга</option>
+                    </select>
+                  </td>
+                  <td></td>
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <script>
+    $(document).ready(function() {
+      const csrfToken = '{{ csrf_token }}';
+      const table = $('#accounts-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false,
+        ordering: false,
+        ajax: {
+          url: "{% url 'building:ajax_datatable_personal_accounts' %}",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          data: d => ({
+            ...d,
+            number: $('#filter_number').val(),
+            status: $('#filter_status').val(),
+            apartment_number: $('#filter_apartment_number').val(),
+            house: $('#filter_house').val(),
+            section: $('#filter_section').val(),
+            owner: $('#filter_owner').val(),
+            balance: $('#filter_balance').val(),
+          })
+        },
+        columns: [
+
+          {
+            data: 'number'
+          }, {
+            data: 'status'
+          }, {
+            data: 'apartment_number'
+          }, {
+            data: 'house'
+          }, {
+            data: 'section'
+          }, {
+            data: 'owner'
+          }, {
+            data: 'balance'
+          }, {
+            data: 'actions'
+          }
+        ],
+        order: [
+          [0, 'asc']
+        ],
+        pageLength: 10,
+        language: {
+          "processing": "Загрузка...",
+          "zeroRecords": "Записи отсутствуют",
+          "info": "Количество счетов: _TOTAL_",
+          "infoEmpty": "Количество счетов: 0",
+          "paginate": {
+            "first": "Первая",
+            "last": "Последняя",
+            "next": "Следующая",
+            "previous": "Предыдущая"
+          }
+        },
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+      });
+
+      const houseFilter = $('#filter_house');
+      const sectionFilter = $('#filter_section');
+      houseFilter.on('change', function() {
+        const houseId = $(this).val();
+        sectionFilter.html('<option value="">Сначала выберите дом</option>');
+        sectionFilter.prop('disabled', true);
+        if (houseId) {
+          sectionFilter.html('<option value="">Загрузка...</option>');
+          $.ajax({
+            url: `/api/v1/buildings/house/${houseId}/sections`,
+            type: 'GET',
+            success: function(sections) {
+              sectionFilter.html('<option value="">Все секции</option>');
+              sections.forEach(function(section) {
+                sectionFilter.append(new Option(section.name, section.id));
+              });
+              sectionFilter.prop('disabled', false);
+            },
+            error: function() {
+              sectionFilter.html('<option value="">Ошибка загрузки</option>');
+            }
+          });
+        }
+      });
+      let timer;
+      $('.filter-row input').on('keyup', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => table.ajax.reload(), 500);
+      });
+      $('.filter-row select').on('change', () => table.ajax.reload());
+      $('#clear-filters-btn').on('click', () => {
+        $('.filter-row input, .filter-row select').val('');
+        houseFilter.trigger('change');
+        table.ajax.reload();
+      });
+
+      $('#export-excel-btn').on('click', function(e) {
+        e.preventDefault();
+        alert('Функция экспорта в Excel будет реализована позже');
+      });
+
+      $(document).on('click', '.delete-account-btn', function(e) {
+        e.stopPropagation();
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        if (!confirm(`Удалить счет №${name}?`)) return;
+        $.ajax({
+          url: `/api/v1/buildings/personal-account/${id}`,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          success: (res) => {
+            alert(res.message);
+            if (res.status === 'success') table.ajax.reload(null, false);
+          },
+          error: () => alert('Ошибка при удалении счета')
+        });
+      });
+
+      $('#accounts-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a').length) return;
+        const url = table.row(this).data()?.DT_RowAttr?.['data-detail-url'];
+        if (url) window.location.href = url;
+      });
+    });
+  </script>
+  <style>
+    .gradient-card-1 {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      border: none;
+    }
+
+    .gradient-card-2 {
+      background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+      border: none;
+    }
+
+    .gradient-card-3 {
+      background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+      border: none;
+    }
+
+    table.dataTable thead .dt-column-order {
+      display: none !important;
+    }
+
+    table.dataTable thead th {
+      padding-right: 12px !important;
+    }
+  </style>
+{% endblock scripts %}

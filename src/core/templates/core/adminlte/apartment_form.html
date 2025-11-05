@@ -1,0 +1,273 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  {% if form.instance.pk %}
+    Редактирование квартиры
+  {% else %}
+    Новая квартира
+  {% endif %}
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <!-- CSS для Select2 -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+        rel="stylesheet" />
+  <style>
+    /* Стили для лучшей интеграции Select2 с Bootstrap 5 */
+    .select2-container {
+      width: 100% !important;
+    }
+
+    .select2-container--default .select2-selection--single {
+      height: calc(1.5em + .75rem + 2px);
+      padding: .375rem .75rem;
+      border: 1px solid #ced4da;
+      border-radius: .25rem;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+      line-height: 1.5;
+      padding-left: 0;
+      color: #495057;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+      height: calc(1.5em + .75rem);
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .select2-search__field {
+      border: 1px solid #ced4da !important;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>
+            {% if form.instance.pk %}
+              Редактирование квартиры
+            {% else %}
+              Новая квартира
+            {% endif %}
+          </h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}"><i class="bi bi-house-door-fill"></i> Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'building:apartment_list' %}">Квартиры</a>
+            </li>
+            {% if form.instance.pk %}
+              <li class="breadcrumb-item">
+                <a href="{% url 'building:apartment_detail' form.instance.pk %}">Квартира №{{ form.instance.number }}</a>
+              </li>
+              <li class="breadcrumb-item active">Редактирование</li>
+            {% else %}
+              <li class="breadcrumb-item active">Новая квартира</li>
+            {% endif %}
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post">
+        {% csrf_token %}
+        <div class="card card-primary card-outline">
+          <div class="card-body">
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.number.id_for_label }}">{{ form.number.label }}</label>
+                  {{ form.number }}
+                  {% if form.number.errors %}<div class="text-danger">{{ form.number.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                  <label for="{{ form.area.id_for_label }}">{{ form.area.label }}</label>
+                  {{ form.area }}
+                  {% if form.area.errors %}<div class="text-danger">{{ form.area.errors }}</div>{% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.personal_account_number.id_for_label }}">{{ form.personal_account_number.label }}</label>
+                  <!-- Поле 1: Текстовый ввод. Именно оно отправляется на сервер -->
+                  {{ form.personal_account_number }}
+                  {% if form.personal_account_number.errors %}
+                    <div class="text-danger">{{ form.personal_account_number.errors }}</div>
+                  {% endif %}
+                  <!-- Поле 2: Помощник для поиска. Он не отправляется с формой -->
+                  <select id="account-selector" class="form-select mt-2">
+                    <!-- Пустая опция для плейсхолдера -->
+                  </select>
+                </div>
+              </div>
+            </div>
+            <hr />
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.house.id_for_label }}">
+                    Дом <span class="text-danger">*</span>
+                  </label>
+                  {{ form.house }}
+                  {% if form.house.errors %}<div class="text-danger">{{ form.house.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                  <label for="{{ form.section.id_for_label }}">Секция</label>
+                  {{ form.section }}
+                  {% if form.section.errors %}<div class="text-danger">{{ form.section.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                  <label for="{{ form.floor.id_for_label }}">Этаж</label>
+                  {{ form.floor }}
+                  {% if form.floor.errors %}<div class="text-danger">{{ form.floor.errors }}</div>{% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="{{ form.owner.id_for_label }}">Владелец</label>
+                  {{ form.owner }}
+                  {% if form.owner.errors %}<div class="text-danger">{{ form.owner.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                  <label for="{{ form.tariff.id_for_label }}">Тариф</label>
+                  {{ form.tariff }}
+                  {% if form.tariff.errors %}<div class="text-danger">{{ form.tariff.errors }}</div>{% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{% url 'building:apartment_list' %}" class="btn btn-secondary">Отменить</a>
+            <button type="submit" name="save" class="btn btn-success">Сохранить</button>
+            {% if not form.instance.pk %}
+              <button type="submit" name="save_and_add_new" class="btn btn-primary">Сохранить и добавить новую</button>
+            {% endif %}
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <!-- JS для JQuery (нужен для Select2) и Select2 -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // --- Логика для лицевого счета ---
+      const accountNumberInput = $('#{{ form.personal_account_number.id_for_label }}');
+      const accountSelector = $('#account-selector');
+
+      accountSelector.select2({
+        placeholder: '... или выберите свободный из списка',
+        allowClear: true,
+        ajax: {
+          url: '/api/v1/buildings/personal-accounts/search',
+          dataType: 'json',
+          delay: 250,
+          data: function(params) {
+            return {
+              term: params.term,
+              current_apartment_id: '{{ form.instance.pk|default_if_none:"" }}'
+            };
+          },
+          processResults: function(data) {
+            return {
+              results: data.results
+            };
+          },
+          cache: true
+        }
+      });
+
+      accountSelector.on('select2:select', function(e) {
+        const data = e.params.data;
+        if (data && data.text) {
+          accountNumberInput.val(data.text);
+        }
+      });
+
+      accountSelector.on('select2:unselect', function(e) {
+        accountNumberInput.val('');
+      });
+
+      // --- Логика для динамической подгрузки секций и этажей ---
+      const houseSelect = document.getElementById('{{ form.house.id_for_label }}');
+      const sectionSelect = document.getElementById('{{ form.section.id_for_label }}');
+      const floorSelect = document.getElementById('{{ form.floor.id_for_label }}');
+
+      // Запоминаем исходные ID для восстановления при редактировании
+      const initialHouseId = '{{ form.instance.house.pk|default_if_none:"" }}';
+      const initialSectionId = '{{ form.instance.section.pk|default_if_none:"" }}';
+      const initialFloorId = '{{ form.instance.floor.pk|default_if_none:"" }}';
+
+      const sectionsUrlTemplate = "/api/v1/buildings/house/0/sections";
+      const floorsUrlTemplate = "/api/v1/buildings/house/0/floors";
+
+      houseSelect.addEventListener('change', function() {
+        const houseId = this.value;
+
+        // Блокируем и очищаем списки
+        sectionSelect.innerHTML = '<option value="">---------</option>';
+        floorSelect.innerHTML = '<option value="">---------</option>';
+        sectionSelect.disabled = true;
+        floorSelect.disabled = true;
+
+        if (!houseId) {
+          return;
+        }
+
+        // Загружаем секции
+        fetch(sectionsUrlTemplate.replace('0', houseId))
+          .then(response => response.json())
+          .then(data => {
+            data.forEach(section => {
+              const option = new Option(section.name, section.id);
+              sectionSelect.add(option);
+            });
+            sectionSelect.disabled = false;
+            // Если текущий дом - это исходный дом, восстанавливаем значение секции
+            if (houseId === initialHouseId) {
+              sectionSelect.value = initialSectionId;
+            }
+          })
+          .catch(error => console.error('Error fetching sections:', error));
+
+        // Загружаем этажи
+        fetch(floorsUrlTemplate.replace('0', houseId))
+          .then(response => response.json())
+          .then(data => {
+            data.forEach(floor => {
+              const option = new Option(floor.name, floor.id);
+              floorSelect.add(option);
+            });
+            floorSelect.disabled = false;
+            // Если текущий дом - это исходный дом, восстанавливаем значение этажа
+            if (houseId === initialHouseId) {
+              floorSelect.value = initialFloorId;
+            }
+          })
+          .catch(error => console.error('Error fetching floors:', error));
+      });
+
+      // Если страница загружена с уже выбранным домом (редактирование),
+      // запускаем событие 'change', чтобы подгрузить связанные данные.
+      if (houseSelect.value) {
+        houseSelect.dispatchEvent(new Event('change'));
+      }
+    });
+  </script>
+{% endblock scripts %}
