@@ -1,0 +1,579 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  {% if form.instance.pk %}
+    Редактирование квитанции
+  {% else %}
+    Новая квитанция
+  {% endif %}
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <!-- CSS для Select2 -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+        rel="stylesheet" />
+  <style>
+    .select2-container {
+      width: 100% !important;
+    }
+
+    .select2-container--default .select2-selection--single {
+      height: calc(1.5em + .75rem + 2px);
+      padding: .375rem .75rem;
+      border: 1px solid #ced4da;
+      border-radius: .25rem;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+      line-height: 1.5;
+      padding-left: 0;
+      color: #495057;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+      height: calc(1.5em + .75rem);
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .select2-search__field {
+      border: 1px solid #ced4da !important;
+    }
+
+    /* === ИЗМЕНЕНИЕ: Добавлены классы вместо инлайн-стилей === */
+    .th-service {
+      width: 30%;
+    }
+
+    .th-actions {
+      width: 50px;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid d-flex justify-content-between">
+      <h1>
+        {% if form.instance.pk %}
+          Редактирование квитанции №{{ form.instance.number }}
+        {% else %}
+          Новая квитанция
+        {% endif %}
+      </h1>
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'finance:admin_stats' %}">Главная</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'finance:receipt_list' %}">Квитанции</a>
+        </li>
+        <li class="breadcrumb-item active">
+          {% if form.instance.pk %}
+            Редактирование
+          {% else %}
+            Новая квитанция
+          {% endif %}
+        </li>
+      </ol>
+    </div>
+  </section>
+  <section class="content">
+    <form method="post" id="receipt-form">
+      {% csrf_token %}
+      <div class="card">
+        <div class="card-body">
+          {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+          <div class="row align-items-center mb-3">
+            <div class="col-auto">
+              <label for="{{ form.number.id_for_label }}" class="col-form-label">{{ form.number.label }}</label>
+            </div>
+            <div class="col-md-2">{{ form.number }}</div>
+            <div class="col-auto">
+              <label for="{{ form.date.id_for_label }}" class="col-form-label">{{ form.date.label }}</label>
+            </div>
+            <div class="col-md-2">{{ form.date }}</div>
+            <div class="col d-flex justify-content-end">
+              <div class="dropdown">
+                <button class="btn btn-primary dropdown-toggle"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false">Выберите действие</button>
+                <ul class="dropdown-menu">
+                  <li>
+                    <a class="dropdown-item" href="#" id="set-tariff-services-btn-dropdown">Выставить
+                    все услуги согласно тарифу</a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="#" id="add-counter-readings-btn-dropdown">Добавить
+                    показания счетчиков</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-5 border-end pe-4">
+              {{ form.apartment }}
+              <div class="mb-3">
+                <label for="id_house" class="form-label">Дом</label>
+                <select id="id_house" class="form-select">
+                  <option value="">Выберите...</option>
+                  {% for house in houses %}<option value="{{ house.pk }}">{{ house.title }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="id_section" class="form-label">Секция</label>
+                <select id="id_section" class="form-select" disabled>
+                  <option value="">Выберите...</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="id_apartment_select" class="form-label">Квартира</label>
+                <select id="id_apartment_select" class="form-select" disabled>
+                  <option value="">Выберите...</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="{{ form.personal_account_number.id_for_label }}"
+                       class="form-label">{{ form.personal_account_number.label }}</label>
+                <!-- Поле 1: Текстовый ввод. Именно оно отправляется на сервер -->
+                {{ form.personal_account_number }}
+                {% if form.personal_account_number.errors %}
+                  <div class="text-danger small mt-1">{{ form.personal_account_number.errors }}</div>
+                {% endif %}
+                <!-- Поле 2: Помощник для поиска. Он не отправляется с формой -->
+                <select id="account-selector" class="form-select mt-2"></select>
+              </div>
+              <p class="mb-1">
+                <strong>Владелец:</strong> <span id="owner-name">не выбран</span>
+              </p>
+              <p>
+                <strong>Телефон:</strong> <span id="owner-phone">не выбран</span>
+              </p>
+            </div>
+            <div class="col-md-7 ps-4">
+              <div class="row">
+                <div class="col-md-12 d-flex align-items-center mb-3">
+                  <div class="form-check form-switch">
+                    {{ form.is_posted }}
+                    <label class="form-check-label" for="{{ form.is_posted.id_for_label }}">Проведена</label>
+                  </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
+                  {{ form.status }}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.tariff.id_for_label }}" class="form-label">{{ form.tariff.label }}</label>
+                  {{ form.tariff }}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.period_start.id_for_label }}" class="form-label">{{ form.period_start.label }}</label>
+                  {{ form.period_start }}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.period_end.id_for_label }}" class="form-label">{{ form.period_end.label }}</label>
+                  {{ form.period_end }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <hr />
+          <h5>Услуги</h5>
+          {{ services_formset.management_form }}
+          <div class="table-responsive">
+            <table id="services-table" class="table">
+              <thead>
+                <tr>
+                  {# === ИЗМЕНЕНИЕ: Инлайн-стили заменены на классы === #}
+                  <th class="th-service">Услуга</th>
+                  <th>Расход</th>
+                  <th>Ед.изм.</th>
+                  <th>Цена за ед., грн.</th>
+                  <th>Стоимость, грн.</th>
+                  <th class="th-actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item_form in services_formset %}
+                  {% if item_form.instance.pk %}
+                    <tr class="service-form">
+                      {{ item_form.id }}
+                      <td>{{ item_form.service }}</td>
+                      <td>{{ item_form.consumption }}</td>
+                      <td class="unit-name">...</td>
+                      <td>{{ item_form.price_per_unit }}</td>
+                      <td>{{ item_form.amount }}</td>
+                      <td>
+                        <div class="form-check d-none">{{ item_form.DELETE }}</div>
+                        <button type="button" class="btn btn-sm btn-danger remove-service-btn">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th colspan="4" class="text-end">Итого:</th>
+                  <th id="grand-total">0.00 грн</th>
+                  <th></th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <button type="button" id="add-service-btn" class="btn btn-light border me-2">Добавить услугу</button>
+          <button type="button"
+                  id="set-tariff-services-btn"
+                  class="btn btn-light border me-2">Установить все услуги согласно тарифу</button>
+          <button type="button"
+                  id="add-counter-readings-btn"
+                  class="btn btn-light border">Добавить показания счетчиков</button>
+        </div>
+        <div class="card-footer text-end">
+          <a href="{% url 'finance:receipt_list' %}" class="btn btn-secondary">Отменить</a>
+          <button type="submit" class="btn btn-success">Сохранить</button>
+        </div>
+      </div>
+    </form>
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">Показания счетчиков</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table id="readings-table" class="table table-hover mb-0" width="100%">
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>Статус</th>
+                <th>Дата</th>
+                <th>Месяц</th>
+                <th>Счетчик</th>
+                <th>Показания</th>
+                <th>Ед. изм.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="7" class="text-center text-muted">Выберите квартиру для отображения показаний</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <!-- JS для JQuery и Select2 -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ЭЛЕМЕНТЫ ---
+      const houseSelect = $('#id_house');
+      const sectionSelect = $('#id_section');
+      const apartmentSelect = $('#id_apartment_select');
+      const hiddenApartmentInput = $('#{{ form.apartment.id_for_label }}');
+      const tariffSelect = $('#{{ form.tariff.id_for_label }}');
+      const servicesTableBody = $('#services-table tbody');
+      // Эта переменная больше не нужна, мы будем обращаться к шаблону напрямую
+      // const serviceFormTemplate = $('#service-form-template').html();
+      const readingsTableBody = $('#readings-table tbody');
+      const accountNumberInput = $('#{{ form.personal_account_number.id_for_label }}');
+      const accountSelector = $('#account-selector');
+
+      const initialData = {
+        houseId: '{{ initial_data.house_id|default_if_none:"" }}',
+        sectionId: '{{ initial_data.section_id|default_if_none:"" }}',
+        apartmentId: '{{ initial_data.apartment_id|default_if_none:"" }}'
+      };
+
+      // --- Весь код до функции addServiceRow остается без изменений ---
+
+      accountSelector.select2({
+        placeholder: '... или выберите свободный из списка',
+        allowClear: true,
+        ajax: {
+          url: '/api/v1/buildings/personal-accounts/search',
+          dataType: 'json',
+          delay: 250,
+          data: function(params) {
+            return {
+              term: params.term,
+              current_apartment_id: apartmentSelect.val() || initialData.apartmentId
+            };
+          },
+          processResults: function(data) {
+            return {
+              results: data.results
+            };
+          },
+          cache: true
+        }
+      });
+      accountSelector.on('select2:select', function(e) {
+        if (e.params.data && e.params.data.text) {
+          accountNumberInput.val(e.params.data.text);
+        }
+      });
+      accountSelector.on('select2:unselect', function(e) {
+        accountNumberInput.val('');
+      });
+
+      function resetSelect(select, text) {
+        select.prop('disabled', true).html(`<option value="">${text}</option>`);
+      }
+
+      function refreshCounterReadings() {
+        const apartmentId = apartmentSelect.val();
+        readingsTableBody.html('<tr><td colspan="7" class="text-center text-muted">Загрузка...</td></tr>');
+        if (!apartmentId) {
+          readingsTableBody.html('<tr><td colspan="7" class="text-center text-muted">Выберите квартиру для отображения показаний</td></tr>');
+          return;
+        }
+        $.get(`/api/v1/finance/apartment/${apartmentId}/counter-readings`, function(readings) {
+          readingsTableBody.empty();
+          if (!readings.length) {
+            readingsTableBody.html('<tr><td colspan="7" class="text-center text-muted">Нет доступных показаний для этой квартиры</td></tr>');
+            return;
+          }
+          readings.forEach(r => {
+            const statusBadge = `<span class="badge bg-warning">${r.status_display}</span>`;
+            const dateFormatted = new Date(r.date).toLocaleDateString('ru-RU');
+            const row = `<tr><td>${r.number || '—'}</td><td>${statusBadge}</td><td>${dateFormatted}</td><td>${r.month_display}</td><td>${r.service_name}</td><td>${r.value.toFixed(1)}</td><td>${r.unit_name}</td></tr>`;
+            readingsTableBody.append(row);
+          });
+        });
+      }
+
+      function updateApartmentDetails() {
+        const apartmentId = apartmentSelect.val();
+        hiddenApartmentInput.val(apartmentId);
+        accountNumberInput.val('');
+        accountSelector.val(null).trigger('change');
+        $('#owner-name').text('не выбран');
+        $('#owner-phone').text('не выбран');
+        if (!apartmentId) {
+          tariffSelect.val('').trigger('change');
+          refreshCounterReadings();
+          return;
+        }
+        $.get(`/api/v1/buildings/apartment/${apartmentId}/details`, function(details) {
+          $('#owner-name').text(details.owner_name || 'не выбран');
+          $('#owner-phone').text(details.owner_phone || 'не выбран');
+          accountNumberInput.val(details.personal_account_number || '');
+          if (details.tariff_id) {
+            tariffSelect.val(details.tariff_id).trigger('change');
+          } else {
+            tariffSelect.val('').trigger('change');
+          }
+        });
+        refreshCounterReadings();
+      }
+      houseSelect.on('change', function() {
+        const houseId = $(this).val();
+        resetSelect(sectionSelect, 'Выберите...');
+        resetSelect(apartmentSelect, 'Сначала выберите секцию');
+        updateApartmentDetails();
+        if (!houseId) return;
+        sectionSelect.prop('disabled', false).html('<option value="">Загрузка...</option>');
+        $.get(`/api/v1/buildings/house/${houseId}/sections`, function(sections) {
+          sectionSelect.html('<option value="">Выберите...</option>');
+          sections.forEach(s => sectionSelect.append(new Option(s.name, s.id)));
+        });
+      });
+      sectionSelect.on('change', function() {
+        const houseId = houseSelect.val();
+        const sectionId = $(this).val();
+        resetSelect(apartmentSelect, 'Выберите...');
+        updateApartmentDetails();
+        if (!houseId) return;
+        apartmentSelect.prop('disabled', false).html('<option value="">Загрузка...</option>');
+        let url = `/api/v1/buildings/house/${houseId}/apartments`;
+        if (sectionId) url += `?section=${sectionId}`;
+        $.get(url, function(apartments) {
+          apartmentSelect.html('<option value="">Выберите...</option>');
+          apartments.forEach(apt => apartmentSelect.append(new Option(apt.number, apt.id)));
+        });
+      });
+      apartmentSelect.on('change', updateApartmentDetails);
+
+      function calculateRowTotal(row) {
+        const consumption = parseFloat(row.find('.consumption-input').val()) || 0;
+        const price = parseFloat(row.find('.price-input').val()) || 0;
+        row.find('.amount-input').val((consumption * price).toFixed(2));
+        calculateGrandTotal();
+      }
+
+      function calculateGrandTotal() {
+        let grandTotal = 0;
+        servicesTableBody.find('tr.service-form').each(function() {
+          if (!$(this).find('input[id$="-DELETE"]:checked').length) {
+            grandTotal += parseFloat($(this).find('.amount-input').val()) || 0;
+          }
+        });
+        $('#grand-total').text(grandTotal.toFixed(2) + ' грн');
+      }
+
+      function updateServiceUnit(serviceSelect) {
+        const serviceId = $(serviceSelect).val();
+        const row = $(serviceSelect).closest('tr');
+        if (serviceId) {
+          $.get(`/api/v1/finance/service/${serviceId}/unit`, (data) => row.find('.unit-name').text(data.name));
+        } else {
+          row.find('.unit-name').text('...');
+        }
+      }
+
+      // === ИЗМЕНЕНИЕ №1: Обновляем эту функцию ===
+      function addServiceRow(serviceId = null, price = '', consumption = '', unitName = '...') {
+        const totalFormsInput = $('#id_services-TOTAL_FORMS');
+        const formIdx = parseInt(totalFormsInput.val());
+
+        // Получаем чистый HTML из тега <template>
+        const templateHtml = document.getElementById('service-form-template').innerHTML;
+        // Заменяем в нем префикс
+        const newFormHtml = templateHtml.replace(/__prefix__/g, formIdx);
+        // Создаем jQuery-объект из этого HTML
+        const newRow = $(newFormHtml);
+
+        // Остальная логика без изменений
+        if (serviceId) newRow.find('.service-select').val(serviceId);
+        newRow.find('.price-input').val(price);
+        newRow.find('.consumption-input').val(consumption);
+        newRow.find('.unit-name').text(unitName);
+
+        servicesTableBody.append(newRow);
+        totalFormsInput.val(formIdx + 1);
+        return newRow;
+      }
+
+      // --- Весь остальной код после функции addServiceRow остается без изменений ---
+
+      servicesTableBody.on('input', '.consumption-input, .price-input', function() {
+        calculateRowTotal($(this).closest('tr'));
+      });
+      servicesTableBody.on('change', '.service-select', function() {
+        updateServiceUnit(this);
+      });
+      $('#add-service-btn').on('click', () => addServiceRow());
+      servicesTableBody.on('click', '.remove-service-btn', function() {
+        const row = $(this).closest('tr');
+        const deleteCheckbox = row.find('input[id$="-DELETE"]');
+        if (deleteCheckbox.length) {
+          deleteCheckbox.prop('checked', true);
+          row.hide();
+        } else {
+          row.remove();
+          const totalFormsInput = $('#id_services-TOTAL_FORMS');
+          totalFormsInput.val(parseInt(totalFormsInput.val()) - 1);
+        }
+        calculateGrandTotal();
+      });
+
+      function setServicesFromTariff(e) {
+        e.preventDefault();
+        const tariffId = tariffSelect.val();
+        if (!tariffId) {
+          alert('Пожалуйста, выберите тариф.');
+          return;
+        }
+        $.get(`/api/v1/finance/tariff/${tariffId}/services`, function(services) {
+          servicesTableBody.find('tr.service-form').each(function() {
+            const deleteCheckbox = $(this).find('input[id$="-DELETE"]');
+            if (deleteCheckbox.length) {
+              deleteCheckbox.prop('checked', true);
+              $(this).hide();
+            } else {
+              $(this).remove();
+            }
+          });
+          const existingForms = servicesTableBody.find('tr.service-form input[id$="-DELETE"]:checked').length;
+          $('#id_services-TOTAL_FORMS').val(existingForms);
+          services.forEach(s => {
+            const newRow = addServiceRow(s.service_id, s.price.toFixed(2), '', s.unit_name);
+            calculateRowTotal(newRow);
+          });
+        }).fail(function() {
+          alert('Ошибка при загрузке услуг тарифа');
+        });
+      }
+
+      function addReadingsToServices(e) {
+        e.preventDefault();
+        alert('Функционал "Добавить показания счетчиков" в разработке.');
+      }
+      $('#set-tariff-services-btn, #set-tariff-services-btn-dropdown').on('click', setServicesFromTariff);
+      $('#add-counter-readings-btn, #add-counter-readings-btn-dropdown').on('click', addReadingsToServices);
+      $('#receipt-form').on('submit', function(e) {
+        const apartmentId = hiddenApartmentInput.val();
+        if (!apartmentId) {
+          e.preventDefault();
+          alert('Пожалуйста, выберите квартиру');
+          return false;
+        }
+        const visibleServices = servicesTableBody.find('tr.service-form:visible').length;
+        if (visibleServices === 0) {
+          e.preventDefault();
+          alert('Добавьте хотя бы одну услугу в квитанцию');
+          return false;
+        }
+      });
+
+      function prefillFormOnLoad() {
+        if (!initialData.houseId) return;
+        houseSelect.val(initialData.houseId);
+        const houseId = initialData.houseId;
+        const sectionIdToSelect = initialData.sectionId;
+        const apartmentIdToSelect = initialData.apartmentId;
+        sectionSelect.prop('disabled', true).html('<option value="">Загрузка...</option>');
+        apartmentSelect.prop('disabled', true).html('<option value="">Загрузка...</option>');
+        $.get(`/api/v1/buildings/house/${houseId}/sections`, function(sections) {
+          sectionSelect.html('<option value="">Выберите...</option>');
+          sections.forEach(s => sectionSelect.append(new Option(s.name, s.id)));
+          sectionSelect.prop('disabled', false);
+          if (sectionIdToSelect) {
+            sectionSelect.val(sectionIdToSelect);
+          }
+          let url = `/api/v1/buildings/house/${houseId}/apartments`;
+          if (sectionIdToSelect) url += `?section=${sectionIdToSelect}`;
+          $.get(url, function(apartments) {
+            apartmentSelect.html('<option value="">Выберите...</option>');
+            apartments.forEach(apt => apartmentSelect.append(new Option(apt.number, apt.id)));
+            apartmentSelect.prop('disabled', false);
+            if (apartmentIdToSelect) {
+              apartmentSelect.val(apartmentIdToSelect).trigger('change');
+            }
+          });
+        });
+      }
+      servicesTableBody.find('tr.service-form').each(function() {
+        updateServiceUnit($(this).find('.service-select'));
+      });
+      calculateGrandTotal();
+      prefillFormOnLoad();
+    });
+  </script>
+  <template id="service-form-template">
+    <tr class="service-form" id="service-form-__prefix__">
+      {{ services_formset.empty_form.id.as_hidden }}
+      <td>{{ services_formset.empty_form.service }}</td>
+      <td>{{ services_formset.empty_form.consumption }}</td>
+      <td class="unit-name">...</td>
+      <td>{{ services_formset.empty_form.price_per_unit }}</td>
+      <td>{{ services_formset.empty_form.amount }}</td>
+      <td>
+        <div class="form-check d-none">{{ services_formset.empty_form.DELETE }}</div>
+        <button type="button" class="btn btn-sm btn-danger remove-service-btn">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    </tr>
+  </template>
+{% endblock scripts %}

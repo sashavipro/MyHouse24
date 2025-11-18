@@ -50,20 +50,12 @@ def get_apartments(
     request,
     house_id: int,
     section: int | None = None,
-    account_id: int | None = None,
 ):
     """Return apartments for a selected house, optionally filtered by section."""
     queryset = Apartment.objects.filter(house_id=house_id)
 
     if section:
         queryset = queryset.filter(section_id=section)
-
-    q_filter = Q(personal_account__isnull=True)
-
-    if account_id:
-        q_filter |= Q(personal_account_id=account_id)
-
-    queryset = queryset.filter(q_filter)
 
     apartments = queryset.select_related("owner").values(
         "id", "number", "owner__first_name", "owner__last_name"
@@ -110,9 +102,7 @@ def search_personal_accounts(
     if term:
         queryset = queryset.filter(number__icontains=term)
 
-    results = [
-        {"id": acc.pk, "text": acc.number} for acc in queryset[:20]
-    ]  # Ограничиваем вывод
+    results = [{"id": acc.pk, "text": acc.number} for acc in queryset[:20]]
     return {"results": results}
 
 
@@ -152,21 +142,29 @@ def delete_personal_account(request: HttpRequest, account_id: int):
 
 @router.get("/apartment/{apartment_id}/details")
 def get_apartment_details(request, apartment_id: int):
-    """Return details for an apartment, including the owner's information."""
+    """Return detailed information about the apartment.
+
+    Includes the owner, personal account, and rate.
+    """
     apartment = get_object_or_404(
-        Apartment.objects.select_related("owner"), id=apartment_id
+        Apartment.objects.select_related("owner", "personal_account", "tariff"),
+        id=apartment_id,
     )
 
     owner_name = "не выбран"
     owner_phone = "не выбран"
-
     if apartment.owner:
         owner_name = apartment.owner.get_full_name()
-        owner_phone = (
-            apartment.owner.phone if hasattr(apartment.owner, "phone") else "не указан"
-        )
+        owner_phone = apartment.owner.phone or "не указан"
 
-    try:
-        return {"owner_name": owner_name, "owner_phone": owner_phone}
-    except (DatabaseError, ValidationError) as e:
-        return 404, {"error": str(e)}
+    personal_account_number = (
+        apartment.personal_account.number if apartment.personal_account else ""
+    )
+    tariff_id = apartment.tariff.id if apartment.tariff else None
+
+    return {
+        "owner_name": owner_name,
+        "owner_phone": owner_phone,
+        "personal_account_number": personal_account_number,
+        "tariff_id": tariff_id,
+    }

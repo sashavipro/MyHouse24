@@ -1,0 +1,362 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% block title %}
+  Квитанции на оплату
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Квитанции на оплату</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Квитанции на оплату</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <!-- Статистика -->
+      <div class="row mb-3">
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <div class="card text-white bg-info">
+            <div class="card-body">
+              <h3 class="mb-0">{{ total_cash|floatformat:2 }} грн</h3>
+              <p class="mb-0">Состояние кассы</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <div class="card text-white bg-success">
+            <div class="card-body">
+              <h3 class="mb-0">{{ total_balance|floatformat:2 }} грн</h3>
+              <p class="mb-0">Баланс по счетам</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-4 col-sm-6">
+          <div class="card text-white bg-danger">
+            <div class="card-body">
+              <h3 class="mb-0">{{ total_debt|floatformat:2 }} грн</h3>
+              <p class="mb-0">Задолженность по счетам</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Кнопки действий -->
+      <div class="d-flex justify-content-end mb-3">
+        <div class="dropdown">
+          <button class="btn btn-success dropdown-toggle"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false">Выберите действие</button>
+          <ul class="dropdown-menu">
+            <li>
+              <a class="dropdown-item" href="{% url 'finance:receipt_add' %}">Создать общую квитанцию</a>
+            </li>
+            <li>
+              <hr class="dropdown-divider" />
+            </li>
+            <li>
+              <a class="dropdown-item text-danger" href="#" id="delete-selected-btn">Удалить</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <!-- Таблица -->
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="d-flex justify-content-end p-3 border-bottom">
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    id="clear-filters-btn">Очистить</button>
+          </div>
+          <div class="table-responsive">
+            <table id="receipts-table" class="table table-hover mb-0" width="100%">
+              <thead>
+                <tr>
+                  <th class="text-center">
+                    <input type="checkbox" class="form-check-input" id="select-all-receipts" />
+                  </th>
+                  <th>№ квитанции</th>
+                  <th>Статус</th>
+                  <th>Дата</th>
+                  <th>Месяц</th>
+                  <th>Квартира</th>
+                  <th>Владелец</th>
+                  <th>Проведена</th>
+                  <th>Сумма (грн)</th>
+                  <th class="actions-column"></th>
+                </tr>
+                <tr class="filter-row">
+                  <td></td>
+                  <td>
+                    <input type="text" id="filter_number" class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <select id="filter_status" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      {% for val, name in statuses %}<option value="{{ val }}">{{ name }}</option>{% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <input type="text"
+                           id="filter_date"
+                           class="form-control form-control-sm"
+                           placeholder="дд.мм.гггг" />
+                  </td>
+                  <td>
+                    <input type="text"
+                           id="filter_month"
+                           class="form-control form-control-sm"
+                           placeholder="Напр: Ноябрь 2017" />
+                  </td>
+                  <td>
+                    <input type="text"
+                           id="filter_apartment_number"
+                           class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <select id="filter_owner" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      {% for owner in owners %}<option value="{{ owner.pk }}">{{ owner.get_full_name }}</option>{% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <select id="filter_is_posted" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      <option value="true">Проведена</option>
+                      <option value="false">Не проведена</option>
+                    </select>
+                  </td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <script>
+    $(document).ready(function() {
+      const csrfToken = '{{ csrf_token }}'; // Эта переменная хранит токен
+      const table = $('#receipts-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false,
+        ordering: true,
+        ajax: {
+          url: "{% url 'finance:ajax_datatable_receipts' %}",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          data: d => ({
+            ...d,
+            number: $('#filter_number').val(),
+            status: $('#filter_status').val(),
+            date: $('#filter_date').val(),
+            month: $('#filter_month').val(),
+            apartment_number: $('#filter_apartment_number').val(),
+            owner: $('#filter_owner').val(),
+            is_posted: $('#filter_is_posted').val(),
+          })
+        },
+        columns: [{
+          data: 'checkbox',
+          orderable: false,
+          className: 'text-center'
+        }, {
+          data: 'number'
+        }, {
+          data: 'status',
+          orderable: false
+        }, {
+          data: 'date'
+        }, {
+          data: 'month',
+          orderable: false
+        }, {
+          data: 'apartment',
+          orderable: false
+        }, {
+          data: 'owner',
+          orderable: false
+        }, {
+          data: 'is_posted',
+          orderable: false
+        }, {
+          data: 'total_amount'
+        }, {
+          data: 'actions',
+          orderable: false
+        }],
+        order: [
+          [3, 'desc']
+        ],
+        pageLength: 10,
+        language: {
+          /* Ваша локализация */
+        },
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        "drawCallback": function(settings) {
+          $('#select-all-receipts').prop('checked', false);
+        }
+      });
+
+      // --- Логика фильтров ---
+      let timer;
+      $('#filter_number, #filter_apartment_number, #filter_date, #filter_month').on('keyup', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => table.ajax.reload(), 500);
+      });
+      $('#filter_status, #filter_owner, #filter_is_posted').on('change', () => table.ajax.reload());
+      $('#clear-filters-btn').on('click', () => {
+        $('.filter-row input, .filter-row select').val('').trigger('change');
+      });
+
+      // --- Логика массового выделения ---
+      $('#select-all-receipts').on('click', function() {
+        $('.receipt-checkbox').prop('checked', this.checked);
+      });
+      $(document).on('click', '.receipt-checkbox', function() {
+        if (!this.checked) {
+          $('#select-all-receipts').prop('checked', false);
+        }
+      });
+
+      // --- Клик по строке ---
+      $('#receipts-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).is('input[type="checkbox"]') || $(e.target).closest('button, a').length) {
+          return;
+        }
+        const url = $(this).data('detail-url');
+        if (url) window.location.href = url;
+      });
+
+      // --- Логика массового удаления ---
+      $('#delete-selected-btn').on('click', function(e) {
+        e.preventDefault();
+        const selectedIds = $('.receipt-checkbox:checked').map(function() {
+          return $(this).data('id');
+        }).get();
+        if (selectedIds.length === 0) {
+          alert('Пожалуйста, выберите хотя бы одну квитанцию для удаления.');
+          return;
+        }
+        if (!confirm(`Вы уверены, что хотите удалить ${selectedIds.length} квитанций?`)) {
+          return;
+        }
+        $.ajax({
+          url: '/api/v1/finance/receipts/bulk-delete',
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          contentType: 'application/json',
+          data: JSON.stringify({
+            ids: selectedIds
+          }),
+          success: function(response) {
+            alert(response.message);
+            if (response.status === 'success') {
+              table.ajax.reload();
+            }
+          },
+          error: function(xhr) {
+            const errorMessage = xhr.responseJSON ? xhr.responseJSON.message : 'Произошла ошибка.';
+            alert(`Ошибка: ${errorMessage}`);
+          }
+        });
+      });
+
+      // --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ: Логика индивидуального удаления ---
+      $('#receipts-table tbody').on('click', '.delete-receipt-btn', function(e) {
+        // Останавливаем всплытие события - это КРИТИЧНО!
+        e.stopPropagation();
+        e.preventDefault();
+
+        const receiptId = $(this).data('id');
+        const receiptNumber = $(this).data('number');
+
+        if (!confirm(`Вы уверены, что хотите удалить квитанцию №${receiptNumber}?`)) {
+          return;
+        }
+
+        $.ajax({
+          url: `/api/v1/finance/receipt/${receiptId}`,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          success: function(response) {
+            alert(response.message);
+            if (response.status === 'success') {
+              table.ajax.reload(null, false);
+            }
+          },
+          error: function(xhr) {
+            const errorMessage = xhr.responseJSON ? xhr.responseJSON.message : 'Произошла неизвестная ошибка.';
+            alert(`Ошибка при удалении: ${errorMessage}`);
+          }
+        });
+      });
+    });
+  </script>
+  <style>
+    /* ... (Ваши стили остаются без изменений) ... */
+    .filter-row td {
+      padding: 8px !important;
+      background-color: #f8f9fa;
+      vertical-align: middle;
+    }
+
+    #receipts-table tbody tr {
+      cursor: pointer;
+    }
+
+    .actions-column {
+      width: 120px;
+    }
+
+    table.dataTable thead th,
+    table.dataTable tbody td {
+      vertical-align: middle;
+    }
+
+    #receipts-table thead .dt-column-order {
+      display: none !important;
+    }
+
+    #receipts-table thead th {
+      padding-right: 0.75rem !important;
+      user-select: none;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    #receipts-table thead th:first-child {
+      text-align: center;
+    }
+
+    #receipts-table thead th:last-child {
+      text-align: right;
+    }
+  </style>
+{% endblock scripts %}

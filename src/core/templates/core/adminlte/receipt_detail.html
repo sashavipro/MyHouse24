@@ -1,0 +1,193 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Квитанция №{{ receipt.number }}
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    .th-receipt-info {
+      width: 250px;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2 align-items-center">
+        <div class="col-sm-6">
+          <form class="form-inline">
+            <div class="row align-items-center">
+              <div class="col-auto">
+                <label for="receipt-number" class="col-form-label">
+                  <h3>№</h3>
+                </label>
+              </div>
+              <div class="col-auto">
+                <input type="text"
+                       readonly
+                       class="form-control-plaintext form-control-lg"
+                       id="receipt-number"
+                       value="{{ receipt.number }}" />
+              </div>
+              <div class="col-auto">
+                <label for="receipt-date" class="col-form-label">
+                  <h3>от</h3>
+                </label>
+              </div>
+              <div class="col-auto">
+                <input type="text"
+                       readonly
+                       class="form-control-plaintext form-control-lg"
+                       id="receipt-date"
+                       value="{{ receipt.date|date:"d.m.Y" }}" />
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:receipt_list' %}">Квитанции</a>
+            </li>
+            <li class="breadcrumb-item active">№{{ receipt.number }}</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h3 class="card-title">Просмотр квитанции</h3>
+            <div>
+              <a href="{% url 'finance:receipt_print_form' receipt.pk %}"
+                 class="btn btn-sm btn-outline-secondary">Печать</a>
+              <button type="button" class="btn btn-sm btn-outline-secondary disabled">Отправить на e-mail</button>
+              <a href="{% url 'finance:receipt_edit' receipt.pk %}"
+                 class="btn btn-sm btn-primary">Редактировать квитанцию</a>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Основная информация о квитанции -->
+          <table class="table table-bordered mb-4">
+            <tbody>
+              <tr>
+                <th class="th-receipt-info">Проведена</th>
+                <td>
+                  {% if receipt.is_posted %}
+                    <span class="badge bg-success">Проведена</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Не проведена (черновик)</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Статус</th>
+                <td>
+                  {% if receipt.status == 'paid' %}
+                    <span class="badge bg-success">Оплачена</span>
+                  {% elif receipt.status == 'partially_paid' %}
+                    <span class="badge bg-warning">Частично оплачена</span>
+                  {% else %}
+                    <span class="badge bg-danger">Неоплачена</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Месяц</th>
+                <td>{{ receipt.date|date:"F Y" }}</td>
+              </tr>
+              <tr>
+                <th>Владелец</th>
+                <td>
+                  <a href="#">{{ receipt.apartment.owner.get_full_name|default:"—" }}</a>
+                </td>
+              </tr>
+              <tr>
+                <th>Лицевой счет</th>
+                <td>
+                  <a href="#">{{ receipt.apartment.personal_account.number|default:"—" }}</a>
+                </td>
+              </tr>
+              <tr>
+                <th>Телефон</th>
+                <td>{{ receipt.apartment.owner.phone|default:"—" }}</td>
+              </tr>
+              <tr>
+                <th>Дом</th>
+                <td>
+                  <a href="#">{{ receipt.apartment.house.title|default:"—" }}</a>
+                </td>
+              </tr>
+              <tr>
+                <th>Квартира</th>
+                <td>{{ receipt.apartment.number|default:"—" }}</td>
+              </tr>
+              <tr>
+                <th>Секция</th>
+                <td>{{ receipt.apartment.section.name|default:"—" }}</td>
+              </tr>
+              <tr>
+                <th>Тариф</th>
+                <td>
+                  {% if receipt.tariff %}
+                    <a href="{% url 'finance:tariff_detail' receipt.tariff.pk %}">{{ receipt.tariff.name }}</a>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Таблица с услугами -->
+          <h4 class="mt-4">Услуги</h4>
+          <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Услуга</th>
+                  <th>Количество потребления (расход)</th>
+                  <th>Ед. изм.</th>
+                  <th>Цена за ед., грн</th>
+                  <th>Стоимость, грн</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in receipt.receiptitem_set.all %}
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ item.service.name }}</td>
+                    <td>{{ item.consumption|floatformat:"-3" }}</td>
+                    <td>{{ item.service.unit.name }}</td>
+                    <td>{{ item.price_per_unit|floatformat:2 }}</td>
+                    <td>{{ item.amount|floatformat:2 }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="6" class="text-center">В квитанцию не добавлено ни одной услуги.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr class="fw-bold">
+                  <td colspan="5" class="text-end">Итого:</td>
+                  <td>{{ receipt.total_amount|floatformat:2 }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}

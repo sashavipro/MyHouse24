@@ -1,0 +1,92 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Настройка шаблонов
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Настройка шаблонов</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:receipt_list' %}">Квитанции</a>
+            </li>
+            <li class="breadcrumb-item active">Настройка шаблонов</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3 class="card-title">Список шаблонов</h3>
+        </div>
+        <div class="card-body">
+          <ul class="list-group">
+            {% for template in templates %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  {{ template.name }}
+                  {% if template.is_default %}<span class="badge bg-success">по-умолчанию</span>{% endif %}
+                </div>
+                <div>
+                  <a href="{{ template.template_file.url }}"
+                     class="btn btn-sm btn-outline-secondary"
+                     download>Скачать шаблон</a>
+                  {% if not template.is_default %}
+                    <a href="?action=set_default&template_id={{ template.pk }}"
+                       class="btn btn-sm btn-outline-info">Назначить шаблоном по умолчанию</a>
+                  {% endif %}
+                  <a href="?action=delete&template_id={{ template.pk }}"
+                     class="btn btn-sm btn-outline-danger"
+                     onclick="return confirm('Вы уверены, что хотите удалить этот шаблон?')">Удалить шаблон</a>
+                </div>
+              </li>
+            {% empty %}
+              <li class="list-group-item text-muted">Нет загруженных шаблонов.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Загрузить пользовательский шаблон</h3>
+          </div>
+          <div class="card-body">
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="mb-3">
+              <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+              {{ form.name }}
+              {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+            </div>
+            <div class="mb-3">
+              <label for="{{ form.template_file.id_for_label }}">{{ form.template_file.label }}</label>
+              {{ form.template_file }}
+              <div class="form-text">Допускаются только файлы формата .xlsx</div>
+              {% if form.template_file.errors %}
+                <div class="text-danger small mt-1">{{ form.template_file.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <button type="reset" class="btn btn-secondary">Отменить</button>
+            <button type="submit" class="btn btn-success">Сохранить</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}

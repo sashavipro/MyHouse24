@@ -1,6 +1,7 @@
 """src/website/views.py."""
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -13,6 +14,7 @@ from django.views.generic import TemplateView
 from django.views.generic import UpdateView
 from django.views.generic import View
 
+from src.users.permissions import Permissions
 from src.website.models import AboutUsPage
 from src.website.models import ContactPage
 from src.website.models import Document
@@ -88,13 +90,14 @@ class ContactsPageView(TemplateView):
         return context
 
 
-class AdminHomePageView(LoginRequiredMixin, UpdateView):
+class AdminHomePageView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Handle the editing of the main page content."""
 
     model = MainPage
     form_class = MainPageForm
     template_name = "core/adminlte/admin_home_page.html"
     success_url = reverse_lazy("website:admin_home")
+    permission_required = Permissions.MANAGEMENT
 
     def get_object(self, queryset=None):
         """Return the single main page instance, creating if necessary."""
@@ -175,13 +178,14 @@ class AdminHomePageView(LoginRequiredMixin, UpdateView):
         return self.form_invalid(form)
 
 
-class AdminAboutPageView(LoginRequiredMixin, UpdateView):
+class AdminAboutPageView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Handle the editing of the 'About Us' page content."""
 
     model = AboutUsPage
     form_class = AboutUsPageForm
     template_name = "core/adminlte/admin_about_page.html"
     success_url = reverse_lazy("website:admin_about")
+    permission_required = Permissions.MANAGEMENT
 
     def get_object(self, queryset=None):
         """Return the single page instance, creating galleries if needed."""
@@ -251,11 +255,12 @@ class AdminAboutPageView(LoginRequiredMixin, UpdateView):
         return self.render_to_response(context)
 
 
-class AdminServicesPageView(LoginRequiredMixin, View):
+class AdminServicesPageView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Handle the 'Services' admin page."""
 
     template_name = "core/adminlte/admin_services_page.html"
     success_url = reverse_lazy("website:admin_services")
+    permission_required = Permissions.MANAGEMENT
 
     def get(self, request, *args, **kwargs):
         """Handle GET request: instantiate and display the forms."""
@@ -292,13 +297,14 @@ class AdminServicesPageView(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
 
 
-class AdminContactsPageView(LoginRequiredMixin, UpdateView):
+class AdminContactsPageView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Handle the editing of the 'Contacts' page content."""
 
     model = ContactPage
     form_class = ContactPageForm
     template_name = "core/adminlte/admin_contacts_page.html"
     success_url = reverse_lazy("website:admin_contacts")
+    permission_required = Permissions.MANAGEMENT
 
     def get_object(self, queryset=None):
         """Return the single 'Contacts' page instance."""
@@ -334,8 +340,10 @@ class AdminContactsPageView(LoginRequiredMixin, UpdateView):
 
 
 @method_decorator(require_POST, name="dispatch")
-class DeleteDocumentView(LoginRequiredMixin, View):
+class DeleteDocumentView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Handle an AJAX request to delete a document."""
+
+    permission_required = Permissions.MANAGEMENT
 
     def post(self, request, *args, **kwargs):
         """Find and delete a document by its ID."""
@@ -354,8 +362,10 @@ class DeleteDocumentView(LoginRequiredMixin, View):
 
 
 @method_decorator(require_POST, name="dispatch")
-class DeleteGalleryImageView(LoginRequiredMixin, View):
+class DeleteGalleryImageView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Handle an AJAX request to delete an image from a gallery."""
+
+    permission_required = Permissions.MANAGEMENT
 
     def post(self, request, *args, **kwargs):
         """Find and delete an image by its ID."""

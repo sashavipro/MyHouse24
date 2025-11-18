@@ -1,7 +1,14 @@
 """src/users/models.py."""
 
+import logging
+
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import Group
+from django.db import DatabaseError
+from django.db import IntegrityError
 from django.db import models
+
+logger = logging.getLogger(__name__)
 
 
 class Role(models.Model):
@@ -34,6 +41,7 @@ class Role(models.Model):
     has_payment_details = models.BooleanField(
         default=False, verbose_name="Access to payment details"
     )
+    has_article = models.BooleanField(default=False, verbose_name="Access to Articles")
 
     class Meta:
         """Meta class."""
@@ -76,7 +84,7 @@ class User(AbstractUser):
     user_type = models.CharField(
         max_length=10,
         choices=UserType.choices,
-        default=UserType.OWNER,
+        default=UserType.EMPLOYEE,
         verbose_name="Type of user",
     )
     status = models.CharField(
@@ -97,6 +105,27 @@ class User(AbstractUser):
         Role, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Role"
     )
 
+    def save(self, *args, **kwargs):
+        """Override the save method to sync user's groups with their role."""
+        super().save(*args, **kwargs)
+
+        if self.role:
+            try:
+                group, _ = Group.objects.get_or_create(name=self.role.name)
+
+                current_groups = set(self.groups.all())
+                if current_groups != {group}:
+                    self.groups.set([group])
+
+            except (DatabaseError, IntegrityError):
+                logger.exception(
+                    "Failed to sync user %s with group %s due to a database error.",
+                    self.username,
+                    self.role.name,
+                )
+        elif self.groups.exists():
+            self.groups.clear()
+
     def get_full_name(self):
         """Get full name."""
         return f"{self.last_name} {self.first_name} {self.middle_name}".strip()
@@ -104,6 +133,22 @@ class User(AbstractUser):
     def __str__(self):
         """__str__."""
         return self.get_full_name() or self.username
+
+
+class Owner(User):
+    """Proxy model for the User model to represent apartment owners.
+
+    This model does not create a new database table. It allows us to have
+    a separate set of permissions for owners in the Django admin and for our
+    custom permission system.
+    """
+
+    class Meta:
+        """Meta class."""
+
+        proxy = True
+        verbose_name = "Владелец"
+        verbose_name_plural = "Владельцы"
 
 
 class Ticket(models.Model):
@@ -166,7 +211,7 @@ class Message(models.Model):
     )
     title = models.CharField(max_length=255, verbose_name="Title")
     text = models.TextField(verbose_name="Text")
-    date = models.DateField(auto_now_add=True, verbose_name="Date")
+    date = models.DateTimeField(auto_now_add=True, verbose_name="Date")
 
     class Meta:
         """Meta class."""
@@ -187,6 +232,8 @@ class MessageRecipient(models.Model):
         Message, on_delete=models.CASCADE, verbose_name="Message"
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Sender")
+    is_read = models.BooleanField(default=False, verbose_name="Прочитано")
+    is_hidden = models.BooleanField(default=False, verbose_name="Скрыто получателем")
 
     class Meta:
         """Meta class."""

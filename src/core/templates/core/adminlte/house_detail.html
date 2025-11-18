@@ -3,6 +3,50 @@
 {% block title %}
   {{ house.title }}
 {% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    /* Стили для контейнеров-плейсхолдеров (когда картинки нет) */
+    .house-img-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f8f9fa;
+    }
+
+    .house-img-placeholder .bi-image {
+      color: #adb5bd;
+      font-size: 3rem;
+    }
+
+    .house-img-placeholder-lg {
+      height: 350px;
+    }
+
+    .house-img-placeholder-sm {
+      height: 160px;
+    }
+
+    .house-img-placeholder-sm .bi-image {
+      font-size: 2rem;
+    }
+
+    /* Стили для самих изображений */
+    .house-img {
+      object-fit: cover;
+      /* Заполняет блок, сохраняя пропорции и обрезая лишнее */
+      width: 100%;
+    }
+
+    .house-img-lg {
+      height: 350px;
+    }
+
+    .house-img-sm {
+      height: 160px;
+    }
+  </style>
+{% endblock styles %}
 {% block content %}
   <section class="content-header">
     <div class="container-fluid">

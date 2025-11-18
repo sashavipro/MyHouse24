@@ -51,3 +51,32 @@ class ArticleListResponseSchema(Schema):
     records_total: int
     records_filtered: int
     data: list[ArticleSchema]
+
+
+class TariffServiceSchema(Schema):
+    """Определяет структуру данных для одной услуги внутри тарифа при ответе API."""
+
+    service_id: int
+    service_name: str
+    price: float
+    unit_name: str
+
+
+class CounterReadingSchema(Schema):
+    """Схема для одного показания счетчика в ответе API."""
+
+    id: int
+    number: str
+    status: str
+    status_display: str
+    date: datetime
+    month_display: str
+    service_name: str
+    value: float
+    unit_name: str
+
+
+class DeleteItemsSchema(Schema):
+    """Схема для приема списка ID для удаления."""
+
+    ids: list[int]

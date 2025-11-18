@@ -4,9 +4,13 @@ from django.urls import path
 
 from . import views
 from .datatables import ArticleAjaxDatatableView
+from .datatables import CounterAjaxDatatableView
+from .datatables import CounterReadingAjaxDatatableView
+from .datatables import ReceiptAjaxDatatableView
 from .datatables import TariffAjaxDatatableView
 
 app_name = "finance"
+
 
 urlpatterns = [
     path("adminlte/", views.AdminStatsView.as_view(), name="admin_stats"),
@@ -48,5 +52,60 @@ urlpatterns = [
         "adminlte/payment-details/",
         views.PaymentDetailsUpdateView.as_view(),
         name="payment_details",
+    ),
+    path("adminlte/counters/", views.CounterListView.as_view(), name="counter_list"),
+    path(
+        "ajax-datatable/counters/",
+        CounterAjaxDatatableView.as_view(),
+        name="ajax_datatable_counters",
+    ),
+    path(
+        "adminlte/counters/readings/",
+        views.CounterReadingListView.as_view(),
+        name="counter_reading_list",
+    ),
+    path(
+        "ajax-datatable/counter-readings/",
+        CounterReadingAjaxDatatableView.as_view(),
+        name="ajax_datatable_counter_readings",
+    ),
+    path(
+        "adminlte/counters/readings/add/",
+        views.CounterReadingCreateView.as_view(),
+        name="counter_reading_add",
+    ),
+    path(
+        "adminlte/counters/readings/<int:pk>/edit/",
+        views.CounterReadingUpdateView.as_view(),
+        name="counter_reading_edit",
+    ),
+    path("adminlte/receipts/", views.ReceiptListView.as_view(), name="receipt_list"),
+    path(
+        "adminlte/receipts/add/", views.ReceiptCreateView.as_view(), name="receipt_add"
+    ),
+    path(
+        "adminlte/receipts/<int:pk>/",
+        views.ReceiptDetailView.as_view(),
+        name="receipt_detail",
+    ),
+    path(
+        "adminlte/receipts/<int:pk>/edit/",
+        views.ReceiptUpdateView.as_view(),
+        name="receipt_edit",
+    ),
+    path(
+        "ajax-datatable/receipts/",
+        ReceiptAjaxDatatableView.as_view(),
+        name="ajax_datatable_receipts",
+    ),
+    path(
+        "adminlte/receipts/<int:pk>/print/",
+        views.ReceiptPrintFormView.as_view(),
+        name="receipt_print_form",
+    ),
+    path(
+        "adminlte/receipts/templates/",
+        views.ReceiptTemplateSettingsView.as_view(),
+        name="receipt_template_settings",
     ),
 ]

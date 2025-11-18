@@ -1,0 +1,230 @@
+{% extends 'core/adminlte/cabinet_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Профиль: {{ owner.get_full_name }}
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  {# === ИЗМЕНЕНИЕ 1: Добавлен блок стилей === #}
+  <style>
+    .avatar-placeholder-icon {
+      font-size: 100px;
+    }
+
+    .apartment-main-img {
+      height: 250px;
+      width: 100%;
+      object-fit: cover;
+    }
+
+    .apartment-main-placeholder {
+      height: 250px;
+    }
+
+    .apartment-main-placeholder-icon {
+      font-size: 4rem;
+    }
+
+    .apartment-thumb-img {
+      height: 117px;
+      width: 100%;
+      object-fit: cover;
+    }
+
+    .apartment-thumb-placeholder {
+      height: 117px;
+    }
+
+    .apartment-thumb-placeholder-icon {
+      font-size: 2rem;
+    }
+
+    .th-apartment-desc {
+      width: 200px;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Профиль</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="#">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Профиль</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="row">
+        <!-- Левая колонка: Профиль пользователя -->
+        <div class="col-lg-4 mb-4">
+          <div class="card card-primary card-outline">
+            <div class="card-body box-profile">
+              <div class="text-center">
+                {% if owner.avatar %}
+                  <img class="profile-user-img img-fluid img-circle"
+                       src="{{ owner.avatar.url }}"
+                       alt="User profile picture" />
+                {% else %}
+                  {# === ИЗМЕНЕНИЕ 2: Инлайн-стиль заменен на класс === #}
+                  <i class="bi bi-person-circle text-muted avatar-placeholder-icon"></i>
+                {% endif %}
+              </div>
+              <h3 class="profile-username text-center">{{ owner.get_full_name|default:owner.username }}</h3>
+              <p class="text-muted text-center">Владелец квартиры</p>
+              <ul class="list-group list-group-unbordered mb-3">
+                <li class="list-group-item">
+                  <b>Телефон</b> <a class="float-end">{{ owner.phone|default:"-" }}</a>
+                </li>
+                <li class="list-group-item">
+                  <b>Viber</b> <a class="float-end">{{ owner.viber|default:"-" }}</a>
+                </li>
+                <li class="list-group-item">
+                  <b>Telegram</b> <a class="float-end">{{ owner.telegram|default:"-" }}</a>
+                </li>
+                <li class="list-group-item">
+                  <b>Email</b> <a class="float-end">{{ owner.email|default:"-" }}</a>
+                </li>
+              </ul>
+              <a href="{% url 'users:cabinet_edit' %}" class="btn btn-primary w-100">Изменить</a>
+            </div>
+          </div>
+          <div class="card card-primary">
+            <div class="card-header">
+              <h3 class="card-title">Обо мне (заметки)</h3>
+            </div>
+            <div class="card-body">
+              <p class="text-muted">{{ owner.description|default:"Нет информации."|linebreaksbr }}</p>
+            </div>
+          </div>
+        </div>
+        <!-- Правая колонка: Мои квартиры -->
+        <div class="col-lg-8">
+          <h4 class="mb-3">Мои квартиры</h4>
+          {% for apartment in apartments %}
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="card-title m-0">Описание квартиры</h5>
+              </div>
+              <div class="card-body">
+                <p class="text-muted">{{ apartment.house.title }}, {{ apartment.house.address }}</p>
+                <div class="row">
+                  <div class="col-md-7 mb-3 mb-md-0">
+                    {% if apartment.house.image1 %}
+                      {# === ИЗМЕНЕНИЕ 3: Инлайн-стили заменены на класс === #}
+                      <img src="{{ apartment.house.image1.url }}"
+                           class="img-fluid rounded apartment-main-img"
+                           alt="Главное фото дома" />
+                    {% else %}
+                      <div class="d-flex align-items-center justify-content-center bg-light rounded apartment-main-placeholder">
+                        <i class="bi bi-image text-muted apartment-main-placeholder-icon"></i>
+                      </div>
+                    {% endif %}
+                  </div>
+                  <div class="col-md-5">
+                    <div class="row">
+                      <div class="col-6 mb-3">
+                        {% if apartment.house.image2 %}
+                          <img src="{{ apartment.house.image2.url }}"
+                               class="img-fluid rounded apartment-thumb-img"
+                               alt="Фото 2" />
+                        {% else %}
+                          <div class="d-flex align-items-center justify-content-center bg-light rounded apartment-thumb-placeholder">
+                            <i class="bi bi-image text-muted apartment-thumb-placeholder-icon"></i>
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="col-6 mb-3">
+                        {% if apartment.house.image3 %}
+                          <img src="{{ apartment.house.image3.url }}"
+                               class="img-fluid rounded apartment-thumb-img"
+                               alt="Фото 3" />
+                        {% else %}
+                          <div class="d-flex align-items-center justify-content-center bg-light rounded apartment-thumb-placeholder">
+                            <i class="bi bi-image text-muted apartment-thumb-placeholder-icon"></i>
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="col-6">
+                        {% if apartment.house.image4 %}
+                          <img src="{{ apartment.house.image4.url }}"
+                               class="img-fluid rounded apartment-thumb-img"
+                               alt="Фото 4" />
+                        {% else %}
+                          <div class="d-flex align-items-center justify-content-center bg-light rounded apartment-thumb-placeholder">
+                            <i class="bi bi-image text-muted apartment-thumb-placeholder-icon"></i>
+                          </div>
+                        {% endif %}
+                      </div>
+                      <div class="col-6">
+                        {% if apartment.house.image5 %}
+                          <img src="{{ apartment.house.image5.url }}"
+                               class="img-fluid rounded apartment-thumb-img"
+                               alt="Фото 5" />
+                        {% else %}
+                          <div class="d-flex align-items-center justify-content-center bg-light rounded apartment-thumb-placeholder">
+                            <i class="bi bi-image text-muted apartment-thumb-placeholder-icon"></i>
+                          </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <hr />
+                <h5>Описание</h5>
+                <div class="table-responsive mt-3">
+                  <table class="table table-bordered">
+                    <tbody>
+                      <tr>
+                        {# === ИЗМЕНЕНИЕ 4: Инлайн-стиль заменен на класс === #}
+                        <th class="th-apartment-desc">Название дома</th>
+                        <td>{{ apartment.house.title }}</td>
+                      </tr>
+                      <tr>
+                        <th>Адрес</th>
+                        <td>{{ apartment.house.address }}</td>
+                      </tr>
+                      <tr>
+                        <th>№ квартиры</th>
+                        <td>{{ apartment.number }}</td>
+                      </tr>
+                      <tr>
+                        <th>Площадь</th>
+                        <td>{{ apartment.area|default:"-" }} м²</td>
+                      </tr>
+                      <tr>
+                        <th>Этаж</th>
+                        <td>{{ apartment.floor.name|default:"-" }}</td>
+                      </tr>
+                      <tr>
+                        <th>Секция</th>
+                        <td>{{ apartment.section.name|default:"-" }}</td>
+                      </tr>
+                      <tr>
+                        <th>Лицевой счет</th>
+                        <td>{{ apartment.personal_account.number|default:"-" }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="alert alert-info">За вами не закреплено ни одной квартиры.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}

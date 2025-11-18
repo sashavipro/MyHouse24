@@ -3,24 +3,55 @@
 {% load static %}
 
 {% block title %}
-  {{ page_title|default:"Форма Владельца" }}
+  {% if form.instance.pk %}
+    Редактирование владельца
+  {% else %}
+    Новый владелец
+  {% endif %}
 {% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    .avatar-placeholder {
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+    }
+
+    .avatar-placeholder-icon {
+      font-size: 150px;
+    }
+  </style>
+{% endblock styles %}
 {% block content %}
   <section class="content-header">
     <div class="container-fluid">
       <div class="row mb-2">
         <div class="col-sm-6">
-          <h1>{{ page_title|default:"Форма Владельца" }}</h1>
+          <h1>
+            {% if form.instance.pk %}
+              Редактирование владельца
+            {% else %}
+              Новый владелец
+            {% endif %}
+          </h1>
         </div>
         <div class="col-sm-6">
           <ol class="breadcrumb float-sm-end">
             <li class="breadcrumb-item">
-              <a href="#">Главная</a>
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
             </li>
             <li class="breadcrumb-item">
               <a href="{% url 'users:owner_list' %}">Владельцы</a>
             </li>
-            <li class="breadcrumb-item active">{{ page_title }}</li>
+            {% if form.instance.pk %}
+              <li class="breadcrumb-item">
+                <a href="{% url 'users:owner_detail' form.instance.pk %}">{{ object.get_full_name }}</a>
+              </li>
+              <li class="breadcrumb-item active">Редактирование</li>
+            {% else %}
+              <li class="breadcrumb-item active">Новый</li>
+            {% endif %}
           </ol>
         </div>
       </div>
@@ -30,22 +61,32 @@
     <div class="container-fluid">
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <div class="card card-primary card-outline">
-          <div class="card-body">
-            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
-            <div class="row">
-              <!-- Левая колонка -->
-              <div class="col-md-8">
+        <div class="row">
+          <!-- Левая колонка -->
+          <div class="col-lg-8">
+            <div class="card card-primary card-outline">
+              <div class="card-header">
+                <h3 class="card-title">Личные данные</h3>
+              </div>
+              <div class="card-body">
+                {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
                 <div class="row">
                   <div class="col-md-4 text-center">
                     <div class="mb-3">
-                      {% if owner_obj.avatar %}
+                      {% if form.instance.avatar %}
                         <img id="avatar-preview"
-                             src="{{ owner_obj.avatar.url }}"
+                             src="{{ form.instance.avatar.url }}"
                              alt="Avatar"
                              class="img-fluid rounded-circle avatar-placeholder" />
                       {% else %}
-                        <div id="avatar-preview" class="bi bi-image text-muted avatar-placeholder"></div>
+                        <div class="d-flex align-items-center justify-content-center">
+                          <i id="avatar-preview-icon"
+                             class="bi bi-person-circle text-muted avatar-placeholder-icon"></i>
+                          <img id="avatar-preview-img"
+                               src="#"
+                               alt="Avatar"
+                               class="img-fluid rounded-circle avatar-placeholder d-none" />
+                        </div>
                       {% endif %}
                     </div>
                     <div class="mb-3">
@@ -78,7 +119,7 @@
                   </div>
                 </div>
                 <hr />
-                <h5>Контактные данные</h5>
+                <h5 class="mt-4">Контактные данные</h5>
                 <div class="row">
                   <div class="col-md-6 mb-3">
                     <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
@@ -86,12 +127,12 @@
                     {% if form.phone.errors %}<div class="text-danger small mt-1">{{ form.phone.errors }}</div>{% endif %}
                   </div>
                   <div class="col-md-6 mb-3">
-                    <label for="{{ form.viber.id_for_label }}">Viber</label>
+                    <label for="{{ form.viber.id_for_label }}">{{ form.viber.label }}</label>
                     {{ form.viber }}
                     {% if form.viber.errors %}<div class="text-danger small mt-1">{{ form.viber.errors }}</div>{% endif %}
                   </div>
                   <div class="col-md-6 mb-3">
-                    <label for="{{ form.telegram.id_for_label }}">Telegram</label>
+                    <label for="{{ form.telegram.id_for_label }}">{{ form.telegram.label }}</label>
                     {{ form.telegram }}
                     {% if form.telegram.errors %}<div class="text-danger small mt-1">{{ form.telegram.errors }}</div>{% endif %}
                   </div>
@@ -102,25 +143,35 @@
                   </div>
                 </div>
               </div>
-              <!-- Правая колонка -->
-              <div class="col-md-4">
-                <div class="mb-3">
-                  <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
-                  {{ form.status }}
-                  {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors }}</div>{% endif %}
-                </div>
+            </div>
+          </div>
+          <!-- Правая колонка -->
+          <div class="col-lg-4">
+            <div class="card">
+              <div class="card-body">
                 <div class="mb-3">
                   <label for="{{ form.owner_id.id_for_label }}">{{ form.owner_id.label }}</label>
                   {{ form.owner_id }}
                   {% if form.owner_id.errors %}<div class="text-danger small mt-1">{{ form.owner_id.errors }}</div>{% endif %}
                 </div>
                 <div class="mb-3">
+                  <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+                  {{ form.status }}
+                  {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
                   <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
                   {{ form.description }}
                   {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors }}</div>{% endif %}
                 </div>
-                <hr />
-                <h5>Изменить пароль</h5>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Изменить пароль</h3>
+              </div>
+              <div class="card-body">
+                <p class="text-muted small">Оставьте поля пустыми, если не хотите менять пароль.</p>
                 <div class="mb-3">
                   <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
                   <div class="input-group">
@@ -128,7 +179,10 @@
                     <button class="btn btn-outline-secondary"
                             type="button"
                             id="generate-password">Сгенерировать</button>
-                    <button class="btn btn-outline-secondary" type="button" id="toggle-password">
+                    <button class="btn btn-outline-secondary"
+                            type="button"
+                            id="toggle-password"
+                            title="Показать/скрыть пароль">
                       <i class="bi bi-eye"></i>
                     </button>
                   </div>
@@ -142,9 +196,17 @@
               </div>
             </div>
           </div>
-          <div class="card-footer text-end">
-            <a href="{% url 'users:owner_list' %}" class="btn btn-secondary">Отменить</a>
-            <button type="submit" class="btn btn-success">Сохранить</button>
+        </div>
+        <!-- Кнопки сохранения -->
+        <div class="row">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body text-end">
+                <a href="{% if object.pk %}{% url 'users:owner_detail' object.pk %}{% else %}{% url 'users:owner_list' %}{% endif %}"
+                   class="btn btn-secondary">Отменить</a>
+                <button type="submit" class="btn btn-success">Сохранить</button>
+              </div>
+            </div>
           </div>
         </div>
       </form>
@@ -152,23 +214,30 @@
   </section>
 {% endblock content %}
 {% block scripts %}
+  {{ block.super }}
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Preview for avatar
       const avatarInput = document.getElementById('{{ form.avatar.id_for_label }}');
-      const avatarPreview = document.getElementById('avatar-preview');
+      const previewImg = document.getElementById('avatar-preview-img');
+      const previewIcon = document.getElementById('avatar-preview-icon');
+      const existingPreview = document.getElementById('avatar-preview');
+
       avatarInput.addEventListener('change', function(event) {
         const file = event.target.files[0];
         if (file) {
           const reader = new FileReader();
           reader.onload = function(e) {
-            avatarPreview.src = e.target.result;
+            if (existingPreview) existingPreview.classList.add('d-none');
+            if (previewIcon) previewIcon.classList.add('d-none');
+            if (previewImg) {
+              previewImg.src = e.target.result;
+              previewImg.classList.remove('d-none');
+            }
           }
           reader.readAsDataURL(file);
         }
       });
 
-      // Password generator and toggle
       const passwordInput = document.getElementById('{{ form.password.id_for_label }}');
       const password2Input = document.getElementById('{{ form.password2.id_for_label }}');
       const generateBtn = document.getElementById('generate-password');
@@ -187,23 +256,10 @@
       toggleBtn.addEventListener('click', function() {
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
         passwordInput.setAttribute('type', type);
+        password2Input.setAttribute('type', type);
         this.querySelector('i').classList.toggle('bi-eye');
         this.querySelector('i').classList.toggle('bi-eye-slash');
       });
     });
   </script>
-  <style>
-    .avatar-placeholder {
-      width: 150px;
-      height: 150px;
-      object-fit: cover;
-    }
-
-    #avatar-preview.bi-image {
-      font-size: 150px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-  </style>
 {% endblock scripts %}

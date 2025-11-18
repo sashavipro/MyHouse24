@@ -3,6 +3,7 @@
 from contextlib import suppress
 
 from ajax_datatable.views import AjaxDatatableView
+from django.db.models import Q
 from django.urls import reverse
 
 from .models import Apartment
@@ -22,10 +23,10 @@ class HouseAjaxDatatableView(AjaxDatatableView):
             "name": "pk",
             "title": "#",
             "width": "50px",
-            "orderable": False,
+            "orderable": True,
             "searchable": False,
         },
-        {"name": "title", "title": "Название", "orderable": False, "searchable": False},
+        {"name": "title", "title": "Название", "orderable": True, "searchable": False},
         {"name": "address", "title": "Адрес", "orderable": False, "searchable": False},
         {
             "name": "actions",
@@ -37,14 +38,29 @@ class HouseAjaxDatatableView(AjaxDatatableView):
     ]
 
     def get_initial_queryset(self, request=None):
-        """Build the initial queryset for the DataTable."""
+        """Build the initial queryset and applies filters."""
         queryset = House.objects.all().order_by("pk")
-        if request:
-            if title := request.POST.get("title", "").strip():
-                queryset = queryset.filter(title__icontains=title)
-            if address := request.POST.get("address", "").strip():
-                queryset = queryset.filter(address__icontains=address)
-        return queryset
+
+        if not request:
+            return queryset
+
+        filters = {
+            "title__icontains": request.POST.get("title"),
+            "address__icontains": request.POST.get("address"),
+        }
+
+        return self.apply_filters(queryset, filters)
+
+    def apply_filters(self, queryset, filters):
+        """Apply a dictionary of filters to the queryset."""
+        query_conditions = Q()
+
+        for key, value in filters.items():
+            if value:
+                cleaned_value = value.strip() if isinstance(value, str) else value
+                query_conditions &= Q(**{key: cleaned_value})
+
+        return queryset.filter(query_conditions)
 
     def customize_row(self, row, obj):
         """Customize each row of the DataTable."""
@@ -52,12 +68,11 @@ class HouseAjaxDatatableView(AjaxDatatableView):
             "data-detail-url": reverse("building:house_detail", args=[obj.pk])
         }
 
-        # Формируем кнопки действий
         edit_url = reverse("building:house_edit", args=[obj.pk])
         row["actions"] = f"""
             <div class="text-end" style="white-space: nowrap;">
-                <a href="{edit_url}" class="btn btn-sm btn-primary
-                    edit-house-link" title="Редактировать">
+                <a href="{edit_url}" class="btn btn-sm
+                 btn-primary edit-house-link" title="Редактировать">
                     <i class="bi bi-pencil"></i>
                 </a>
                 <button type="button" class="btn btn-sm btn-danger delete-house-btn"
@@ -70,7 +85,7 @@ class HouseAjaxDatatableView(AjaxDatatableView):
 
 
 class ApartmentAjaxDatatableView(AjaxDatatableView):
-    """Provides server-side processing for the Apartment list DataTable."""
+    """Provide server-side processing for the Apartment list DataTable."""
 
     model = Apartment
     title = "Квартиры"
@@ -98,34 +113,49 @@ class ApartmentAjaxDatatableView(AjaxDatatableView):
             "title": "",
             "searchable": False,
             "orderable": False,
-            "width": "120px",
+            "width": "12_px",
         },
     ]
 
     def get_initial_queryset(self, request=None):
-        """Build the initial queryset for the DataTable."""
+        """Build the initial queryset and applies filters."""
         queryset = Apartment.objects.select_related(
             "house", "section", "floor", "owner"
         ).order_by("id")
 
-        if request:
-            if number := request.POST.get("number", "").strip():
-                queryset = queryset.filter(number__icontains=number)
-            if house_id := request.POST.get("house", "").strip():
-                queryset = queryset.filter(house_id=house_id)
-            if section_id := request.POST.get("section", "").strip():
-                queryset = queryset.filter(section_id=section_id)
-            if floor_id := request.POST.get("floor", "").strip():
-                queryset = queryset.filter(floor_id=floor_id)
-            if owner_id := request.POST.get("owner", "").strip():
-                queryset = queryset.filter(owner_id=owner_id)
-            if balance_filter := request.POST.get("balance", "").strip():
-                if balance_filter == "debt":
-                    queryset = queryset.filter(personal_account__balance__lt=0)
-                elif balance_filter == "no_debt":
-                    queryset = queryset.filter(personal_account__balance__gte=0)
+        if not request:
+            return queryset
 
-        return queryset
+        filters = {
+            "number__icontains": request.POST.get("number"),
+            "house_id": request.POST.get("house"),
+            "section_id": request.POST.get("section"),
+            "floor_id": request.POST.get("floor"),
+            "owner_id": request.POST.get("owner"),
+            "balance": request.POST.get("balance"),
+        }
+
+        return self.apply_filters(queryset, filters)
+
+    def apply_filters(self, queryset, filters):
+        """Apply a dictionary of filters to the queryset."""
+        query_conditions = Q()
+
+        for key, value in filters.items():
+            if not value:
+                continue
+
+            if key == "balance":
+                if value == "debt":
+                    query_conditions &= Q(personal_account__balance__lt=0)
+                elif value == "no_debt":
+                    query_conditions &= Q(personal_account__balance__gte=0)
+                continue
+
+            cleaned_value = value.strip() if isinstance(value, str) else value
+            query_conditions &= Q(**{key: cleaned_value})
+
+        return queryset.filter(query_conditions)
 
     def customize_row(self, row, obj):
         """Customize each row of the DataTable."""
@@ -167,7 +197,7 @@ class ApartmentAjaxDatatableView(AjaxDatatableView):
 
 
 class PersonalAccountAjaxDatatableView(AjaxDatatableView):
-    """Provides server-side processing for the Personal Account list DataTable."""
+    """Provide server-side processing for the Personal Account list DataTable."""
 
     model = PersonalAccount
     title = "Лицевые счета"
@@ -175,6 +205,7 @@ class PersonalAccountAjaxDatatableView(AjaxDatatableView):
     show_column_filters = False
 
     column_defs = [
+        {"name": "pk", "visible": False, "orderable": True},
         {"name": "number", "title": "№", "orderable": True},
         {"name": "status", "title": "Статус", "searchable": False, "orderable": False},
         {
@@ -197,77 +228,45 @@ class PersonalAccountAjaxDatatableView(AjaxDatatableView):
     ]
 
     def get_initial_queryset(self, request=None):
-        """Build the initial queryset for the DataTable."""
+        """Build the initial queryset and applies filters."""
         queryset = PersonalAccount.objects.all().order_by("pk")
 
         if not request:
             return queryset
 
-        return self._apply_balance_filter(
-            request,
-            self._apply_owner_filter(
-                request,
-                self._apply_section_filter(
-                    request,
-                    self._apply_house_filter(
-                        request,
-                        self._apply_apartment_filter(
-                            request,
-                            self._apply_status_filter(
-                                request, self._apply_number_filter(request, queryset)
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        )
+        filters = {
+            "number__icontains": request.POST.get("number"),
+            "status": request.POST.get("status"),
+            "apartment__number__icontains": request.POST.get("apartment_number"),
+            "apartment__house_id": request.POST.get("house"),
+            "apartment__section_id": request.POST.get("section"),
+            "apartment__owner_id": request.POST.get("owner"),
+            "balance": request.POST.get("balance"),
+        }
 
-    def _apply_number_filter(self, request, queryset):
-        """Apply number filter if present."""
-        if number := request.POST.get("number", "").strip():
-            return queryset.filter(number__icontains=number)
-        return queryset
+        return self.apply_filters(queryset, filters)
 
-    def _apply_status_filter(self, request, queryset):
-        """Apply status filter if present."""
-        if status := request.POST.get("status", "").strip():
-            return queryset.filter(status=status)
-        return queryset
+    def apply_filters(self, queryset, filters):
+        """Apply a dictionary of filters to the queryset."""
+        query_conditions = Q()
 
-    def _apply_apartment_filter(self, request, queryset):
-        """Apply apartment number filter if present."""
-        if apartment_number := request.POST.get("apartment_number", "").strip():
-            return queryset.filter(apartment__number__icontains=apartment_number)
-        return queryset
+        for key, value in filters.items():
+            if not value:
+                continue
 
-    def _apply_house_filter(self, request, queryset):
-        """Apply house filter if present."""
-        if house_id := request.POST.get("house", "").strip():
-            return queryset.filter(apartment__house_id=house_id)
-        return queryset
+            if key == "balance":
+                if value == "debt":
+                    query_conditions &= Q(balance__lt=0)
+                elif value == "no_debt":
+                    query_conditions &= Q(balance__gte=0)
+                elif value == "zero":
+                    query_conditions &= Q(balance=0)
+                continue
 
-    def _apply_section_filter(self, request, queryset):
-        """Apply section filter if present."""
-        if section_id := request.POST.get("section", "").strip():
-            return queryset.filter(apartment__section_id=section_id)
-        return queryset
+            cleaned_value = value.strip() if isinstance(value, str) else value
+            query_conditions &= Q(**{key: cleaned_value})
 
-    def _apply_owner_filter(self, request, queryset):
-        """Apply owner filter if present."""
-        if owner_id := request.POST.get("owner", "").strip():
-            return queryset.filter(apartment__owner_id=owner_id)
-        return queryset
-
-    def _apply_balance_filter(self, request, queryset):
-        """Apply balance filter if present."""
-        if balance := request.POST.get("balance", "").strip():
-            if balance == "debt":
-                return queryset.filter(balance__lt=0)
-            if balance == "no_debt":
-                return queryset.filter(balance__gte=0)
-            if balance == "zero":
-                return queryset.filter(balance=0)
-        return queryset
+        return queryset.filter(query_conditions)
 
     def customize_row(self, row, obj):
         """Customize each row to add HTML and data from related models."""
@@ -276,9 +275,8 @@ class PersonalAccountAjaxDatatableView(AjaxDatatableView):
         row["status"] = f'<span class="badge {badge_class}">{status_text}</span>'
 
         apt = None
-        if hasattr(obj, "apartment"):
-            with suppress(AttributeError):
-                apt = obj.apartment
+        with suppress(self.model.apartment.RelatedObjectDoesNotExist):
+            apt = obj.apartment
 
         row["apartment_number"] = apt.number if apt else "(не задано)"
         row["house"] = apt.house.title if apt and apt.house else "(не задано)"

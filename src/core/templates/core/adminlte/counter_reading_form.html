@@ -1,0 +1,207 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% block title %}
+  {% if form.instance.pk %}
+    Редактирование показания
+  {% else %}
+    Новое показание
+  {% endif %}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>
+            {% if form.instance.pk %}
+              Редактирование показания
+            {% else %}
+              Новое показание
+            {% endif %}
+          </h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{{ user_home_url }}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:counter_list' %}">Счетчики</a>
+            </li>
+            {% if form.instance.pk %}
+              <li class="breadcrumb-item">
+                <a href="{% url 'finance:counter_reading_list' %}?counter={{ form.instance.counter.pk }}">История</a>
+              </li>
+              <li class="breadcrumb-item active">Редактирование</li>
+            {% else %}
+              <li class="breadcrumb-item active">Новое показание</li>
+            {% endif %}
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post">
+        {% csrf_token %}
+        {{ form.apartment }}
+        {{ form.counter }}
+        <div class="card card-primary card-outline">
+          <div class="card-body">
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="row">
+              <div class="col-md-3">
+                <div class="mb-3">
+                  <label for="{{ form.number.id_for_label }}">{{ form.number.label }}</label>
+                  {{ form.number }}
+                  {% if form.number.errors %}<div class="text-danger small">{{ form.number.errors }}</div>{% endif %}
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="mb-3">
+                  <label for="{{ form.date.id_for_label }}">{{ form.date.label }}</label>
+                  {{ form.date }}
+                  {% if form.date.errors %}<div class="text-danger small">{{ form.date.errors }}</div>{% endif %}
+                </div>
+              </div>
+            </div>
+            <hr />
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="id_house">Дом</label>
+                  <select id="id_house" class="form-select">
+                    <option value="">Выберите...</option>
+                    {% for house in houses %}<option value="{{ house.pk }}">{{ house.title }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="id_section">Секция</label>
+                  <select id="id_section" class="form-select" disabled>
+                    <option value="">Выберите дом</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="id_apartment_select">Квартира</label>
+                  <select id="id_apartment_select" class="form-select" disabled>
+                    <option value="">Выберите секцию</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-6">
+                {# --- ИЗМЕНЕНИЕ: Просто рендерим поле из формы Django --- #}
+                <div class="mb-3">
+                  <label for="{{ form.service.id_for_label }}">{{ form.service.label }}</label>
+                  {{ form.service }}
+                  {% if form.service.errors %}<div class="text-danger small">{{ form.service.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                  <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+                  {{ form.status }}
+                  {% if form.status.errors %}<div class="text-danger small">{{ form.status.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                  <label for="{{ form.value.id_for_label }}">{{ form.value.label }}</label>
+                  {{ form.value }}
+                  {% if form.value.errors %}<div class="text-danger small">{{ form.value.errors }}</div>{% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{% if form.instance.pk %}{% url 'finance:counter_reading_list' %}?counter={{ form.instance.counter.pk }}{% else %}{% url 'finance:counter_list' %}{% endif %}"
+               class="btn btn-secondary">Отменить</a>
+            <button type="submit" name="save" class="btn btn-success">Сохранить</button>
+            {% if not form.instance.pk %}
+              <button type="submit" name="save_and_add_new" class="btn btn-primary">Сохранить и добавить новые показания</button>
+            {% endif %}
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  {{ initial_data|json_script:"initial-data" }}
+  <script>
+    $(document).ready(function() {
+      // Визуальные элементы
+      const houseSelect = $('#id_house');
+      const sectionSelect = $('#id_section');
+      const apartmentSelect = $('#id_apartment_select');
+
+      // Скрытый элемент для отправки
+      const hiddenApartmentInput = $('#id_apartment');
+
+      const initialData = JSON.parse(document.getElementById('initial-data')?.textContent || '{}');
+
+      // Функции сброса
+      function resetSections() {
+        sectionSelect.prop('disabled', true).html('<option value="">Выберите дом</option>');
+        resetApartments();
+      }
+
+      function resetApartments() {
+        apartmentSelect.prop('disabled', true).html('<option value="">Выберите секцию</option>');
+        hiddenApartmentInput.val('');
+      }
+
+      // Функции загрузки
+      function loadSections(houseId, selectedId, callback) {
+        if (!houseId) {
+          resetSections();
+          return;
+        }
+        sectionSelect.prop('disabled', true).html('<option value="">Загрузка...</option>');
+        $.get(`/api/v1/buildings/house/${houseId}/sections`, data => {
+          sectionSelect.html('<option value="">Выберите...</option>');
+          data.forEach(i => sectionSelect.append(new Option(i.name, i.id)));
+          sectionSelect.prop('disabled', false);
+          if (selectedId) {
+            sectionSelect.val(selectedId);
+          }
+          if (callback) callback();
+        });
+      }
+
+      function loadApartments(houseId, sectionId, selectedId) {
+        if (!sectionId) {
+          resetApartments();
+          return;
+        }
+        apartmentSelect.prop('disabled', true).html('<option value="">Загрузка...</option>');
+        $.get(`/api/v1/buildings/house/${houseId}/apartments?section=${sectionId}`, data => {
+          apartmentSelect.html('<option value="">Выберите...</option>');
+          data.forEach(i => apartmentSelect.append(new Option(i.number, i.id)));
+          apartmentSelect.prop('disabled', false);
+          if (selectedId) {
+            apartmentSelect.val(selectedId).trigger('change');
+          }
+        });
+      }
+
+      // Обработчики событий
+      houseSelect.on('change', function() {
+        loadSections($(this).val());
+      });
+
+      sectionSelect.on('change', function() {
+        loadApartments(houseSelect.val(), $(this).val());
+      });
+
+      apartmentSelect.on('change', function() {
+        hiddenApartmentInput.val($(this).val());
+      });
+
+      // Логика предзаполнения локации
+      if (initialData.house_id) {
+        houseSelect.val(initialData.house_id);
+        loadSections(initialData.house_id, initialData.section_id, function() {
+          loadApartments(initialData.house_id, initialData.section_id, initialData.apartment_id);
+        });
+      }
+    });
+  </script>
+{% endblock scripts %}

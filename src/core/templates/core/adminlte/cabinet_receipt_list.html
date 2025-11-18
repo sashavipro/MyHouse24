@@ -1,0 +1,142 @@
+{% extends 'core/adminlte/cabinet_layout.html' %}
+
+{% block title %}
+  {{ page_title }}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>{{ page_title }}</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'users:cabinet' %}">Личный кабинет</a>
+            </li>
+            <li class="breadcrumb-item active">Квитанции</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card">
+        <div class="card-body">
+          {# === ИЗМЕНЕНИЕ: Добавлен ID к таблице === #}
+          <table id="receipts-table" class="table table-hover">
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>Дата</th>
+                <th>Статус</th>
+                <th class="text-end">Сумма</th>
+              </tr>
+              {# === ИЗМЕНЕНИЕ: Добавлены ID к фильтрам === #}
+              <tr>
+                <td></td>
+                <td>
+                  <input type="date" id="date-filter" class="form-control form-control-sm" />
+                </td>
+                <td>
+                  <select id="status-filter" class="form-select form-select-sm">
+                    <option value="">Все статусы</option>
+                    {% for value, name in receipt_statuses %}<option value="{{ value }}">{{ name }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td class="text-end">
+                  <button id="clear-filters-btn" class="btn btn-sm btn-outline-secondary">Очистить</button>
+                </td>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  {# JS-код из вашего файла полностью корректен и остается без изменений #}
+  <script>
+    $(document).ready(function() {
+      const csrfToken = '{{ csrf_token }}';
+      const ajaxUrl = '{{ ajax_url }}';
+
+      const table = $('#receipts-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false,
+        ordering: true,
+        ajax: {
+          url: ajaxUrl,
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          data: function(d) {
+            d.date_filter = $('#date-filter').val();
+            d.status_filter = $('#status-filter').val();
+            return d;
+          }
+        },
+        columns: [{
+          data: 'number',
+          orderable: true
+        }, {
+          data: 'date',
+          orderable: true
+        }, {
+          data: 'status_html',
+          orderable: true
+        }, {
+          data: 'total_amount',
+          orderable: true,
+          className: 'text-end'
+        }],
+        order: [
+          [1, 'desc']
+        ],
+        pageLength: 20,
+        language: {
+          "processing": "Загрузка...",
+          "zeroRecords": "Квитанции не найдены.",
+          "info": "Показано с _START_ по _END_ из _TOTAL_ квитанций",
+          "infoEmpty": "Нет квитанций для отображения",
+          "infoFiltered": "(отфильтровано из _MAX_)",
+          "paginate": {
+            "first": "«",
+            "last": "»",
+            "next": "›",
+            "previous": "‹"
+          }
+        },
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        createdRow: function(row, data, dataIndex) {
+          const detailUrl = $(row).data('detail-url');
+          if (detailUrl) {
+            $(row).css('cursor', 'pointer').on('click', function() {
+              window.location.href = detailUrl;
+            });
+          }
+        }
+      });
+
+      $('#date-filter, #status-filter').on('change', function() {
+        table.ajax.reload();
+      });
+
+      $('#clear-filters-btn').on('click', function() {
+        $('#date-filter').val('');
+        $('#status-filter').val('');
+        table.ajax.reload();
+      });
+    });
+  </script>
+{% endblock scripts %}

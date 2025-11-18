@@ -34,7 +34,18 @@
             <h3 class="card-title">Просмотр лицевого счета</h3>
             <div>
               <a href="#" class="btn btn-sm btn-success disabled"><i class="bi bi-currency-dollar"></i> Принять платеж</a>
-              <a href="#" class="btn btn-sm btn-info disabled"><i class="bi bi-file-earmark-text"></i> Оформить квитанцию</a>
+              {% if account.apartment %}
+                <a href="{% url 'finance:receipt_add' %}?apartment={{ account.apartment.pk }}"
+                   class="btn btn-sm btn-info">
+                  <i class="bi bi-file-earmark-text"></i> Оформить квитанцию
+                </a>
+              {% else %}
+                <a href="#"
+                   class="btn btn-sm btn-info disabled"
+                   title="Счет не привязан к квартире">
+                  <i class="bi bi-file-earmark-text"></i> Оформить квитанцию
+                </a>
+              {% endif %}
               <a href="{% url 'building:personal_account_edit' account.pk %}"
                  class="btn btn-sm btn-primary">Редактировать счет</a>
             </div>

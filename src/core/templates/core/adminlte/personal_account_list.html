@@ -254,8 +254,28 @@
 
       $('#export-excel-btn').on('click', function(e) {
         e.preventDefault();
-        alert('Функция экспорта в Excel будет реализована позже');
+
+        // 1. Собираем все значения фильтров
+        const params = {
+          number: $('#filter_number').val(),
+          status: $('#filter_status').val(),
+          apartment_number: $('#filter_apartment_number').val(),
+          house: $('#filter_house').val(),
+          section: $('#filter_section').val(),
+          owner: $('#filter_owner').val(),
+          balance: $('#filter_balance').val(),
+        };
+
+        // 2. Превращаем их в строку запроса (например, "status=active&house=1")
+        const queryString = new URLSearchParams(params).toString();
+
+        // 3. Формируем полный URL для скачивания
+        const exportUrl = `{% url 'building:personal_account_export_excel' %}?${queryString}`;
+
+        // 4. Отправляем браузер по этому URL, что вызовет скачивание файла
+        window.location.href = exportUrl;
       });
+
 
       $(document).on('click', '.delete-account-btn', function(e) {
         e.stopPropagation();

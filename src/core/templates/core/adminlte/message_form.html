@@ -1,0 +1,142 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Новое сообщение
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    .breadcrumb-transparent {
+      background-color: transparent;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Новое сообщение</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end breadcrumb-transparent">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}"><i class="bi bi-house-door"></i> Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'users:message_list' %}">Сообщения</a>
+            </li>
+            <li class="breadcrumb-item active">Новое сообщение</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post" id="message-form">
+        {% csrf_token %}
+        <div class="card">
+          <div class="card-body">
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="mb-3">
+              {{ form.title.label_tag }}
+              {{ form.title }}
+              {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors }}</div>{% endif %}
+            </div>
+            <div class="mb-3">
+              {{ form.text.label_tag }}
+              <!-- TinyMCE будет применен к этому textarea автоматически -->
+              {{ form.text }}
+              {% if form.text.errors %}<div class="text-danger small mt-1">{{ form.text.errors }}</div>{% endif %}
+            </div>
+            <hr />
+            <h5>Кому отправить:</h5>
+            <div class="form-check mb-3">
+              {{ form.to_debtors }}
+              <label class="form-check-label" for="{{ form.to_debtors.id_for_label }}">{{ form.to_debtors.label }}</label>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.house.id_for_label }}" class="form-label">{{ form.house.label }}</label>
+                {{ form.house }}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.section.id_for_label }}" class="form-label">{{ form.section.label }}</label>
+                {{ form.section }}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.floor.id_for_label }}" class="form-label">{{ form.floor.label }}</label>
+                {{ form.floor }}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.apartment.id_for_label }}" class="form-label">{{ form.apartment.label }}</label>
+                {{ form.apartment }}
+              </div>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{% url 'users:message_list' %}" class="btn btn-secondary">Отменить</a>
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-envelope-fill me-2"></i>Отправить
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script>
+    $(document).ready(function() {
+      // --- Логика каскадных выпадающих списков ---
+      const houseSelect = $('#{{ form.house.id_for_label }}');
+      const sectionSelect = $('#{{ form.section.id_for_label }}');
+      const floorSelect = $('#{{ form.floor.id_for_label }}');
+      const apartmentSelect = $('#{{ form.apartment.id_for_label }}');
+
+      function resetSelect(select, placeholder) {
+        select.empty().append(new Option(placeholder, '')).prop('disabled', true);
+      }
+
+      houseSelect.on('change', function() {
+        const houseId = $(this).val();
+
+        resetSelect(sectionSelect, 'Выберите...');
+        resetSelect(floorSelect, 'Выберите...');
+        resetSelect(apartmentSelect, 'Сначала выберите секцию');
+
+        if (!houseId) return;
+
+        // Загружаем секции
+        $.get(`/api/v1/buildings/house/${houseId}/sections`, function(sections) {
+          sectionSelect.prop('disabled', false);
+          sections.forEach(s => sectionSelect.append(new Option(s.name, s.id)));
+        });
+
+        // Загружаем этажи
+        $.get(`/api/v1/buildings/house/${houseId}/floors`, function(floors) {
+          floorSelect.prop('disabled', false);
+          floors.forEach(f => floorSelect.append(new Option(f.name, f.id)));
+        });
+      });
+
+      sectionSelect.on('change', function() {
+        const houseId = houseSelect.val();
+        const sectionId = $(this).val();
+
+        resetSelect(apartmentSelect, 'Выберите...');
+
+        if (!houseId || !sectionId) return;
+
+        apartmentSelect.prop('disabled', false);
+        $.get(`/api/v1/buildings/house/${houseId}/apartments?section=${sectionId}`, function(apartments) {
+          apartments.forEach(apt => apartmentSelect.append(new Option(apt.number, apt.id)));
+        });
+      });
+    });
+  </script>
+{% endblock scripts %}

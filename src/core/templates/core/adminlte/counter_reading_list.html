@@ -1,0 +1,307 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% block title %}
+  История показаний счетчиков
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-8">
+          <h1>История показаний счетчиков</h1>
+          <p class="text-muted mb-0">Общий список всех снятых показаний</p>
+        </div>
+        <div class="col-sm-4">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{{ user_home_url }}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:counter_list' %}">Счетчики</a>
+            </li>
+            <li class="breadcrumb-item active">История показаний</li>
+          </ol>
+        </div>
+      </div>
+      <div class="row mt-3">
+        <div class="col-sm-12 text-end">
+          <a href="{% url 'finance:counter_reading_add' %}"
+             class="btn btn-success">
+            <i class="bi bi-plus-circle me-2"></i>Добавить показание
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="d-flex justify-content-end p-3 border-bottom">
+          <button type="button"
+                  class="btn btn-outline-secondary"
+                  id="clear-filters-btn">Очистить</button>
+        </div>
+        <div class="table-responsive">
+          <table id="readings-table" class="table table-hover mb-0" width="100%">
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>Статус</th>
+                <th>Дата</th>
+                <th>Месяц</th>
+                <th>Дом</th>
+                <th>Секция</th>
+                <th>№ квартиры</th>
+                <th>Счетчик</th>
+                <th>Показания</th>
+                <th>Ед. изм.</th>
+                <th></th>
+              </tr>
+              <tr class="filter-row">
+                <td>
+                  <input type="text" id="filter_number" class="form-control form-control-sm" />
+                </td>
+                <td>
+                  <select id="filter_status" class="form-select form-select-sm">
+                    <option value="">Все</option>
+                    {% for value, name in statuses %}<option value="{{ value }}">{{ name }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <input type="text"
+                         id="filter_date"
+                         class="form-control form-control-sm"
+                         placeholder="ДД.ММ.ГГГГ" />
+                </td>
+                <td></td>
+                <!-- Поле для месяца удалено -->
+                <td>
+                  <select id="filter_house" class="form-select form-select-sm">
+                    <option value="">Все дома</option>
+                    {% for house in houses %}<option value="{{ house.pk }}">{{ house.title }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <select id="filter_section" class="form-select form-select-sm" disabled>
+                    <option value="">Выберите дом</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="text"
+                         id="filter_apartment_number"
+                         class="form-control form-control-sm" />
+                </td>
+                <td>
+                  <select id="filter_service" class="form-select form-select-sm">
+                    <option value="">Все</option>
+                    {% for service in services %}<option value="{{ service.pk }}">{{ service.name }}</option>{% endfor %}
+                  </select>
+                </td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <script>
+    $(document).ready(function() {
+      const csrfToken = '{{ csrf_token }}';
+
+      const table = $('#readings-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false,
+        ordering: true,
+        ajax: {
+          url: "{% url 'finance:ajax_datatable_counter_readings' %}",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          data: d => ({
+            ...d,
+            number: $('#filter_number').val(),
+            status: $('#filter_status').val(),
+            date: $('#filter_date').val(),
+            house: $('#filter_house').val(),
+            section: $('#filter_section').val(),
+            apartment_number: $('#filter_apartment_number').val(),
+            service: $('#filter_service').val(),
+          })
+        },
+        columns: [{
+            data: 'number',
+            orderable: false
+          }, // Сортировка отключена
+          {
+            data: 'status',
+            orderable: false
+          }, {
+            data: 'date',
+            orderable: true
+          }, // Сортировка оставлена
+          {
+            data: 'month',
+            orderable: false
+          }, {
+            data: 'house',
+            orderable: false
+          }, {
+            data: 'section',
+            orderable: false
+          }, {
+            data: 'apartment_number',
+            orderable: false
+          }, {
+            data: 'service',
+            orderable: false
+          }, {
+            data: 'value',
+            orderable: false
+          }, // Сортировка отключена
+          {
+            data: 'unit',
+            orderable: false
+          }, {
+            data: 'actions',
+            orderable: false
+          }
+        ],
+        order: [
+          [2, 'desc']
+        ], // Сортировка по умолчанию по дате
+        pageLength: 10,
+        language: {
+          /* ... ваша локализация ... */
+        },
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+      });
+
+      // --- Функция для применения фильтров из GET-параметров URL ---
+      function applyUrlFilters() {
+        const params = new URLSearchParams(window.location.search);
+        let filtersApplied = false;
+
+        // Устанавливаем значения для простых полей
+        if (params.has('apartment_number')) {
+          $('#filter_apartment_number').val(params.get('apartment_number'));
+          filtersApplied = true;
+        }
+        if (params.has('service')) {
+          $('#filter_service').val(params.get('service'));
+          filtersApplied = true;
+        }
+
+        // Обрабатываем дом и зависимую от него секцию
+        if (params.has('house')) {
+          const houseId = params.get('house');
+          const sectionId = params.get('section');
+          $('#filter_house').val(houseId);
+          filtersApplied = true;
+
+          const sectionSelect = $('#filter_section');
+          if (houseId) {
+            sectionSelect.prop('disabled', true).html('<option value="">Загрузка...</option>');
+            // Загружаем секции для выбранного дома
+            $.get(`/api/v1/buildings/house/${houseId}/sections`, data => {
+              sectionSelect.html('<option value="">Все секции</option>');
+              data.forEach(i => sectionSelect.append(new Option(i.name, i.id)));
+              sectionSelect.prop('disabled', false);
+              // Устанавливаем значение секции ПОСЛЕ их загрузки
+              if (sectionId) {
+                sectionSelect.val(sectionId);
+              }
+              // Перезагружаем таблицу после установки всех фильтров
+              table.ajax.reload();
+            });
+          }
+        } else if (filtersApplied) {
+          // Если дома нет, но есть другие фильтры, перезагружаем таблицу
+          table.ajax.reload();
+        }
+      }
+
+      // --- Логика фильтров ---
+      let timer;
+      $('#filter_number, #filter_apartment_number, #filter_date').on('keyup', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => table.ajax.reload(), 500);
+      });
+
+      $('#filter_status, #filter_house, #filter_section, #filter_service').on('change', () => {
+        table.ajax.reload();
+      });
+
+      $('#clear-filters-btn').on('click', () => {
+        $('.filter-row input, .filter-row select').val('').trigger('change');
+      });
+
+      $('#filter_house').on('change', function() {
+        const houseId = $(this).val();
+        const sectionSelect = $('#filter_section');
+        sectionSelect.prop('disabled', true).html('<option value="">Выберите дом</option>');
+        if (houseId) {
+          sectionSelect.html('<option value="">Загрузка...</option>');
+          $.get(`/api/v1/buildings/house/${houseId}/sections`, data => {
+            sectionSelect.html('<option value="">Все секции</option>');
+            data.forEach(i => sectionSelect.append(new Option(i.name, i.id)));
+            sectionSelect.prop('disabled', false);
+          });
+        }
+      });
+
+      // --- AJAX-удаление показания ---
+      $(document).on('click', '.delete-reading-btn', function() {
+        if (!confirm('Вы уверены, что хотите удалить это показание?')) return;
+        const readingId = $(this).data('id');
+        $.ajax({
+          url: `/api/v1/finance/counter-reading/${readingId}`,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          success: (res) => {
+            if (res.status === 'success') table.ajax.reload(null, false);
+          },
+          error: () => alert('Произошла ошибка при удалении.')
+        });
+      });
+
+      // --- Применяем фильтры из URL при первой загрузке страницы ---
+      applyUrlFilters();
+    });
+  </script>
+  <style>
+    .filter-row td {
+      padding: 8px !important;
+      background-color: #f8f9fa;
+    }
+
+    #readings-table thead .dt-column-order {
+      display: none !important;
+    }
+
+    #readings-table thead th {
+      text-align: left;
+      /* Выравниваем все заголовки по левому краю */
+      vertical-align: middle;
+      /* Предотвращаем вертикальные "прыжки" */
+    }
+
+    /* Выравниваем заголовок последней колонки (действия) по правому краю */
+    #readings-table thead th:last-child {
+      text-align: right;
+    }
+  </style>
+{% endblock scripts %}

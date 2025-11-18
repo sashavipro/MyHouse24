@@ -53,13 +53,19 @@
               <form method="post" class="form-container">
                 {% csrf_token %}
                 {{ service_formset.management_form }}
+                <!-- === БЛОК ДЛЯ ВЫВОДА ОБЩИХ ОШИБОК === -->
+                {% if service_formset.non_form_errors %}
+                  <div class="alert alert-danger">
+                    {% for error in service_formset.non_form_errors %}<p class="mb-0">{{ error }}</p>{% endfor %}
+                  </div>
+                {% endif %}
+                <!-- === КОНЕЦ БЛОКА === -->
                 <div class="row">
                   <div class="col-md-8">
                     <div id="service-forms-container">
                       {% for form in service_formset %}
-                        <div class="service-form-row mb-3">
+                        <div class="service-form-row mb-3 {% if form.DELETE.value %}form-row-delete{% endif %}">
                           {{ form.id }}
-                          <!-- === ИСПРАВЛЕНИЕ #1: Выравниваем поля === -->
                           <div class="row align-items-end">
                             <div class="col-md-7">
                               <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
@@ -72,7 +78,6 @@
                               {{ form.unit.errors }}
                             </div>
                             <div class="col-md-1">
-                              <!-- === ИСПРАВЛЕНИЕ #2: Кнопка удаления === -->
                               {% if form.instance.pk %}
                                 {{ form.DELETE }}
                                 <button type="button"
@@ -96,7 +101,7 @@
                     <button type="button" id="add-service-btn" class="btn btn-primary mt-2">Добавить</button>
                   </div>
                 </div>
-                <div class="card-footer bg-transparent text-end mt-3">
+                <div class="card-footer bg-transparent text-end mt-3 px-0">
                   <a href="{% url 'finance:manage_services' %}" class="btn btn-secondary">Отменить</a>
                   <button type="submit" name="save_services" class="btn btn-success">Сохранить</button>
                 </div>
@@ -107,11 +112,18 @@
               <form method="post" class="form-container">
                 {% csrf_token %}
                 {{ unit_formset.management_form }}
+                <!-- === БЛОК ДЛЯ ВЫВОДА ОБЩИХ ОШИБОК === -->
+                {% if unit_formset.non_form_errors %}
+                  <div class="alert alert-danger">
+                    {% for error in unit_formset.non_form_errors %}<p class="mb-0">{{ error }}</p>{% endfor %}
+                  </div>
+                {% endif %}
+                <!-- === КОНЕЦ БЛОКА === -->
                 <div class="row">
                   <div class="col-md-8">
                     <div id="unit-forms-container">
                       {% for form in unit_formset %}
-                        <div class="unit-form-row mb-2">
+                        <div class="unit-form-row mb-2 {% if form.DELETE.value %}form-row-delete{% endif %}">
                           <div class="input-group">
                             {{ form.id }}
                             <span class="input-group-text">{{ form.name.label }}</span>
@@ -132,7 +144,7 @@
                     <button type="button" id="add-unit-btn" class="btn btn-primary mt-2">Добавить</button>
                   </div>
                 </div>
-                <div class="card-footer bg-transparent text-end mt-3">
+                <div class="card-footer bg-transparent text-end mt-3 px-0">
                   <a href="{% url 'finance:manage_services' %}" class="btn btn-secondary">Отменить</a>
                   <button type="submit" name="save_units" class="btn btn-success">Сохранить</button>
                 </div>
@@ -145,6 +157,7 @@
   </section>
 {% endblock content %}
 {% block scripts %}
+  {{ block.super }}
   <style>
     /* Скрываем стандартные чекбоксы DELETE */
     input[type="checkbox"][name$="-DELETE"] {
@@ -155,7 +168,7 @@
     .form-row-delete {
       opacity: 0.6;
       background-color: #f8d7da;
-      /* легкий красный фон */
+      padding: 10px;
       border-radius: .25rem;
     }
 
@@ -167,73 +180,41 @@
 
     .form-row-delete .btn.delete-btn {
       background-color: #6c757d;
-      /* серая кнопка для "отмены" удаления */
       border-color: #6c757d;
     }
   </style>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-
-      /**
-       * Универсальная функция для добавления новой формы в формсет.
-       * @param {string} containerSelector - Селектор контейнера, куда добавлять формы.
-       * @param {string} totalFormsSelector - Селектор поля TOTAL_FORMS.
-       * @param {string} emptyFormHtml - HTML-шаблон пустой формы.
-       */
       function addForm(containerSelector, totalFormsSelector, emptyFormHtml) {
         const container = document.querySelector(containerSelector);
         const totalFormsInput = document.querySelector(totalFormsSelector);
         if (!container || !totalFormsInput) return;
-
         let formIdx = parseInt(totalFormsInput.value);
-
-        // Заменяем префикс '__prefix__' на новый индекс
         const newFormHtml = emptyFormHtml.replace(/__prefix__/g, formIdx);
-
-        // Вставляем новую форму в конец контейнера
         container.insertAdjacentHTML('beforeend', newFormHtml);
-
-        // Увеличиваем счетчик форм
         totalFormsInput.value = formIdx + 1;
       }
 
-      /**
-       * Инициализирует кастомные кнопки удаления для формсета.
-       * @param {string} containerSelector - Селектор общего контейнера для форм.
-       */
       function initializeDeleteButtons(containerSelector) {
         const container = document.querySelector(containerSelector);
         if (!container) return;
-
         container.addEventListener('click', function(event) {
           const deleteButton = event.target.closest('.delete-btn');
-          if (!deleteButton) return; // Клик был не по кнопке
-
-          // Находим родительский блок для всей строки формы
+          if (!deleteButton) return;
           const formRow = deleteButton.closest('.service-form-row, .unit-form-row');
           if (!formRow) return;
-
-          // Находим скрытый чекбокс DELETE внутри этого блока
           const deleteCheckbox = formRow.querySelector('input[type="checkbox"][name$="-DELETE"]');
           if (!deleteCheckbox) return;
-
-          // Инвертируем состояние чекбокса
           deleteCheckbox.checked = !deleteCheckbox.checked;
-
-          // Добавляем/убираем класс для визуального эффекта
           formRow.classList.toggle('form-row-delete', deleteCheckbox.checked);
         });
       }
 
-      // --- Инициализация для обеих вкладок ---
       initializeDeleteButtons('#services-tab-content');
       initializeDeleteButtons('#units-tab-content');
 
-
-      // --- Логика для добавления УСЛУГ ---
       const addServiceBtn = document.getElementById('add-service-btn');
       if (addServiceBtn) {
-        // Шаблон для новой формы услуги, полностью соответствующий верстке
         const serviceFormTemplate = `
             <div class="service-form-row mb-3">
                 {{ service_formset.empty_form.id|safe }}
@@ -246,9 +227,7 @@
                         <label for="id_services-__prefix__-unit">Ед. изм.</label>
                         {{ service_formset.empty_form.unit|safe }}
                     </div>
-                    <div class="col-md-1">
-                        <!-- Новые формы не имеют кнопки удаления, т.к. их можно просто не сохранять -->
-                    </div>
+                    <div class="col-md-1"></div>
                 </div>
                 <div class="form-check mt-2">
                     {{ service_formset.empty_form.show_in_counters|safe }}
@@ -256,20 +235,13 @@
                 </div>
             </div>
         `;
-
         addServiceBtn.addEventListener('click', function() {
-          addForm(
-            '#service-forms-container',
-            '#id_services-TOTAL_FORMS',
-            serviceFormTemplate
-          );
+          addForm('#service-forms-container', '#id_services-TOTAL_FORMS', serviceFormTemplate);
         });
       }
 
-      // --- Логика для добавления ЕДИНИЦ ИЗМЕРЕНИЯ ---
       const addUnitBtn = document.getElementById('add-unit-btn');
       if (addUnitBtn) {
-        // Шаблон для новой формы единицы измерения
         const unitFormTemplate = `
             <div class="unit-form-row mb-2">
                 <div class="input-group">
@@ -279,13 +251,8 @@
                 </div>
             </div>
         `;
-
         addUnitBtn.addEventListener('click', function() {
-          addForm(
-            '#unit-forms-container',
-            '#id_units-TOTAL_FORMS',
-            unitFormTemplate
-          );
+          addForm('#unit-forms-container', '#id_units-TOTAL_FORMS', unitFormTemplate);
         });
       }
     });

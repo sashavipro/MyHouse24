@@ -1,0 +1,225 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ru-RU">
+  <head>
+    <meta charset="UTF-8" />
+    <title>
+      {% block title %}
+        Мой Дом 24 | Личный кабинет
+      {% endblock title %}
+    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.0.12/index.css" />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="{% static 'core/adminlte/css/adminlte.css' %}" />
+    <style>
+      .owner-sidebar .nav-link.active,
+      .owner-sidebar .nav-link:hover {
+        background-color: #f8f9fa;
+      }
+    </style>
+    {% block styles %}
+    {% endblock styles %}
+  </head>
+  <body class="layout-fixed sidebar-expand-lg">
+    <div class="app-wrapper">
+      <!-- Шапка (Header) для Жильца -->
+      <nav class="app-header navbar navbar-expand bg-body">
+        <div class="container-fluid">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button"><i class="bi bi-list"></i></a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <span class="nav-link">Личный кабинет</span>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item dropdown">
+              <a class="nav-link" data-bs-toggle="dropdown" href="#">
+                <i class="bi bi-bell"></i>
+                {% if unread_messages_count > 0 %}
+                  <span class="navbar-badge badge text-bg-warning">{{ unread_messages_count }}</span>
+                {% endif %}
+              </a>
+              <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                <span class="dropdown-item dropdown-header">{{ unread_messages_count }} непрочитанных сообщений</span>
+                {% for msg_recipient in unread_messages %}
+                  <div class="dropdown-divider"></div>
+                  <a href="{% url 'users:cabinet_message_detail' msg_recipient.message.pk %}"
+                     class="dropdown-item">
+                    <i class="bi bi-envelope me-2"></i> {{ msg_recipient.message.title|truncatechars:25 }}
+                    <span class="float-end text-muted text-sm">{{ msg_recipient.message.date|timesince }} ago</span>
+                  </a>
+                {% empty %}
+                  <p class="text-center p-3 mb-0">Нет новых сообщений</p>
+                {% endfor %}
+                <div class="dropdown-divider"></div>
+                <a href="{% url 'users:cabinet_message_list' %}"
+                   class="dropdown-item dropdown-footer">Перейти в раздел сообщений</a>
+              </div>
+            </li>
+            <li class="nav-item dropdown user-menu">
+              <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                {% if request.user.avatar %}
+                  <img src="{{ request.user.avatar.url }}"
+                       class="user-image rounded-circle shadow"
+                       alt="User Image" />
+                {% else %}
+                  <i class="bi bi-person-circle fs-4"></i>
+                {% endif %}
+                <span class="d-none d-md-inline">{{ request.user.get_full_name|default:request.user.username }}</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                <li class="user-header text-bg-primary">
+                  {% if request.user.avatar %}
+                    <img src="{{ request.user.avatar.url }}"
+                         class="img-circle shadow"
+                         alt="User Image" />
+                  {% else %}
+                    <i class="bi bi-person-circle fs-1"></i>
+                  {% endif %}
+                  <p>
+                    {{ request.user.get_full_name|default:request.user.username }}
+                    <small>(Владелец)</small>
+                  </p>
+                </li>
+                <li class="user-footer">
+                  <a href="{% url 'users:cabinet' %}" class="btn btn-default btn-flat">Профиль</a>
+                  <a href="{% url 'core:logout' %}"
+                     class="btn btn-default btn-flat float-end">Выход</a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </nav>
+      <!-- Сайдбар (Sidebar) для Жильца -->
+      <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="white">
+        <div class="sidebar-brand">
+          <a href="{% url 'website:home' %}" class="brand-link">
+            <img src="{% static 'core/adminlte/img/logo.svg' %}"
+                 alt="Мой Дом 24 Logo"
+                 class="brand-image" />
+          </a>
+        </div>
+        <div class="sidebar-wrapper">
+          <nav class="mt-2">
+            <ul class="nav sidebar-menu flex-column owner-sidebar"
+                data-lte-toggle="treeview"
+                role="navigation"
+                data-accordion="false">
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-graph-up"></i>
+                  <p>
+                    Сводка <i class="nav-arrow bi bi-chevron-right"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+                  {% for apartment in request.user.apartments.all %}
+                    <li class="nav-item">
+                      <a href="#" class="nav-link">
+                        <i class="nav-icon bi bi-building"></i>
+                        <p>{{ apartment.house.title }}, кв.{{ apartment.number }}</p>
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-file-earmark-text"></i>
+                  <p>
+                    Квитанции <i class="nav-arrow bi bi-chevron-right"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+                  <li class="nav-item">
+                  <a href="#" class="nav-link"><i class="nav-icon bi bi-files"></i>
+                  <p>Все квитанции</p>
+                </a>
+              </li>
+              {% for apartment in request.user.apartments.all %}
+                <li class="nav-item">
+                <a href="#" class="nav-link"><i class="nav-icon bi bi-file-text"></i>
+                <p>{{ apartment.house.title }}, кв.{{ apartment.number }}</p>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </li>
+      <li class="nav-item {% if request.resolver_match.url_name == 'cabinet_tariff_detail' %}menu-open{% endif %}">
+        <a href="#"
+           class="nav-link {% if request.resolver_match.url_name == 'cabinet_tariff_detail' %}active{% endif %}">
+          <i class="nav-icon bi bi-cash-stack"></i>
+          <p>
+            Тарифы <i class="nav-arrow bi bi-chevron-right"></i>
+          </p>
+        </a>
+        <ul class="nav nav-treeview">
+          {% for apartment in request.user.apartments.all %}
+            <li class="nav-item">
+              <a href="{% url 'users:cabinet_tariff_detail' apartment_id=apartment.pk %}"
+                 class="nav-link {% if request.resolver_match.url_name == 'cabinet_tariff_detail' and request.resolver_match.kwargs.apartment_id == apartment.pk %}active{% endif %}">
+                <i class="nav-icon bi bi-file-text"></i>
+                <p>{{ apartment.house.title }}, кв.{{ apartment.number }}</p>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'users:cabinet_message_list' %}"
+           class="nav-link {% if request.resolver_match.url_name == 'cabinet_message_list' or request.resolver_match.url_name == 'cabinet_message_detail' %}active{% endif %}">
+          <i class="nav-icon bi bi-envelope"></i>
+          <p>Сообщения</p>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link">
+          <i class="nav-icon bi bi-wrench"></i>
+          <p>Вызов мастера</p>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="{% url 'users:cabinet' %}"
+           class="nav-link {% if request.resolver_match.url_name == 'cabinet' or request.resolver_match.url_name == 'cabinet_edit' %}active{% endif %}">
+          <i class="nav-icon bi bi-person"></i>
+          <p>Профиль</p>
+        </a>
+      </li>
+    </ul>
+  </nav>
+</div>
+</aside>
+<!-- Основной контент -->
+<main class="app-main">
+  {% block content %}
+  {% endblock content %}
+</main>
+<!-- Футер (Footer) -->
+<footer class="app-footer">
+  Разработано <a href="https://avada-media.ua/">AVADA-MEDIA</a>. На базе системы управления <a href="https://avada-media.ua/moydom24/">"МойДом24"</a>.
+</footer>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es6.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+<script src="{% static 'core/adminlte/js/adminlte.js' %}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebarWrapper = document.querySelector('.sidebar-wrapper');
+    if (sidebarWrapper && typeof OverlayScrollbarsGlobal?.OverlayScrollbars !== 'undefined') {
+      OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {});
+    }
+  });
+</script>
+{% block scripts %}
+{% endblock scripts %}
+</body>
+</html>

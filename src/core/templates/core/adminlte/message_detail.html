@@ -1,0 +1,99 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Сообщение: {{ message.title }}
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Сообщение</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'users:message_list' %}">Сообщения</a>
+            </li>
+            <li class="breadcrumb-item active">Просмотр</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">{{ message.title }}</h3>
+          <div class="card-tools">
+            <span class="text-muted">От: {{ message.sender.get_full_name }}</span>
+            <span class="text-muted ms-3">{{ message.date|date:"d.m.Y - H:i" }}</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Используем |safe, чтобы HTML-теги из редактора отображались корректно -->
+          <p>{{ message.text|safe }}</p>
+          <hr />
+          <h5>Получатели ({{ message.recipients.count }}):</h5>
+          <p>
+            {% for recipient in message.recipients.all %}
+              <span class="badge bg-secondary">{{ recipient.get_full_name }}</span>
+            {% empty %}
+              <span class="text-muted">Нет получателей.</span>
+            {% endfor %}
+          </p>
+        </div>
+        <div class="card-footer">
+          <button type="button"
+                  class="btn btn-danger"
+                  id="delete-message-btn"
+                  data-id="{{ message.pk }}">
+            <i class="bi bi-trash me-2"></i>Удалить
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script>
+    $(document).ready(function() {
+      $('#delete-message-btn').on('click', function() {
+        const messageId = $(this).data('id');
+        const csrfToken = '{{ csrf_token }}';
+
+        if (!confirm('Вы уверены, что хотите удалить это сообщение?')) {
+          return;
+        }
+
+        $.ajax({
+          url: `/api/v1/users/message/${messageId}`,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          success: function(response) {
+            if (response.status === 'success') {
+              alert(response.message);
+              // Перенаправляем на список сообщений после успешного удаления
+              window.location.href = "{% url 'users:message_list' %}";
+            } else {
+              alert('Произошла ошибка: ' + response.message);
+            }
+          },
+          error: function(xhr) {
+            const errorMessage = xhr.responseJSON ? xhr.responseJSON.message : 'Произошла неизвестная ошибка при удалении.';
+            alert(errorMessage);
+          }
+        });
+      });
+    });
+  </script>
+{% endblock scripts %}

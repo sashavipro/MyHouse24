@@ -134,6 +134,9 @@ class ApartmentForm(forms.ModelForm):
         """Initialize the form and dynamically sets querysets for section and floor."""
         super().__init__(*args, **kwargs)
 
+        self.fields["owner"].queryset = User.objects.filter(user_type="owner").order_by(
+            "last_name", "first_name"
+        )
         self.fields["area"].required = False
         self.fields["section"].required = False
         self.fields["floor"].required = False

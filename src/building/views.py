@@ -1,14 +1,20 @@
 """src/building/views.py."""
 
+import openpyxl
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.db.models import Sum
+from django.http import HttpResponse
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import CreateView
 from django.views.generic import DetailView
 from django.views.generic import ListView
 from django.views.generic import UpdateView
+from openpyxl.styles import Font
 
 from src.users.models import User
+from src.users.permissions import Permissions
 
 from .forms import ApartmentForm
 from .forms import FloorFormSet
@@ -21,26 +27,29 @@ from .models import House
 from .models import PersonalAccount
 
 
-class HouseListView(LoginRequiredMixin, ListView):
+class HouseListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """Display a list of houses using a DataTables AJAX source."""
 
     model = House
     template_name = "core/adminlte/house_list.html"
+    permission_required = Permissions.HOUSE
 
 
-class HouseDetailView(LoginRequiredMixin, DetailView):
+class HouseDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """Display detailed information about a single house."""
 
     model = House
     template_name = "core/adminlte/house_detail.html"
+    permission_required = Permissions.HOUSE
 
 
-class HouseCreateView(LoginRequiredMixin, CreateView):
+class HouseCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Handle the creation of a new house and its related formsets."""
 
     model = House
     form_class = HouseForm
     template_name = "core/adminlte/house_form.html"
+    permission_required = Permissions.HOUSE
 
     def get_success_url(self):
         """Return the URL to redirect to after successful creation."""
@@ -88,12 +97,13 @@ class HouseCreateView(LoginRequiredMixin, CreateView):
         return self.form_invalid(form)
 
 
-class HouseUpdateView(LoginRequiredMixin, UpdateView):
-    """Handle updating an existing house and its related formsets."""
+class HouseUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    """Handle updating an existing house."""
 
     model = House
     form_class = HouseForm
     template_name = "core/adminlte/house_form.html"
+    permission_required = Permissions.HOUSE
 
     def get_success_url(self):
         """Return the URL to redirect to after a successful update."""
@@ -146,11 +156,12 @@ class HouseUpdateView(LoginRequiredMixin, UpdateView):
         return self.form_invalid(form)
 
 
-class ApartmentListView(LoginRequiredMixin, ListView):
+class ApartmentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """Displays the page with the list of apartments."""
 
     model = Apartment
     template_name = "core/adminlte/apartment_list.html"
+    permission_required = Permissions.APARTMENT
 
     def get_context_data(self, **kwargs):
         """Add necessary data to the context for filtering."""
@@ -160,20 +171,22 @@ class ApartmentListView(LoginRequiredMixin, ListView):
         return context
 
 
-class ApartmentDetailView(LoginRequiredMixin, DetailView):
+class ApartmentDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """Display detailed information about an apartment."""
 
     model = Apartment
     template_name = "core/adminlte/apartment_detail.html"
     context_object_name = "apartment"
+    permission_required = Permissions.APARTMENT
 
 
-class ApartmentCreateView(LoginRequiredMixin, CreateView):
+class ApartmentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     """Display the form for creating a new apartment."""
 
     model = Apartment
     form_class = ApartmentForm
     template_name = "core/adminlte/apartment_form.html"
+    permission_required = Permissions.APARTMENT
 
     def get_success_url(self):
         """Determine the redirect URL after successful form submission."""
@@ -186,23 +199,25 @@ class ApartmentCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ApartmentUpdateView(LoginRequiredMixin, UpdateView):
+class ApartmentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """Displays the form for editing an apartment."""
 
     model = Apartment
     form_class = ApartmentForm
     template_name = "core/adminlte/apartment_form.html"
+    permission_required = Permissions.APARTMENT
 
     def get_success_url(self):
         """Return the URL to redirect to after a successful update."""
         return reverse_lazy("building:apartment_detail", kwargs={"pk": self.object.pk})
 
 
-class PersonalAccountListView(LoginRequiredMixin, ListView):
+class PersonalAccountListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     """Display the page with the list of personal accounts."""
 
     model = PersonalAccount
     template_name = "core/adminlte/personal_account_list.html"
+    permission_required = Permissions.PERSONAL_ACCOUNT
 
     def get_context_data(self, **kwargs):
         """Add data for filters and statistics cards to the context."""
@@ -229,21 +244,27 @@ class PersonalAccountListView(LoginRequiredMixin, ListView):
         return context
 
 
-class PersonalAccountDetailView(LoginRequiredMixin, DetailView):
+class PersonalAccountDetailView(
+    LoginRequiredMixin, PermissionRequiredMixin, DetailView
+):
     """Displays detailed information about a personal account."""
 
     model = PersonalAccount
     template_name = "core/adminlte/personal_account_detail.html"
     context_object_name = "account"
+    permission_required = Permissions.PERSONAL_ACCOUNT
 
 
-class PersonalAccountCreateView(LoginRequiredMixin, CreateView):
+class PersonalAccountCreateView(
+    LoginRequiredMixin, PermissionRequiredMixin, CreateView
+):
     """Displays the form for creating a new personal account."""
 
     model = PersonalAccount
     form_class = PersonalAccountForm
     template_name = "core/adminlte/personal_account_form.html"
     success_url = reverse_lazy("building:personal_account_list")
+    permission_required = Permissions.PERSONAL_ACCOUNT
 
     def get_context_data(self, **kwargs):
         """Add necessary data for the form to the context."""
@@ -265,12 +286,15 @@ class PersonalAccountCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class PersonalAccountUpdateView(LoginRequiredMixin, UpdateView):
+class PersonalAccountUpdateView(
+    LoginRequiredMixin, PermissionRequiredMixin, UpdateView
+):
     """Display the form for editing a personal account."""
 
     model = PersonalAccount
     form_class = PersonalAccountForm
     template_name = "core/adminlte/personal_account_form.html"
+    permission_required = Permissions.PERSONAL_ACCOUNT
 
     def get_success_url(self):
         """Return the URL to redirect to after a successful update."""
@@ -292,3 +316,94 @@ class PersonalAccountUpdateView(LoginRequiredMixin, UpdateView):
             }
 
         return context
+
+
+class ExportPersonalAccountsExcelView(
+    LoginRequiredMixin, PermissionRequiredMixin, View
+):
+    """Handle the export of personal accounts to an Excel file."""
+
+    permission_required = Permissions.PERSONAL_ACCOUNT
+
+    def filter_queryset(self, request):
+        """Apply filters from request parameters to the queryset."""
+        queryset = PersonalAccount.objects.all().order_by("pk")
+
+        filters_map = {
+            "number": ("number__icontains", str),
+            "status": ("status", str),
+            "apartment_number": ("apartment__number__icontains", str),
+            "house": ("apartment__house_id", str),
+            "section": ("apartment__section_id", str),
+            "owner": ("apartment__owner_id", str),
+        }
+
+        for param, (field, cast) in filters_map.items():
+            value = request.GET.get(param, "").strip()
+            if value:
+                queryset = queryset.filter(**{field: cast(value)})
+
+        balance = request.GET.get("balance", "").strip()
+        if balance:
+            if balance == "debt":
+                queryset = queryset.filter(balance__lt=0)
+            elif balance == "no_debt":
+                queryset = queryset.filter(balance__gte=0)
+            elif balance == "zero":
+                queryset = queryset.filter(balance=0)
+
+        return queryset
+
+    def get(self, request, *args, **kwargs):
+        """Generate and return an Excel file with filtered personal account data."""
+        queryset = self.filter_queryset(request)
+
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Лицевые счета"
+
+        headers = [
+            "№",
+            "Статус",
+            "Квартира",
+            "Дом",
+            "Секция",
+            "Владелец",
+            "Остаток (грн)",
+        ]
+        sheet.append(headers)
+
+        for cell in sheet[1]:
+            cell.font = Font(bold=True)
+
+        for account in queryset:
+            apt = getattr(account, "apartment", None)
+
+            row_data = [
+                account.number,
+                "Активен" if account.status == "active" else "Неактивен",
+                getattr(apt, "number", "(не задано)") if apt else "(не задано)",
+                getattr(apt.house, "title", "(не задано)")
+                if apt and apt.house
+                else "(не задано)",
+                getattr(apt.section, "name", "(не задано)")
+                if apt and apt.section
+                else "(не задано)",
+                apt.owner.get_full_name() if apt and apt.owner else "(не задано)",
+                account.balance,
+            ]
+            sheet.append(row_data)
+
+        column_widths = [20, 15, 15, 25, 20, 35, 20]
+        for i, width in enumerate(column_widths, 1):
+            sheet.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = (
+            'attachment; filename="personal_accounts.xlsx"'
+        )
+
+        workbook.save(response)
+        return response

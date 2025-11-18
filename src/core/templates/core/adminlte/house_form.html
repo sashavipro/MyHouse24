@@ -9,6 +9,53 @@
     Новый дом
   {% endif %}
 {% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    /* Общие стили для контейнера превью */
+    .image-preview-container {
+      border: 2px dashed #ced4da;
+      border-radius: .375rem;
+      background-color: #f8f9fa;
+      position: relative;
+      cursor: pointer;
+      overflow: hidden;
+      /* Обязательно для object-fit */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s ease-in-out;
+    }
+
+    .image-preview-container:hover {
+      border-color: #0d6efd;
+    }
+
+    /* Стили для иконки-плейсхолдера */
+    .image-preview-container .icon-placeholder {
+      font-size: 3rem;
+      /* Размер иконки */
+      color: #adb5bd;
+    }
+
+    /* Стили для самого изображения внутри контейнера */
+    .image-preview-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      /* Масштабирует изображение, чтобы заполнить контейнер, обрезая лишнее */
+    }
+
+    /* Размеры для большого и маленьких превью */
+    .image-preview-lg {
+      height: 350px;
+    }
+
+    .image-preview-sm {
+      height: 160px;
+    }
+  </style>
+{% endblock styles %}
 {% block content %}
   <section class="content-header">
     <div class="container-fluid">
@@ -301,25 +348,34 @@
     <script>
       document.addEventListener('DOMContentLoaded', function() {
 
-        // --- ЛОГИКА ДЛЯ ПРЕВЬЮ ИЗОБРАЖЕНИЙ ---
-        document.querySelectorAll('.image-preview-container').forEach(container => {
-          const inputId = container.dataset.for;
-          const inputEl = document.getElementById(inputId);
+        // --- ОБНОВЛЕННАЯ ЛОГИКА ДЛЯ ПРЕВЬЮ ИЗОБРАЖЕНИЙ ---
+        document.querySelectorAll('input[type="file"]').forEach(inputEl => {
+          const container = document.querySelector(`.image-preview-container[data-for="${inputEl.id}"]`);
 
-          if (inputEl) {
-            container.addEventListener('click', () => inputEl.click());
+          if (!container) return;
 
-            inputEl.addEventListener('change', function(event) {
-              const file = event.target.files[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                  container.innerHTML = `<img src="${e.target.result}" alt="Превью" />`;
+          // Обработчик клика по контейнеру для вызова выбора файла
+          container.addEventListener('click', () => inputEl.click());
+
+          // Обработчик изменения файла в input
+          inputEl.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = function(e) {
+                // Создаем или обновляем img внутри контейнера
+                let img = container.querySelector('img');
+                if (!img) {
+                  container.innerHTML = ''; // Очищаем иконку-плейсхолдер
+                  img = document.createElement('img');
+                  container.appendChild(img);
                 }
-                reader.readAsDataURL(file);
+                img.src = e.target.result;
+                img.alt = "Превью";
               }
-            });
-          }
+              reader.readAsDataURL(file);
+            }
+          });
         });
 
 

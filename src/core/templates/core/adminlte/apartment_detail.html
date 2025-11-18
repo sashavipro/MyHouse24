@@ -36,7 +36,8 @@
               <a href="#" class="btn btn-sm btn-success">
                 <i class="bi bi-currency-dollar"></i> Принять платеж
               </a>
-              <a href="#" class="btn btn-sm btn-info">
+              <a href="{% url 'finance:receipt_add' %}?apartment={{ apartment.pk }}"
+                 class="btn btn-sm btn-info">
                 <i class="bi bi-file-earmark-text"></i> Оформить квитанцию
               </a>
               <a href="{% url 'building:apartment_edit' apartment.pk %}"

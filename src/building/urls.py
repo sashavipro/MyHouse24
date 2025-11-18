@@ -74,4 +74,9 @@ urlpatterns = [
         PersonalAccountAjaxDatatableView.as_view(),
         name="ajax_datatable_personal_accounts",
     ),
+    path(
+        "adminlte/personal-accounts/export-excel/",
+        views.ExportPersonalAccountsExcelView.as_view(),
+        name="personal_account_export_excel",
+    ),
 ]

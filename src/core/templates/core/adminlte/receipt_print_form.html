@@ -1,0 +1,70 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Печатная форма документа
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Печатная форма документа</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:receipt_list' %}">Квитанции</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:receipt_detail' receipt.pk %}">Квитанция №{{ receipt.number }}</a>
+            </li>
+            <li class="breadcrumb-item active">Печатная форма документа</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post">
+        {% csrf_token %}
+        <div class="card">
+          <div class="card-header d-flex justify-content-between">
+            <h3 class="card-title">Список шаблонов</h3>
+            <a href="{% url 'finance:receipt_template_settings' %}"
+               class="btn btn-sm btn-outline-secondary">Настройка шаблонов</a>
+          </div>
+          <div class="card-body">
+            {% for template in templates %}
+              <div class="form-check">
+                <input class="form-check-input"
+                       type="radio"
+                       name="template_id"
+                       id="template{{ template.pk }}"
+                       value="{{ template.pk }}"
+                       {% if template.is_default %}checked{% endif %} />
+                <label class="form-check-label" for="template{{ template.pk }}">
+                  {{ template.name }}
+                  {% if template.is_default %}(по-умолчанию){% endif %}
+                </label>
+              </div>
+            {% empty %}
+              <p class="text-muted">
+                Нет загруженных шаблонов. <a href="{% url 'finance:receipt_template_settings' %}">Добавьте первый шаблон</a>.
+              </p>
+            {% endfor %}
+          </div>
+          <div class="card-footer text-end">
+            <button type="submit" name="download" class="btn btn-success">Скачать</button>
+            <button type="submit" name="send_email" class="btn btn-outline-primary">Отправить на e-mail</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}

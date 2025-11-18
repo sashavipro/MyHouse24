@@ -1,0 +1,239 @@
+{% extends 'core/adminlte/cabinet_layout.html' %}
+
+{% block title %}
+  Мои Сообщения
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    .breadcrumb-custom {
+      background-color: transparent;
+      padding-left: 0;
+    }
+
+    .search-input-group {
+      width: 250px;
+    }
+
+    .th-checkbox {
+      width: 20px;
+    }
+
+    .th-actions-empty {
+      width: 50px;
+    }
+
+    #cabinet-messages-table tbody tr {
+      cursor: pointer;
+    }
+
+    table.dataTable .dt-column-order::before,
+    table.dataTable .dt-column-order::after {
+      display: none !important;
+      content: "" !important;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h1>Входящие сообщения</h1>
+      </div>
+      <ol class="breadcrumb breadcrumb-custom">
+        <li class="breadcrumb-item">
+          <a href="{% url 'users:cabinet' %}">Личный кабинет</a>
+        </li>
+        <li class="breadcrumb-item active">Сообщения</li>
+      </ol>
+    </div>
+  </section>
+  <section class="content">
+    <div class="card">
+      <div class="card-header bg-transparent border-bottom-0 pt-3 pb-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <button class="btn btn-default border"
+                    id="select-all-btn"
+                    title="Выбрать/снять все">
+              <i class="far fa-square"></i>
+            </button>
+            <button class="btn btn-default border"
+                    id="delete-selected-btn"
+                    title="Удалить выбранные">
+              <i class="far fa-trash-alt"></i>
+            </button>
+          </div>
+          <div class="input-group search-input-group">
+            <input type="text"
+                   id="custom-search-input"
+                   class="form-control"
+                   placeholder="Поиск" />
+            <button class="btn btn-outline-secondary"
+                    type="button"
+                    id="custom-search-btn">
+              <i class="bi bi-search"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body py-0 px-2">
+        <div class="table-responsive">
+          <table id="cabinet-messages-table" class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th class="th-checkbox text-center">
+                  <input type="checkbox" class="form-check-input" id="select-all-messages" />
+                </th>
+                <th>Отправитель</th>
+                <th>Текст</th>
+                <th>Дата</th>
+                <th class="th-actions-empty"></th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <script>
+    // --- Ваш JavaScript-код остается без изменений ---
+    $(document).ready(function() {
+      const csrfToken = '{{ csrf_token }}';
+      const table = $('#cabinet-messages-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false,
+        ordering: true,
+        ajax: {
+          url: "{% url 'users:ajax_datatable_cabinet_messages' %}",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          data: function(d) {
+            d.search_value = $('#custom-search-input').val();
+            return d;
+          }
+        },
+        columns: [{
+          data: 'checkbox',
+          orderable: false,
+          className: 'text-center'
+        }, {
+          data: 'sender',
+          orderable: false
+        }, {
+          data: 'text',
+          orderable: false
+        }, {
+          data: 'date'
+        }, {
+          data: 'actions',
+          orderable: false
+        }],
+        order: [
+          [3, 'desc']
+        ],
+        pageLength: 10,
+        language: {
+          "processing": "Загрузка...",
+          "zeroRecords": "Сообщения не найдены.",
+          "info": "Показано с _START_ по _END_ из _TOTAL_ сообщений",
+          "infoEmpty": "Нет сообщений для отображения",
+          "infoFiltered": "(отфильтровано из _MAX_)",
+          "paginate": {
+            "first": "«",
+            "last": "»",
+            "next": "›",
+            "previous": "‹"
+          }
+        },
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        "drawCallback": function(settings) {
+          $('#select-all-messages').prop('checked', false);
+          updateSelectAllButtonIcon(false);
+        }
+      });
+
+      $('#custom-search-btn').on('click', function() {
+        table.ajax.reload();
+      });
+      $('#custom-search-input').on('keyup', function(e) {
+        if (e.key === 'Enter') table.ajax.reload();
+      });
+
+      const selectAllHeaderCheckbox = $('#select-all-messages');
+      const selectAllButton = $('#select-all-btn');
+
+      function updateSelectAllButtonIcon(allAreChecked) {
+        if (allAreChecked) {
+          selectAllButton.find('i').removeClass('far fa-square').addClass('far fa-check-square');
+        } else {
+          selectAllButton.find('i').removeClass('far fa-check-square').addClass('far fa-square');
+        }
+      }
+      selectAllHeaderCheckbox.on('click', function() {
+        const isChecked = this.checked;
+        $('.message-checkbox').prop('checked', isChecked);
+        updateSelectAllButtonIcon(isChecked);
+      });
+      selectAllButton.on('click', function() {
+        const isCurrentlyChecked = selectAllButton.find('i').hasClass('fa-check-square');
+        const shouldBeChecked = !isCurrentlyChecked;
+        $('.message-checkbox, #select-all-messages').prop('checked', shouldBeChecked);
+        updateSelectAllButtonIcon(shouldBeChecked);
+      });
+      $(document).on('click', '.message-checkbox', function(e) {
+        e.stopPropagation();
+        const allChecked = $('.message-checkbox').length > 0 && $('.message-checkbox').length === $('.message-checkbox:checked').length;
+        selectAllHeaderCheckbox.prop('checked', allChecked);
+        updateSelectAllButtonIcon(allChecked);
+      });
+
+      $('#cabinet-messages-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).is('input[type="checkbox"]') || $(e.target).closest('button, a').length) return;
+        const url = $(this).data('detail-url');
+        if (url) window.location.href = url;
+      });
+
+      $('#delete-selected-btn').on('click', function(e) {
+        e.preventDefault();
+        const selectedIds = $('.message-checkbox:checked').map(function() {
+          return $(this).data('id');
+        }).get();
+        if (selectedIds.length === 0) {
+          alert('Пожалуйста, выберите хотя бы одно сообщение.');
+          return;
+        }
+        if (!confirm(`Вы уверены, что хотите скрыть ${selectedIds.length} сообщений? Они исчезнут из этого списка.`)) return;
+        $.ajax({
+          url: '/api/v1/users/cabinet/messages/bulk-hide',
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          contentType: 'application/json',
+          data: JSON.stringify({
+            ids: selectedIds
+          }),
+          success: (response) => {
+            if (response.status === 'success') table.ajax.reload(null, false);
+          },
+          error: (xhr) => {
+            alert(`Ошибка: ${xhr.responseJSON ? xhr.responseJSON.message : 'Произошла ошибка.'}`);
+          }
+        });
+      });
+    });
+  </script>
+{% endblock scripts %}

@@ -41,13 +41,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "src.core",
-    "src.finance",
-    "src.building",
-    "src.users",
-    "src.website",
+    "src.core.apps.CoreConfig",
+    "src.finance.apps.FinanceConfig",
+    "src.building.apps.BuildingConfig",
+    "src.users.apps.UsersConfig",
+    "src.website.apps.WebsiteConfig",
     "ninja",
     "ajax_datatable",
+    'hcaptcha',
 ]
 
 MIDDLEWARE = [
@@ -61,7 +62,7 @@ MIDDLEWARE = [
 ]
 
 AUTHENTICATION_BACKENDS = [
-    "src.users.backends.EmailOrUserIdBackend",
+    "src.users.backends.CustomBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 
@@ -77,6 +78,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                'src.users.context_processors.notifications_context',
+                'src.users.context_processors.user_home_url',
             ],
         },
     },
@@ -146,3 +149,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "users.User"
 LOGIN_REDIRECT_URL = 'finance:admin_stats'
 LOGIN_URL = "core:login"
+
+HCAPTCHA_SITEKEY = env("HCAPTCHA_SITE_KEY")
+HCAPTCHA_SECRET = env("HCAPTCHA_SECRET_KEY")

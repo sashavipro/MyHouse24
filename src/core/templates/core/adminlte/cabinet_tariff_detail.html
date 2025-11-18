@@ -1,0 +1,68 @@
+{% extends 'core/adminlte/cabinet_layout.html' %}
+
+{% block title %}
+  Услуги и тарифы - {{ apartment.house.title }}, кв. {{ apartment.number }}
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    .th-unit {
+      width: 150px;
+    }
+
+    .th-price {
+      width: 200px;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Услуги и тарифы - {{ apartment.house.title }}, кв. {{ apartment.number }}</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'users:cabinet' %}">Личный кабинет</a>
+            </li>
+            <li class="breadcrumb-item active">Услуги и тарифы</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card">
+        <div class="card-body p-0">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Услуга</th>
+                <th class="th-unit">Ед. изм.</th>
+                <th class="th-price">Цена за ед., грн</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in all_services %}
+                <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.unit }}</td>
+                  <td>{{ item.price|floatformat:2|default:"—" }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="3" class="text-center p-4">
+                    Для данной квартиры не найдено ни одной услуги (ни в тарифе, ни в квитанциях).
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}

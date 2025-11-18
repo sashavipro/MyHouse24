@@ -1,5 +1,6 @@
 """src/finance/models.py."""
 
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
@@ -16,7 +17,7 @@ class Unit(models.Model):
         verbose_name_plural = "Units"
 
     def __str__(self):
-        """__str__."""
+        """Return string representation of the unit."""
         return self.name
 
 
@@ -32,7 +33,7 @@ class Currency(models.Model):
         verbose_name_plural = "Currency"
 
     def __str__(self):
-        """__str__."""
+        """Return string representation of the currency."""
         return self.name
 
 
@@ -52,7 +53,7 @@ class Service(models.Model):
         verbose_name_plural = "Service"
 
     def __str__(self):
-        """__str__."""
+        """Return string representation of the service."""
         return self.name
 
 
@@ -74,7 +75,7 @@ class Tariff(models.Model):
         verbose_name_plural = "Tariffs"
 
     def __str__(self):
-        """__str__."""
+        """Return string representation of the tariff."""
         return self.name
 
 
@@ -83,7 +84,7 @@ class TariffService(models.Model):
 
     tariff = models.ForeignKey(Tariff, on_delete=models.CASCADE, verbose_name="Tariff")
     service = models.ForeignKey(
-        Service, on_delete=models.CASCADE, verbose_name="Service"
+        Service, on_delete=models.PROTECT, verbose_name="Service"
     )
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="price")
     currency = models.ForeignKey(
@@ -101,75 +102,90 @@ class TariffService(models.Model):
         )
 
     def __str__(self):
-        """__str__."""
+        """Return string representation of the tariff service."""
         return f"{self.service.name} в {self.tariff.name}"
 
 
 class Counter(models.Model):
-    """Counter."""
+    """Счетчик, привязанный к квартире и услуге."""
 
     serial_number = models.CharField(
-        max_length=100, unique=True, verbose_name="Serial Number"
+        max_length=100, unique=True, verbose_name="Серийный номер"
     )
     apartment = models.ForeignKey(
         "building.Apartment",
         on_delete=models.CASCADE,
         related_name="counters",
-        verbose_name="Apartment",
+        verbose_name="Квартира",
     )
     service = models.ForeignKey(
-        Service, on_delete=models.PROTECT, verbose_name="Service"
+        Service, on_delete=models.PROTECT, verbose_name="Услуга"
     )
-    is_active = models.BooleanField(default=True, verbose_name="is active")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
 
     class Meta:
         """Meta class."""
 
-        verbose_name = "Counter"
-        verbose_name_plural = "Counters"
+        verbose_name = "Счетчик"
+        verbose_name_plural = "Счетчики"
 
     def __str__(self):
-        """__str__."""
+        """Return string representation of the counter."""
         return f"{self.service.name} ({self.serial_number}) в {self.apartment}"
 
 
 class CounterReading(models.Model):
-    """CounterReading."""
+    """Одно показание, снятое для счетчика."""
 
     class CounterStatus(models.TextChoices):
-        """Counter status."""
+        """Counter status choices."""
 
         NEW = "new", "Новое"
         CONSIDERED = "considered", "Учтено"
         ZERO = "zero", "Нулевое"
+        PAID = "paid", "Учтено и оплачено"
 
+    number = models.CharField(max_length=20, unique=True, verbose_name="№")
+
+    # Используем Counter как связь
     counter = models.ForeignKey(
         Counter,
         on_delete=models.CASCADE,
         related_name="readings",
-        verbose_name="Counter",
+        verbose_name="Счетчик",
     )
-    date = models.DateField(verbose_name="Date of removal")
+
+    date = models.DateField(verbose_name="Дата снятия")
     value = models.DecimalField(
-        max_digits=12, decimal_places=3, verbose_name="Indication"
+        max_digits=12, decimal_places=3, verbose_name="Показание"
     )
     status = models.CharField(
         max_length=20,
         choices=CounterStatus.choices,
         default=CounterStatus.NEW,
-        verbose_name="status",
+        verbose_name="Статус",
     )
 
     class Meta:
         """Meta class."""
 
-        verbose_name = "Meter reading"
-        verbose_name_plural = "Meter reading"
-        ordering = ["-date"]
+        verbose_name = "Показание счетчика"
+        verbose_name_plural = "Показания счетчиков"
+        ordering = ["-date", "-id"]
 
     def __str__(self):
-        """__str__."""
-        return f"Indication {self.value} от {self.date}"
+        """Return string representation of the counter reading."""
+        return f"Показание №{self.number} ({self.counter.service.name}) от {self.date}"
+
+    @property
+    def apartment(self):
+        """Get the apartment from the counter."""
+        return self.counter.apartment
+
+    @property
+    def service(self):
+        """Get the service from the counter."""
+        return self.counter.service
 
 
 class Receipt(models.Model):
@@ -178,43 +194,58 @@ class Receipt(models.Model):
     class ReceiptStatus(models.TextChoices):
         """Receipt status."""
 
-        UNPAID = "unpaid", "He оплачено"
-        PARTIALLY_PAID = "partially_paid", "Частично оплачено"
-        PAID = "paid", "Оплачено"
+        UNPAID = "unpaid", "Неоплачена"
+        PARTIALLY_PAID = "partially_paid", "Частично оплачена"
+        PAID = "paid", "Оплачена"
+
+    number = models.CharField(
+        max_length=50, unique=True, verbose_name="Номер квитанции"
+    )
+    date = models.DateField(default=timezone.now, verbose_name="Дата")
+
+    is_posted = models.BooleanField(default=False, verbose_name="Проведена")
+
+    period_start = models.DateField(null=True, blank=True, verbose_name="Период c")
+    period_end = models.DateField(null=True, blank=True, verbose_name="Период по")
 
     apartment = models.ForeignKey(
         "building.Apartment",
         on_delete=models.PROTECT,
         related_name="receipts",
-        verbose_name="apartment",
+        verbose_name="Квартира",
     )
-    month = models.PositiveIntegerField(verbose_name="month")
-    year = models.PositiveIntegerField(verbose_name="year")
+    tariff = models.ForeignKey(
+        Tariff,
+        on_delete=models.PROTECT,
+        verbose_name="Тариф",
+        null=True,
+        blank=True,
+    )
     status = models.CharField(
         max_length=20,
         choices=ReceiptStatus.choices,
         default=ReceiptStatus.UNPAID,
-        verbose_name="status",
+        verbose_name="Статус оплаты",
     )
     total_amount = models.DecimalField(
-        max_digits=10, decimal_places=2, verbose_name="total amount"
+        max_digits=10, decimal_places=2, verbose_name="Итоговая сумма", default=0.00
     )
-    created_at = models.DateField(auto_now_add=True, verbose_name="created_at")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создана")
 
     services = models.ManyToManyField(
-        Service, through="ReceiptItem", verbose_name="services"
+        Service, through="ReceiptItem", verbose_name="Услуги"
     )
 
     class Meta:
         """Meta class."""
 
-        verbose_name = "Receipt"
-        verbose_name_plural = "Receipts"
-        unique_together = ("apartment", "month", "year")
+        verbose_name = "Квитанция"
+        verbose_name_plural = "Квитанции"
+        ordering = ["-date", "-pk"]
 
     def __str__(self):
-        """__str__."""
-        return f"Квитанция для {self.apartment} за {self.month}.{self.year}"
+        """Return string representation of the receipt."""
+        return f"Квитанция №{self.number} от {self.date.strftime('%d.%m.%Y')}"
 
 
 class ReceiptItem(models.Model):
@@ -253,9 +284,8 @@ class ReceiptItem(models.Model):
 
     def __str__(self):
         """Return a string representation of the receipt item."""
-        # E501: Line too long - перенесено на новую строку
         return (
-            f"{self.service.name}: {self.amount} in receipt " f"№{self.receipt.number}"
+            f"{self.service.name}: {self.amount} " f"in receipt №{self.receipt.number}"
         )
 
 
@@ -313,8 +343,8 @@ class CashBox(models.Model):
         verbose_name_plural = "Cash transaction"
 
     def __str__(self):
-        """Return a string representation of the receipt item."""
-        return f"{self.service.name}: {self.amount} " f"in receipt №{self.receipt.id}"
+        """Return a string representation of the cash transaction."""
+        return f"{self.service.name}: {self.amount} in receipt №{self.receipt.id}"
 
 
 class PaymentDetails(models.Model):
@@ -330,5 +360,35 @@ class PaymentDetails(models.Model):
         verbose_name_plural = "Платежные реквизиты"
 
     def __str__(self):
-        """Str."""
+        """Return string representation of payment details."""
         return self.company_name
+
+
+class PrintTemplate(models.Model):
+    """Model for storing templates of printed receipt forms."""
+
+    name = models.CharField(max_length=255, verbose_name="Название шаблона")
+    template_file = models.FileField(
+        upload_to="receipt_templates/",
+        verbose_name="Файл шаблона (.xlsx)",
+        validators=[FileExtensionValidator(allowed_extensions=["xlsx"])],
+    )
+    is_default = models.BooleanField(default=False, verbose_name="По умолчанию")
+
+    class Meta:
+        """Meta class."""
+
+        verbose_name = "Шаблон для печати"
+        verbose_name_plural = "Шаблоны для печати"
+
+    def __str__(self):
+        """Return string representation of the print template."""
+        return self.name
+
+    def save(self, *args, **kwargs):
+        """Save template and ensure only one default template exists."""
+        if self.is_default:
+            PrintTemplate.objects.filter(is_default=True).exclude(pk=self.pk).update(
+                is_default=False
+            )
+        super().save(*args, **kwargs)
