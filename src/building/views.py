@@ -2,7 +2,9 @@
 
 import openpyxl
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.core.exceptions import ValidationError
+from django.db import DatabaseError
+from django.db import transaction
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.urls import reverse_lazy
@@ -14,7 +16,8 @@ from django.views.generic import UpdateView
 from openpyxl.styles import Font
 
 from src.users.models import User
-from src.users.permissions import Permissions
+from src.users.models import logger
+from src.users.permissions import RoleRequiredMixin
 
 from .forms import ApartmentForm
 from .forms import FloorFormSet
@@ -27,29 +30,29 @@ from .models import House
 from .models import PersonalAccount
 
 
-class HouseListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class HouseListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     """Display a list of houses using a DataTables AJAX source."""
 
     model = House
     template_name = "core/adminlte/house_list.html"
-    permission_required = Permissions.HOUSE
+    permission_required = "has_house"
 
 
-class HouseDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+class HouseDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     """Display detailed information about a single house."""
 
     model = House
     template_name = "core/adminlte/house_detail.html"
-    permission_required = Permissions.HOUSE
+    permission_required = "has_house"
 
 
-class HouseCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class HouseCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     """Handle the creation of a new house and its related formsets."""
 
     model = House
     form_class = HouseForm
     template_name = "core/adminlte/house_form.html"
-    permission_required = Permissions.HOUSE
+    permission_required = "has_house"
 
     def get_success_url(self):
         """Return the URL to redirect to after successful creation."""
@@ -86,24 +89,30 @@ class HouseCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
                 staff_formset.is_valid(),
             ]
         ):
-            self.object = form.save()
-            section_formset.instance = self.object
-            section_formset.save()
-            floor_formset.instance = self.object
-            floor_formset.save()
-            staff_formset.instance = self.object
-            staff_formset.save()
+            try:
+                with transaction.atomic():
+                    self.object = form.save()
+                    section_formset.instance = self.object
+                    section_formset.save()
+                    floor_formset.instance = self.object
+                    floor_formset.save()
+                    staff_formset.instance = self.object
+                    staff_formset.save()
+            except (DatabaseError, ValidationError) as e:  # Fixed BLE001
+                logger.error("Error creating house: %s", e)
+                return self.form_invalid(form)
+
             return super().form_valid(form)
         return self.form_invalid(form)
 
 
-class HouseUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class HouseUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Handle updating an existing house."""
 
     model = House
     form_class = HouseForm
     template_name = "core/adminlte/house_form.html"
-    permission_required = Permissions.HOUSE
+    permission_required = "has_house"
 
     def get_success_url(self):
         """Return the URL to redirect to after a successful update."""
@@ -148,20 +157,26 @@ class HouseUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
                 staff_formset.is_valid(),
             ]
         ):
-            self.object = form.save()
-            section_formset.save()
-            floor_formset.save()
-            staff_formset.save()
+            try:
+                with transaction.atomic():
+                    self.object = form.save()
+                    section_formset.save()
+                    floor_formset.save()
+                    staff_formset.save()
+            except (DatabaseError, ValidationError) as e:  # Fixed BLE001
+                logger.error("Error updating house: %s", e)
+                return self.form_invalid(form)
+
             return super().form_valid(form)
         return self.form_invalid(form)
 
 
-class ApartmentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
-    """Displays the page with the list of apartments."""
+class ApartmentListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
+    """Display the page with the list of apartments."""
 
     model = Apartment
     template_name = "core/adminlte/apartment_list.html"
-    permission_required = Permissions.APARTMENT
+    permission_required = "has_apartment"
 
     def get_context_data(self, **kwargs):
         """Add necessary data to the context for filtering."""
@@ -171,22 +186,22 @@ class ApartmentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         return context
 
 
-class ApartmentDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+class ApartmentDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     """Display detailed information about an apartment."""
 
     model = Apartment
     template_name = "core/adminlte/apartment_detail.html"
     context_object_name = "apartment"
-    permission_required = Permissions.APARTMENT
+    permission_required = "has_apartment"
 
 
-class ApartmentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class ApartmentCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     """Display the form for creating a new apartment."""
 
     model = Apartment
     form_class = ApartmentForm
     template_name = "core/adminlte/apartment_form.html"
-    permission_required = Permissions.APARTMENT
+    permission_required = "has_apartment"
 
     def get_success_url(self):
         """Determine the redirect URL after successful form submission."""
@@ -196,28 +211,30 @@ class ApartmentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVie
 
     def form_valid(self, form):
         """Handle the valid form submission."""
-        return super().form_valid(form)
+        with transaction.atomic():
+            return super().form_valid(form)
 
 
-class ApartmentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class ApartmentUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Displays the form for editing an apartment."""
 
     model = Apartment
     form_class = ApartmentForm
     template_name = "core/adminlte/apartment_form.html"
-    permission_required = Permissions.APARTMENT
+    permission_required = "has_apartment"
 
-    def get_success_url(self):
-        """Return the URL to redirect to after a successful update."""
-        return reverse_lazy("building:apartment_detail", kwargs={"pk": self.object.pk})
+    def form_valid(self, form):
+        """Handle the valid form submission."""
+        with transaction.atomic():
+            return super().form_valid(form)
 
 
-class PersonalAccountListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class PersonalAccountListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     """Display the page with the list of personal accounts."""
 
     model = PersonalAccount
     template_name = "core/adminlte/personal_account_list.html"
-    permission_required = Permissions.PERSONAL_ACCOUNT
+    permission_required = "has_personal_account"
 
     def get_context_data(self, **kwargs):
         """Add data for filters and statistics cards to the context."""
@@ -244,27 +261,23 @@ class PersonalAccountListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         return context
 
 
-class PersonalAccountDetailView(
-    LoginRequiredMixin, PermissionRequiredMixin, DetailView
-):
+class PersonalAccountDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     """Displays detailed information about a personal account."""
 
     model = PersonalAccount
     template_name = "core/adminlte/personal_account_detail.html"
     context_object_name = "account"
-    permission_required = Permissions.PERSONAL_ACCOUNT
+    permission_required = "has_personal_account"
 
 
-class PersonalAccountCreateView(
-    LoginRequiredMixin, PermissionRequiredMixin, CreateView
-):
+class PersonalAccountCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     """Displays the form for creating a new personal account."""
 
     model = PersonalAccount
     form_class = PersonalAccountForm
     template_name = "core/adminlte/personal_account_form.html"
     success_url = reverse_lazy("building:personal_account_list")
-    permission_required = Permissions.PERSONAL_ACCOUNT
+    permission_required = "has_personal_account"
 
     def get_context_data(self, **kwargs):
         """Add necessary data for the form to the context."""
@@ -274,27 +287,31 @@ class PersonalAccountCreateView(
 
     def form_valid(self, form):
         """Handle the logic after a valid form submission."""
-        self.object = form.save()
-        apartment_id = form.cleaned_data.get("apartment")
-        if apartment_id:
-            try:
-                apartment = Apartment.objects.get(pk=apartment_id)
-                apartment.personal_account = self.object
-                apartment.save()
-            except Apartment.DoesNotExist:
-                pass
+        try:
+            with transaction.atomic():
+                self.object = form.save()
+                apartment_id = form.cleaned_data.get("apartment")
+                if apartment_id:
+                    try:
+                        apartment = Apartment.objects.get(pk=apartment_id)
+                        apartment.personal_account = self.object
+                        apartment.save()
+                    except Apartment.DoesNotExist:
+                        pass
+        except (DatabaseError, ValidationError) as e:  # Fixed BLE001
+            logger.error("Error creating personal account: %s", e)
+            return self.form_invalid(form)
+
         return super().form_valid(form)
 
 
-class PersonalAccountUpdateView(
-    LoginRequiredMixin, PermissionRequiredMixin, UpdateView
-):
+class PersonalAccountUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Display the form for editing a personal account."""
 
     model = PersonalAccount
     form_class = PersonalAccountForm
     template_name = "core/adminlte/personal_account_form.html"
-    permission_required = Permissions.PERSONAL_ACCOUNT
+    permission_required = "has_personal_account"
 
     def get_success_url(self):
         """Return the URL to redirect to after a successful update."""
@@ -317,13 +334,16 @@ class PersonalAccountUpdateView(
 
         return context
 
+    def form_valid(self, form):
+        """Handle the valid form submission with atomic transaction."""  # Fixed D102
+        with transaction.atomic():
+            return super().form_valid(form)
 
-class ExportPersonalAccountsExcelView(
-    LoginRequiredMixin, PermissionRequiredMixin, View
-):
+
+class ExportPersonalAccountsExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
     """Handle the export of personal accounts to an Excel file."""
 
-    permission_required = Permissions.PERSONAL_ACCOUNT
+    permission_required = "has_personal_account"
 
     def filter_queryset(self, request):
         """Apply filters from request parameters to the queryset."""

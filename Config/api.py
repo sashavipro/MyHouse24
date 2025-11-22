@@ -5,9 +5,11 @@ from ninja.security import SessionAuth
 from src.users.api import router as users_router
 from src.building.api import router as building_router
 from src.finance.api import router as finance_router
+from src.cabinet.api import router as cabinet_router
 
 api = NinjaAPI(version="1.0.0", auth=SessionAuth())
 
 api.add_router("/users", users_router)
 api.add_router("/buildings", building_router)
 api.add_router("/finance", finance_router)
+api.add_router("/cabinet", cabinet_router)

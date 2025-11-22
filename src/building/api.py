@@ -1,6 +1,7 @@
 """src/building/api.py."""
 
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db import DatabaseError
 from django.db import IntegrityError
 from django.db.models import Q
@@ -79,13 +80,12 @@ def search_personal_accounts(
     request,
     term: str | None = None,
     current_apartment_id: int | None = None,
+    page: int = 1,
 ):
-    """Search for available personal accounts.
-
-    Also includes the personal account assigned to the `current_apartment_id`
-    for use in editing forms.
-    """
-    queryset = PersonalAccount.objects.all()
+    """Search for available personal accounts with pagination."""
+    queryset = PersonalAccount.objects.all().order_by(
+        "number"
+    )  # Важно добавить сортировку для пагинации
 
     q_filter = Q(apartment__isnull=True)
 
@@ -102,8 +102,14 @@ def search_personal_accounts(
     if term:
         queryset = queryset.filter(number__icontains=term)
 
-    results = [{"id": acc.pk, "text": acc.number} for acc in queryset[:20]]
-    return {"results": results}
+    page_size = 10
+    paginator = Paginator(queryset, page_size)
+
+    page_obj = paginator.get_page(page)
+
+    results = [{"id": acc.pk, "text": acc.number} for acc in page_obj]
+
+    return {"results": results, "pagination": {"more": page_obj.has_next()}}
 
 
 @router.delete("/apartment/{apartment_id}", response=StatusResponse)
@@ -168,3 +174,28 @@ def get_apartment_details(request, apartment_id: int):
         "personal_account_number": personal_account_number,
         "tariff_id": tariff_id,
     }
+
+
+@router.get("/apartments/search-by-owner")
+def search_apartments_by_owner(
+    request, owner_id: int, term: str | None = None, page: int = 1
+):
+    """Search for apartments owned by a specific owner for Select2 (Lazy Load)."""
+    queryset = Apartment.objects.filter(owner_id=owner_id).select_related(
+        "house", "section"
+    )
+
+    if term:
+        queryset = queryset.filter(
+            Q(number__icontains=term) | Q(house__title__icontains=term)
+        )
+
+    paginator = Paginator(queryset, 10)
+    page_obj = paginator.get_page(page)
+
+    results = []
+    for apt in page_obj:
+        text = f"№{apt.number}, {apt.house.title}"
+        results.append({"id": apt.id, "text": text})
+
+    return {"results": results, "pagination": {"more": page_obj.has_next()}}

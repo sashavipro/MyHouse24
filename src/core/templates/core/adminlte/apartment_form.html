@@ -171,6 +171,7 @@
       const accountNumberInput = $('#{{ form.personal_account_number.id_for_label }}');
       const accountSelector = $('#account-selector');
 
+      // --- Инициализация Select2 для поиска лицевых счетов ---
       accountSelector.select2({
         placeholder: '... или выберите свободный из списка',
         allowClear: true,
@@ -181,12 +182,15 @@
           data: function(params) {
             return {
               term: params.term,
-              current_apartment_id: '{{ form.instance.pk|default_if_none:"" }}'
+              current_apartment_id: '{{ form.instance.pk|default_if_none:"" }}',
+              page: params.page || 1
             };
           },
-          processResults: function(data) {
+          processResults: function(data, params) {
+            params.page = params.page || 1;
             return {
-              results: data.results
+              results: data.results,
+              pagination: data.pagination
             };
           },
           cache: true

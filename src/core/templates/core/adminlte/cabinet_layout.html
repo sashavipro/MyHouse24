@@ -49,7 +49,7 @@
                 <span class="dropdown-item dropdown-header">{{ unread_messages_count }} непрочитанных сообщений</span>
                 {% for msg_recipient in unread_messages %}
                   <div class="dropdown-divider"></div>
-                  <a href="{% url 'users:cabinet_message_detail' msg_recipient.message.pk %}"
+                  <a href="{% url 'cabinet:cabinet_message_detail' msg_recipient.message.pk %}"
                      class="dropdown-item">
                     <i class="bi bi-envelope me-2"></i> {{ msg_recipient.message.title|truncatechars:25 }}
                     <span class="float-end text-muted text-sm">{{ msg_recipient.message.date|timesince }} ago</span>
@@ -58,7 +58,7 @@
                   <p class="text-center p-3 mb-0">Нет новых сообщений</p>
                 {% endfor %}
                 <div class="dropdown-divider"></div>
-                <a href="{% url 'users:cabinet_message_list' %}"
+                <a href="{% url 'cabinet:cabinet_message_list' %}"
                    class="dropdown-item dropdown-footer">Перейти в раздел сообщений</a>
               </div>
             </li>
@@ -88,7 +88,7 @@
                   </p>
                 </li>
                 <li class="user-footer">
-                  <a href="{% url 'users:cabinet' %}" class="btn btn-default btn-flat">Профиль</a>
+                  <a href="{% url 'cabinet:cabinet' %}" class="btn btn-default btn-flat">Профиль</a>
                   <a href="{% url 'core:logout' %}"
                      class="btn btn-default btn-flat float-end">Выход</a>
                 </li>
@@ -130,96 +130,105 @@
                   {% endfor %}
                 </ul>
               </li>
-              <li class="nav-item">
-                <a href="#" class="nav-link">
-                  <i class="nav-icon bi bi-file-earmark-text"></i>
+              {% with receipt_pages='cabinet_receipt_list,cabinet_receipt_list_apartment,cabinet_receipt_detail' %}
+                <li class="nav-item {% if request.resolver_match.url_name in receipt_pages %}menu-open{% endif %}">
+                  <a href="#"
+                     class="nav-link {% if request.resolver_match.url_name in receipt_pages %}active{% endif %}">
+                    <i class="nav-icon bi bi-file-earmark-text"></i>
+                    <p>
+                      Квитанции <i class="nav-arrow bi bi-chevron-right"></i>
+                    </p>
+                  </a>
+                  <ul class="nav nav-treeview">
+                    <li class="nav-item">
+                      <a href="{% url 'cabinet:cabinet_receipt_list' %}"
+                         class="nav-link {% if request.resolver_match.url_name == 'cabinet_receipt_list' %}active{% endif %}">
+                        <i class="nav-icon bi bi-files"></i>
+                        <p>Все квитанции</p>
+                      </a>
+                    </li>
+                    {% for apartment in request.user.apartments.all %}
+                      <li class="nav-item">
+                        {# Проверяем, что текущий URL - это страница квитанций для КОНКРЕТНОЙ квартиры И ID этой квартиры совпадает #}
+                        <a href="{% url 'cabinet:cabinet_receipt_list_apartment' apartment_id=apartment.pk %}"
+                           class="nav-link {% if request.resolver_match.url_name == 'cabinet_receipt_list_apartment' and request.resolver_match.kwargs.apartment_id == apartment.pk %}active{% endif %}">
+                          <i class="nav-icon bi bi-file-text"></i>
+                          <p>{{ apartment.house.title }}, кв.{{ apartment.number }}</p>
+                        </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </li>
+              {% endwith %}
+              <li class="nav-item {% if request.resolver_match.url_name == 'cabinet_tariff_detail' %}menu-open{% endif %}">
+                <a href="#"
+                   class="nav-link {% if request.resolver_match.url_name == 'cabinet_tariff_detail' %}active{% endif %}">
+                  <i class="nav-icon bi bi-cash-stack"></i>
                   <p>
-                    Квитанции <i class="nav-arrow bi bi-chevron-right"></i>
+                    Тарифы <i class="nav-arrow bi bi-chevron-right"></i>
                   </p>
                 </a>
                 <ul class="nav nav-treeview">
-                  <li class="nav-item">
-                  <a href="#" class="nav-link"><i class="nav-icon bi bi-files"></i>
-                  <p>Все квитанции</p>
+                  {% for apartment in request.user.apartments.all %}
+                    <li class="nav-item">
+                      <a href="{% url 'cabinet:cabinet_tariff_detail' apartment_id=apartment.pk %}"
+                         class="nav-link {% if request.resolver_match.url_name == 'cabinet_tariff_detail' and request.resolver_match.kwargs.apartment_id == apartment.pk %}active{% endif %}">
+                        <i class="nav-icon bi bi-file-text"></i>
+                        <p>{{ apartment.house.title }}, кв.{{ apartment.number }}</p>
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'cabinet:cabinet_message_list' %}"
+                   class="nav-link {% if request.resolver_match.url_name == 'cabinet_message_list' or request.resolver_match.url_name == 'cabinet_message_detail' %}active{% endif %}">
+                  <i class="nav-icon bi bi-envelope"></i>
+                  <p>Сообщения</p>
                 </a>
               </li>
-              {% for apartment in request.user.apartments.all %}
-                <li class="nav-item">
-                <a href="#" class="nav-link"><i class="nav-icon bi bi-file-text"></i>
-                <p>{{ apartment.house.title }}, кв.{{ apartment.number }}</p>
-              </a>
-            </li>
-          {% endfor %}
-        </ul>
-      </li>
-      <li class="nav-item {% if request.resolver_match.url_name == 'cabinet_tariff_detail' %}menu-open{% endif %}">
-        <a href="#"
-           class="nav-link {% if request.resolver_match.url_name == 'cabinet_tariff_detail' %}active{% endif %}">
-          <i class="nav-icon bi bi-cash-stack"></i>
-          <p>
-            Тарифы <i class="nav-arrow bi bi-chevron-right"></i>
-          </p>
-        </a>
-        <ul class="nav nav-treeview">
-          {% for apartment in request.user.apartments.all %}
-            <li class="nav-item">
-              <a href="{% url 'users:cabinet_tariff_detail' apartment_id=apartment.pk %}"
-                 class="nav-link {% if request.resolver_match.url_name == 'cabinet_tariff_detail' and request.resolver_match.kwargs.apartment_id == apartment.pk %}active{% endif %}">
-                <i class="nav-icon bi bi-file-text"></i>
-                <p>{{ apartment.house.title }}, кв.{{ apartment.number }}</p>
-              </a>
-            </li>
-          {% endfor %}
-        </ul>
-      </li>
-      <li class="nav-item">
-        <a href="{% url 'users:cabinet_message_list' %}"
-           class="nav-link {% if request.resolver_match.url_name == 'cabinet_message_list' or request.resolver_match.url_name == 'cabinet_message_detail' %}active{% endif %}">
-          <i class="nav-icon bi bi-envelope"></i>
-          <p>Сообщения</p>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="#" class="nav-link">
-          <i class="nav-icon bi bi-wrench"></i>
-          <p>Вызов мастера</p>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a href="{% url 'users:cabinet' %}"
-           class="nav-link {% if request.resolver_match.url_name == 'cabinet' or request.resolver_match.url_name == 'cabinet_edit' %}active{% endif %}">
-          <i class="nav-icon bi bi-person"></i>
-          <p>Профиль</p>
-        </a>
-      </li>
-    </ul>
-  </nav>
-</div>
-</aside>
-<!-- Основной контент -->
-<main class="app-main">
-  {% block content %}
-  {% endblock content %}
-</main>
-<!-- Футер (Footer) -->
-<footer class="app-footer">
-  Разработано <a href="https://avada-media.ua/">AVADA-MEDIA</a>. На базе системы управления <a href="https://avada-media.ua/moydom24/">"МойДом24"</a>.
-</footer>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es6.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
-<script src="{% static 'core/adminlte/js/adminlte.js' %}"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-    if (sidebarWrapper && typeof OverlayScrollbarsGlobal?.OverlayScrollbars !== 'undefined') {
-      OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {});
-    }
-  });
-</script>
-{% block scripts %}
-{% endblock scripts %}
-</body>
+              <li class="nav-item">
+                <a href="{% url 'cabinet:cabinet_ticket_list' %}"
+                   class="nav-link {% if 'ticket' in request.resolver_match.url_name %}active{% endif %}">
+                  <i class="nav-icon bi bi-wrench"></i>
+                  <p>Вызов мастера</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'cabinet:cabinet' %}"
+                   class="nav-link {% if request.resolver_match.url_name == 'cabinet' or request.resolver_match.url_name == 'cabinet_edit' %}active{% endif %}">
+                  <i class="nav-icon bi bi-person"></i>
+                  <p>Профиль</p>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </aside>
+      <!-- Основной контент -->
+      <main class="app-main">
+        {% block content %}
+        {% endblock content %}
+      </main>
+      <!-- Футер (Footer) -->
+      <footer class="app-footer">
+        Разработано <a href="https://avada-media.ua/">AVADA-MEDIA</a>. На базе системы управления <a href="https://avada-media.ua/moydom24/">"МойДом24"</a>.
+      </footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+    <script src="{% static 'core/adminlte/js/adminlte.js' %}"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const sidebarWrapper = document.querySelector('.sidebar-wrapper');
+        if (sidebarWrapper && typeof OverlayScrollbarsGlobal?.OverlayScrollbars !== 'undefined') {
+          OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {});
+        }
+      });
+    </script>
+    {% block scripts %}
+    {% endblock scripts %}
+  </body>
 </html>

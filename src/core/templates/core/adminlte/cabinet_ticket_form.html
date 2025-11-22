@@ -1,0 +1,126 @@
+{% extends 'core/adminlte/cabinet_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Новая заявка
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <!-- Flatpickr Styles -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  <style>
+    .input-group-text {
+      background-color: #fff;
+      border-left: 0;
+      color: #6c757d;
+      border-color: #ced4da;
+    }
+
+    .date-picker,
+    .time-picker {
+      border-right: 0;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Новая заявка</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'cabinet:cabinet' %}">Личный кабинет</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'cabinet:cabinet_ticket_list' %}">Вызов мастера</a>
+            </li>
+            <li class="breadcrumb-item active">Новая заявка</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post">
+        {% csrf_token %}
+        <div class="card card-primary card-outline">
+          <div class="card-body">
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="mb-3">
+              <label for="{{ form.role.id_for_label }}" class="form-label fw-bold">Тип мастера</label>
+              {{ form.role }}
+              {% if form.role.errors %}<div class="text-danger small">{{ form.role.errors }}</div>{% endif %}
+            </div>
+            <div class="mb-3">
+              <label for="{{ form.apartment.id_for_label }}" class="form-label fw-bold">Квартира</label>
+              {{ form.apartment }}
+              {% if form.apartment.errors %}<div class="text-danger small">{{ form.apartment.errors }}</div>{% endif %}
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.date.id_for_label }}" class="form-label fw-bold">Дата работ</label>
+                <div class="input-group">
+                  {{ form.date }}
+                  <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+                </div>
+                {% if form.date.errors %}<div class="text-danger small">{{ form.date.errors }}</div>{% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.time.id_for_label }}" class="form-label fw-bold">Время работ</label>
+                <div class="input-group">
+                  {{ form.time }}
+                  <span class="input-group-text"><i class="bi bi-clock"></i></span>
+                </div>
+                {% if form.time.errors %}<div class="text-danger small">{{ form.time.errors }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="{{ form.description.id_for_label }}" class="form-label fw-bold">Описание</label>
+              {{ form.description }}
+              {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors }}</div>{% endif %}
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <button type="submit" class="btn btn-success">Отправить заявку</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <!-- Flatpickr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/ru.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Инициализация даты
+      flatpickr(".date-picker", {
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d.m.Y",
+        locale: "ru",
+        disableMobile: "true",
+        defaultDate: new Date() // Автозаполнение текущей датой
+      });
+
+      // Инициализация времени
+      flatpickr(".time-picker", {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true,
+        locale: "ru",
+        disableMobile: "true",
+        defaultDate: new Date() // Автозаполнение текущим временем
+      });
+    });
+  </script>
+{% endblock scripts %}

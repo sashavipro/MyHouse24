@@ -1,5 +1,4 @@
 {% load static %}
-{% load permissions_tags %}
 
 <!DOCTYPE html>
 <html lang="ru-RU">
@@ -27,12 +26,16 @@
         text-decoration: none;
         color: inherit;
       }
+
+      .ticket-description {
+        max-width: 200px;
+        padding-left: 1.5rem;
+      }
     </style>
     {% block styles %}
     {% endblock styles %}
   </head>
   <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
-    {% get_perms as Permissions %}
     <div class="app-wrapper">
       <!-- Шапка (Header) для Администратора -->
       <nav class="app-header navbar navbar-expand bg-body">
@@ -46,8 +49,34 @@
             </li>
           </ul>
           <ul class="navbar-nav ms-auto">
+            <!-- БЛОК 1: Уведомления о ЗАЯВКАХ (Для мастеров) -->
+            {% if new_tickets_count > 0 %}
+              <li class="nav-item dropdown">
+                <a class="nav-link" data-bs-toggle="dropdown" href="#">
+                  <i class="bi bi-bell"></i>
+                  <span class="navbar-badge badge text-bg-warning">{{ new_tickets_count }}</span>
+                </a>
+                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                  <span class="dropdown-item dropdown-header">{{ new_tickets_count }} новых заявок</span>
+                  <div class="dropdown-divider"></div>
+                  {% for ticket in new_tickets %}
+                    <a href="{% url 'users:ticket_detail' ticket.pk %}"
+                       class="dropdown-item">
+                      <i class="bi bi-wrench me-2"></i> Заявка №{{ ticket.pk }}
+                      <span class="float-end text-muted text-sm">{{ ticket.date|date:"d.m" }}</span>
+                      <div class="text-muted text-sm text-truncate ticket-description">{{ ticket.description }}</div>
+                    </a>
+                    <div class="dropdown-divider"></div>
+                  {% endfor %}
+                  <a href="{% url 'users:ticket_list' %}"
+                     class="dropdown-item dropdown-footer">Посмотреть все заявки</a>
+                </div>
+              </li>
+            {% endif %}
+            <!-- КОНЕЦ БЛОКА 1 -->
+            <!-- БЛОК 2: Уведомления для ДИРЕКТОРА (существующий код) -->
             <li class="nav-item dropdown">
-              {% if request.user.is_superuser or "Директор" in request.user.groups.all.0.name or "Управляющий" in request.user.groups.all.0.name %}
+              {% if request.user.is_superuser or request.user.role.name == "Директор" or request.user.role.name == "Управляющий" %}
                 <a class="nav-link" data-bs-toggle="dropdown" href="#">
                   <i class="bi bi-person-plus-fill"></i>
                   {% if new_users_count > 0 %}<span class="navbar-badge badge text-bg-warning">{{ new_users_count }}</span>{% endif %}
@@ -65,14 +94,18 @@
                      class="dropdown-item dropdown-footer">Перейти в раздел владельцев</a>
                 </div>
               {% else %}
-                <a class="nav-link" data-bs-toggle="dropdown" href="#">
-                  <i class="bi bi-bell"></i>
-                </a>
-                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
-                  <p class="text-center p-2">Нет новых уведомлений</p>
-                </div>
+                <!-- Если это не директор и нет заявок, показываем пустой колокольчик (или можно скрыть) -->
+                {% if new_tickets_count == 0 %}
+                  <a class="nav-link" data-bs-toggle="dropdown" href="#">
+                    <i class="bi bi-bell"></i>
+                  </a>
+                  <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                    <p class="text-center p-2">Нет новых уведомлений</p>
+                  </div>
+                {% endif %}
               {% endif %}
             </li>
+            <!-- КОНЕЦ БЛОКА 2 -->
             <li class="nav-item dropdown user-menu">
               <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                 {% if request.user.avatar %}
@@ -124,7 +157,8 @@
                 data-lte-toggle="treeview"
                 role="navigation"
                 data-accordion="false">
-              {% if request.user|has_perm:Permissions.STATISTICS %}
+              {# === ВСЕ ПРОВЕРКИ ЗАМЕНЕНЫ НА НОВЫЙ СИНТАКСИС === #}
+              {% if request.user.role.has_statistics %}
                 <li class="nav-item">
                   <a href="{% url 'finance:admin_stats' %}"
                      class="nav-link {% if request.resolver_match.url_name == 'admin_stats' %}active{% endif %}">
@@ -133,14 +167,14 @@
                   </a>
                 </li>
               {% endif %}
-              {% if request.user|has_perm:Permissions.CASHBOX %}
+              {% if request.user.role.has_cashbox %}
                 <li class="nav-item">
                 <a href="#" class="nav-link"><i class="nav-icon bi bi-cash-coin"></i>
                 <p>Касса</p>
               </a>
             </li>
           {% endif %}
-          {% if request.user|has_perm:Permissions.RECEIPT %}
+          {% if request.user.role.has_receipt %}
             <li class="nav-item">
               <a href="{% url 'finance:receipt_list' %}"
                  class="nav-link {% if 'receipt' in request.resolver_match.url_name %}active{% endif %}">
@@ -149,7 +183,7 @@
               </a>
             </li>
           {% endif %}
-          {% if request.user|has_perm:Permissions.PERSONAL_ACCOUNT %}
+          {% if request.user.role.has_personal_account %}
             <li class="nav-item">
               <a href="{% url 'building:personal_account_list' %}"
                  class="nav-link {% if 'personal_account' in request.resolver_match.url_name %}active{% endif %}">
@@ -158,7 +192,7 @@
               </a>
             </li>
           {% endif %}
-          {% if request.user|has_perm:Permissions.APARTMENT %}
+          {% if request.user.role.has_apartment %}
             <li class="nav-item">
               <a href="{% url 'building:apartment_list' %}"
                  class="nav-link {% if 'apartment' in request.resolver_match.url_name %}active{% endif %}">
@@ -167,7 +201,7 @@
               </a>
             </li>
           {% endif %}
-          {% if request.user|has_perm:Permissions.OWNER %}
+          {% if request.user.role.has_owner %}
             <li class="nav-item">
               <a href="{% url 'users:owner_list' %}"
                  class="nav-link {% if 'owner' in request.resolver_match.url_name %}active{% endif %}">
@@ -176,7 +210,7 @@
               </a>
             </li>
           {% endif %}
-          {% if request.user|has_perm:Permissions.HOUSE %}
+          {% if request.user.role.has_house %}
             <li class="nav-item">
               <a href="{% url 'building:house_list' %}"
                  class="nav-link {% if 'house' in request.resolver_match.url_name and 'staff' not in request.resolver_match.url_name %}active{% endif %}">
@@ -185,7 +219,7 @@
               </a>
             </li>
           {% endif %}
-          {% if request.user|has_perm:Permissions.MESSAGE %}
+          {% if request.user.role.has_message %}
             <li class="nav-item">
               <a href="{% url 'users:message_list' %}"
                  class="nav-link {% if 'message' in request.resolver_match.url_name %}active{% endif %}">
@@ -194,14 +228,14 @@
               </a>
             </li>
           {% endif %}
-          {% if request.user|has_perm:Permissions.TICKET %}
+          {% if request.user.role.has_ticket %}
             <li class="nav-item">
-            <a href="#" class="nav-link"><i class="nav-icon bi bi-wrench"></i>
+            <a href="{% url 'users:ticket_list' %}" class="nav-link"><i class="nav-icon bi bi-wrench"></i>
             <p>Заявки вызова мастера</p>
           </a>
         </li>
       {% endif %}
-      {% if request.user|has_perm:Permissions.COUNTERS %}
+      {% if request.user.role.has_counters %}
         <li class="nav-item">
           <a href="{% url 'finance:counter_list' %}"
              class="nav-link {% if 'counter' in request.resolver_match.url_name %}active{% endif %}">
@@ -210,7 +244,7 @@
           </a>
         </li>
       {% endif %}
-      {% if request.user|has_perm:Permissions.MANAGEMENT %}
+      {% if request.user.role.has_management %}
         {% with website_pages='admin_home,admin_about,admin_services,admin_contacts' %}
           <li class="nav-item {% if request.resolver_match.url_name in website_pages %}menu-open{% endif %}">
             <a href="#"
@@ -224,28 +258,28 @@
               <li class="nav-item">
                 <a href="{% url 'website:admin_home' %}"
                    class="nav-link {% if request.resolver_match.url_name == 'admin_home' %}active{% endif %}">
-                  <i class="nav-icon bi bi-circle"></i>
+                  <i class="nav-icon bi bi-window-desktop"></i>
                   <p>Главная страница</p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="{% url 'website:admin_about' %}"
                    class="nav-link {% if request.resolver_match.url_name == 'admin_about' %}active{% endif %}">
-                  <i class="nav-icon bi bi-circle"></i>
+                  <i class="nav-icon bi bi-info-circle"></i>
                   <p>О нас</p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="{% url 'website:admin_services' %}"
                    class="nav-link {% if request.resolver_match.url_name == 'admin_services' %}active{% endif %}">
-                  <i class="nav-icon bi bi-circle"></i>
+                  <i class="nav-icon bi bi-building-gear"></i>
                   <p>Услуги</p>
                 </a>
               </li>
               <li class="nav-item">
                 <a href="{% url 'website:admin_contacts' %}"
                    class="nav-link {% if request.resolver_match.url_name == 'admin_contacts' %}active{% endif %}">
-                  <i class="nav-icon bi bi-circle"></i>
+                  <i class="nav-icon bi bi-telephone"></i>
                   <p>Контакты</p>
                 </a>
               </li>
@@ -253,7 +287,7 @@
           </li>
         {% endwith %}
       {% endif %}
-      {% if request.user|has_perm:Permissions.SERVICE or request.user|has_perm:Permissions.TARIFF or request.user|has_perm:Permissions.ROLE or request.user|has_perm:Permissions.USER or request.user|has_perm:Permissions.PAYMENT_DETAILS or request.user|has_perm:Permissions.ARTICLE or request.user|has_perm:Permissions.PRINT_TEMPLATE %}
+      {% if request.user.role.has_service or request.user.role.has_tariff or request.user.role.has_role or request.user.role.has_user or request.user.role.has_payment_details or request.user.role.has_article or request.user.role.has_print_template %}
         {% with settings_pages='manage_services,tariff_list,tariff_detail,tariff_add,tariff_edit,admin_roles,user_list,user_detail,user_add,user_edit,payment_details,article_list,article_add,article_edit,receipt_template_settings' %}
           <li class="nav-item {% if request.resolver_match.url_name in settings_pages %}menu-open{% endif %}">
             <a href="#"
@@ -264,7 +298,7 @@
               </p>
             </a>
             <ul class="nav nav-treeview">
-              {% if request.user|has_perm:Permissions.SERVICE %}
+              {% if request.user.role.has_service %}
                 <li class="nav-item">
                 <a href="{% url 'finance:manage_services' %}"
                    class="nav-link {% if request.resolver_match.url_name == 'manage_services' %}active{% endif %}"><i class="nav-icon bi bi-briefcase"></i>
@@ -272,7 +306,7 @@
               </a>
             </li>
           {% endif %}
-          {% if request.user|has_perm:Permissions.TARIFF %}
+          {% if request.user.role.has_tariff %}
             <li class="nav-item">
             <a href="{% url 'finance:tariff_list' %}"
                class="nav-link {% if 'tariff' in request.resolver_match.url_name %}active{% endif %}"><i class="nav-icon bi bi-currency-dollar"></i>
@@ -280,7 +314,7 @@
           </a>
         </li>
       {% endif %}
-      {% if request.user|has_perm:Permissions.ROLE %}
+      {% if request.user.role.has_role %}
         <li class="nav-item">
         <a href="{% url 'users:admin_roles' %}"
            class="nav-link {% if request.resolver_match.url_name == 'admin_roles' %}active{% endif %}"><i class="nav-icon bi bi-person-badge"></i>
@@ -288,7 +322,7 @@
       </a>
     </li>
   {% endif %}
-  {% if request.user|has_perm:Permissions.USER %}
+  {% if request.user.role.has_user %}
     <li class="nav-item">
     <a href="{% url 'users:user_list' %}"
        class="nav-link {% if 'user' in request.resolver_match.url_name %}active{% endif %}"><i class="nav-icon bi bi-person-plus"></i>
@@ -296,7 +330,7 @@
   </a>
 </li>
 {% endif %}
-{% if request.user|has_perm:Permissions.PAYMENT_DETAILS %}
+{% if request.user.role.has_payment_details %}
   <li class="nav-item">
   <a href="{% url 'finance:payment_details' %}"
      class="nav-link {% if request.resolver_match.url_name == 'payment_details' %}active{% endif %}"><i class="nav-icon bi bi-credit-card-2-front"></i>
@@ -304,7 +338,7 @@
 </a>
 </li>
 {% endif %}
-{% if request.user|has_perm:Permissions.ARTICLE %}
+{% if request.user.role.has_article %}
   <li class="nav-item">
   <a href="{% url 'finance:article_list' %}"
      class="nav-link {% if 'article' in request.resolver_match.url_name %}active{% endif %}"><i class="nav-icon bi bi-card-list"></i>
@@ -312,7 +346,7 @@
 </a>
 </li>
 {% endif %}
-{% if request.user|has_perm:Permissions.PRINT_TEMPLATE %}
+{% if request.user.role.has_print_template %}
   <li class="nav-item">
   <a href="{% url 'finance:receipt_template_settings' %}"
      class="nav-link {% if 'receipt_template' in request.resolver_match.url_name %}active{% endif %}"><i class="nav-icon bi bi-printer"></i>

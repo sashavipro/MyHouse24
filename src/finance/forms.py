@@ -1,6 +1,7 @@
 """src/finance/forms.py."""
 
 from django import forms
+from django.db import transaction
 from django.utils import timezone
 
 from src.building.models import Apartment
@@ -295,71 +296,68 @@ class ReceiptForm(forms.ModelForm):
         return apartment
 
     def clean_personal_account_number(self):
-        """Check that the entered personal account is not occupied.
-
-        Verify the account is not occupied by another apartment.
-        """
+        """Check that the entered personal account is valid and safe to change."""
         number = self.cleaned_data.get("personal_account_number")
         apartment = self.cleaned_data.get("apartment")
 
-        if not number:
-            return None
-
-        query = PersonalAccount.objects.filter(
-            number=number, apartment__isnull=False
-        ).exclude(apartment=apartment)
-
-        if query.exists():
-            error_msg = (
-                f'Лицевой счет "{number}" ' f"уже используется другой квартирой."
-            )
-            raise forms.ValidationError(error_msg)
-
-        return number
-
-    def clean_number(self):
-        """Verify that the entered receipt number is unique."""
-        number = self.cleaned_data.get("number")
-
         if number:
-            queryset = Receipt.objects.filter(number=number)
+            query = PersonalAccount.objects.filter(
+                number=number, apartment__isnull=False
+            ).exclude(apartment=apartment)
 
-            if self.instance and self.instance.pk:
-                queryset = queryset.exclude(pk=self.instance.pk)
-
-            if queryset.exists():
+            if query.exists():
                 error_msg = (
-                    "A receipt with this number already exists."
-                    " Please enter a different number."
+                    f'Лицевой счет "{number}" уже используется другой квартирой.'
                 )
                 raise forms.ValidationError(error_msg)
+
+        if apartment and apartment.personal_account:
+            old_account = apartment.personal_account
+
+            if old_account.number != number:
+                has_receipts = Receipt.objects.filter(
+                    apartment__personal_account=old_account
+                ).exists()
+
+                if has_receipts:
+                    error_msg = (
+                        f'Нельзя изменить лицевой счет "{old_account.number}", '
+                        f"так как по нему уже есть сформированные квитанции."
+                    )
+                    raise forms.ValidationError(error_msg)
 
         return number
 
     def save(self, *, commit=True):
-        """Save receipt and manage personal account associations."""
+        """Save the receipt and handle personal account assignment."""
         receipt = super().save(commit=False)
         apartment = self.cleaned_data.get("apartment")
         account_number = self.cleaned_data.get("personal_account_number")
 
-        if apartment:
-            old_personal_account = apartment.personal_account
-            new_personal_account = None
+        with transaction.atomic():
+            if apartment:
+                old_personal_account = apartment.personal_account
+                new_personal_account = None
 
-            if account_number:
-                new_personal_account, _created = PersonalAccount.objects.get_or_create(
-                    number=account_number, defaults={"status": "active"}
-                )
+                if account_number:
+                    new_personal_account, _created = (
+                        PersonalAccount.objects.get_or_create(
+                            number=account_number, defaults={"status": "active"}
+                        )
+                    )
 
-            apartment.personal_account = new_personal_account
-            apartment.save()
+                apartment.personal_account = new_personal_account
+                apartment.save()
 
-            if old_personal_account and old_personal_account != new_personal_account:
-                old_personal_account.status = "inactive"
-                old_personal_account.save()
+                if (
+                    old_personal_account
+                    and old_personal_account != new_personal_account
+                ):
+                    old_personal_account.status = "inactive"
+                    old_personal_account.save()
 
-        if commit:
-            receipt.save()
+            if commit:
+                receipt.save()
 
         return receipt
 

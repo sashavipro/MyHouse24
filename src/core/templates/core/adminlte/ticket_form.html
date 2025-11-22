@@ -1,0 +1,283 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  {% if form.instance.pk %}
+    Заявка №{{ form.instance.pk }}
+  {% else %}
+    Новая заявка
+  {% endif %}
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+        rel="stylesheet" />
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+  <!-- Стиль для Flatpickr (календарь и время) -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  <style>
+    .breadcrumb-transparent {
+      background-color: transparent;
+    }
+
+    .select2-container--bootstrap-5 .select2-selection {
+      border-color: #ced4da;
+    }
+
+    /* Делаем input-group красивым, чтобы иконка сливалась с полем */
+    .input-group-text {
+      background-color: #fff;
+      border-left: 0;
+      border-color: #ced4da;
+      color: #6c757d;
+    }
+
+    .form-control.date-picker,
+    .form-control.time-picker {
+      border-right: 0;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>
+            {% if form.instance.pk %}
+              Заявка №{{ form.instance.pk }}
+            {% else %}
+              Новая заявка
+            {% endif %}
+          </h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end breadcrumb-transparent">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}"><i class="bi bi-house-door"></i> Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'users:ticket_list' %}">Вызов мастера</a>
+            </li>
+            <li class="breadcrumb-item active">
+              {% if form.instance.pk %}
+                Заявка №{{ form.instance.pk }}
+              {% else %}
+                Новая заявка
+              {% endif %}
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post" id="ticket-form">
+        {% csrf_token %}
+        <div class="row mb-3">
+          <!-- ДАТА -->
+          <div class="col-md-2">
+            <div class="input-group">
+              {{ form.date }}
+              <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+            </div>
+            {% if form.date.errors %}<div class="text-danger small">{{ form.date.errors }}</div>{% endif %}
+          </div>
+          <!-- ВРЕМЯ -->
+          <div class="col-md-2 d-flex align-items-center">
+            <span class="mx-2 fw-bold">от</span>
+            <div class="input-group">
+              {{ form.time }}
+              <span class="input-group-text"><i class="bi bi-clock"></i></span>
+            </div>
+            {% if form.time.errors %}<div class="text-danger small">{{ form.time.errors }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="card card-primary card-outline">
+          <div class="card-body">
+            <div class="row">
+              <!-- ЛЕВАЯ КОЛОНКА -->
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.user.label }}</label>
+                  {{ form.user }}
+                  {% if form.user.errors %}<div class="text-danger small">{{ form.user.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.description.label }}</label>
+                  {{ form.description }}
+                  {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors }}</div>{% endif %}
+                </div>
+              </div>
+              <!-- ПРАВАЯ КОЛОНКА -->
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.apartment.label }}</label>
+                  {{ form.apartment }}
+                  {% if form.apartment.errors %}<div class="text-danger small">{{ form.apartment.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.role.label }}</label>
+                  {{ form.role }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.status.label }}</label>
+                  {{ form.status }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.master.label }}</label>
+                  {{ form.master }}
+                </div>
+              </div>
+            </div>
+            <div class="row mt-3">
+              <div class="col-12">
+                <label class="form-label fw-bold">{{ form.comment.label }}</label>
+                {{ form.comment }}
+              </div>
+            </div>
+          </div>
+          <div class="card-footer text-end bg-white">
+            <a href="{% url 'users:ticket_list' %}" class="btn btn-secondary">Отменить</a>
+            <button type="submit" class="btn btn-success">Сохранить</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/ru.js"></script>
+  <script>
+    $(document).ready(function() {
+      // 1. Настройка КАЛЕНДАРЯ
+      flatpickr(".date-picker", {
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d.m.Y",
+        locale: "ru",
+        disableMobile: "true",
+        defaultDate: new Date()
+      });
+
+      // 2. Настройка ВРЕМЕНИ
+      flatpickr(".time-picker", {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true,
+        locale: "ru",
+        disableMobile: "true",
+        defaultDate: new Date()
+      });
+
+      // --- Остальная логика (Select2, Мастера) без изменений ---
+      const $userSelect = $('.select2-owner');
+      const $apartmentSelect = $('.select2-apartment');
+      const $roleSelect = $('#{{ form.role.id_for_label }}');
+      const $masterSelect = $('#{{ form.master.id_for_label }}');
+
+      let currentOwnerId = $userSelect.val();
+
+      $userSelect.select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: "Выберите владельца...",
+        allowClear: true
+      });
+      $roleSelect.select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+      });
+      $masterSelect.select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+      });
+
+      // Ajax для квартир
+      $apartmentSelect.select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: "Сначала выберите владельца...",
+        allowClear: true,
+        ajax: {
+          url: '/api/v1/buildings/apartments/search-by-owner',
+          dataType: 'json',
+          delay: 250,
+          data: function(params) {
+            return {
+              owner_id: currentOwnerId,
+              term: params.term,
+              page: params.page || 1
+            };
+          },
+          processResults: function(data, params) {
+            params.page = params.page || 1;
+            return {
+              results: data.results,
+              pagination: data.pagination
+            };
+          },
+          cache: true
+        }
+      });
+
+      if (!currentOwnerId) $apartmentSelect.prop('disabled', true);
+
+      $userSelect.on('change', function() {
+        const newOwnerId = $(this).val();
+        if (newOwnerId !== currentOwnerId) {
+          currentOwnerId = newOwnerId;
+          $apartmentSelect.val(null).trigger('change');
+        }
+        if (currentOwnerId) {
+          $apartmentSelect.prop('disabled', false);
+          $apartmentSelect.next().find('.select2-selection__rendered').text('Выберите квартиру...');
+        } else {
+          $apartmentSelect.prop('disabled', true);
+        }
+      });
+
+      // Обновление мастеров
+      function updateMastersList() {
+        const roleId = $roleSelect.val();
+        const currentMasterId = $masterSelect.val();
+
+        if (!roleId) return; // Если роль не выбрана, оставляем как есть (или можно очищать)
+
+        $masterSelect.prop('disabled', true);
+        $masterSelect.empty().append(new Option("Загрузка...", ""));
+
+        $.get('/api/v1/users/masters/by-role', {
+          role_id: roleId
+        }, function(data) {
+          $masterSelect.empty().append(new Option("Выберите мастера...", ""));
+          let foundCurrent = false;
+          data.forEach(function(master) {
+            const isSelected = (currentMasterId && String(master.id) === String(currentMasterId));
+            if (isSelected) foundCurrent = true;
+            $masterSelect.append(new Option(master.name, master.id, false, isSelected));
+          });
+          $masterSelect.prop('disabled', false);
+          if (currentMasterId && !foundCurrent) {
+            $masterSelect.val(null).trigger('change');
+          }
+        });
+      }
+
+      $roleSelect.on('change', updateMastersList);
+
+      // При загрузке сразу фильтруем мастеров
+      if ($roleSelect.val()) {
+        updateMastersList();
+      }
+    });
+  </script>
+{% endblock scripts %}

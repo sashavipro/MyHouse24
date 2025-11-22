@@ -282,8 +282,6 @@
       const hiddenApartmentInput = $('#{{ form.apartment.id_for_label }}');
       const tariffSelect = $('#{{ form.tariff.id_for_label }}');
       const servicesTableBody = $('#services-table tbody');
-      // Эта переменная больше не нужна, мы будем обращаться к шаблону напрямую
-      // const serviceFormTemplate = $('#service-form-template').html();
       const readingsTableBody = $('#readings-table tbody');
       const accountNumberInput = $('#{{ form.personal_account_number.id_for_label }}');
       const accountSelector = $('#account-selector');
@@ -294,8 +292,7 @@
         apartmentId: '{{ initial_data.apartment_id|default_if_none:"" }}'
       };
 
-      // --- Весь код до функции addServiceRow остается без изменений ---
-
+      // --- Инициализация Select2 для поиска лицевых счетов ---
       accountSelector.select2({
         placeholder: '... или выберите свободный из списка',
         allowClear: true,
@@ -306,12 +303,17 @@
           data: function(params) {
             return {
               term: params.term,
-              current_apartment_id: apartmentSelect.val() || initialData.apartmentId
+              current_apartment_id: apartmentSelect.val() || initialData.apartmentId,
+              page: params.page || 1
             };
           },
-          processResults: function(data) {
+          processResults: function(data, params) {
+            // Select2 ожидает формат { results: [], pagination: { more: true/false } }
+            params.page = params.page || 1;
+
             return {
-              results: data.results
+              results: data.results,
+              pagination: data.pagination
             };
           },
           cache: true
@@ -431,7 +433,7 @@
         }
       }
 
-      // === ИЗМЕНЕНИЕ №1: Обновляем эту функцию ===
+      // === Обновляем эту функцию ===
       function addServiceRow(serviceId = null, price = '', consumption = '', unitName = '...') {
         const totalFormsInput = $('#id_services-TOTAL_FORMS');
         const formIdx = parseInt(totalFormsInput.val());
@@ -453,8 +455,6 @@
         totalFormsInput.val(formIdx + 1);
         return newRow;
       }
-
-      // --- Весь остальной код после функции addServiceRow остается без изменений ---
 
       servicesTableBody.on('input', '.consumption-input, .price-input', function() {
         calculateRowTotal($(this).closest('tr'));

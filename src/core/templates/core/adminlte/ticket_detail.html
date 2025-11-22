@@ -1,0 +1,154 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Заявка №{{ ticket.pk }}
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    .date-input-group {
+      max-width: 200px;
+    }
+
+    .time-input-group {
+      max-width: 150px;
+    }
+
+    .th-status {
+      width: 200px;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Заявка №{{ ticket.pk }}</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'users:ticket_list' %}">Заявки вызова мастера</a>
+            </li>
+            <li class="breadcrumb-item active">Заявка №{{ ticket.pk }}</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <!-- Верхние поля с датой и временем -->
+      <div class="row mb-3">
+        <div class="col-md-4 d-flex align-items-center">
+          <div class="input-group date-input-group">
+            <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+            <input type="text"
+                   class="form-control"
+                   value="{{ ticket.date|date:'d.m.Y' }}"
+                   readonly />
+          </div>
+          <span class="mx-2 fw-bold">от</span>
+          <div class="input-group time-input-group">
+            <span class="input-group-text"><i class="bi bi-clock"></i></span>
+            <input type="text"
+                   class="form-control"
+                   value="{{ ticket.time|time:'H:i' }}"
+                   readonly />
+          </div>
+        </div>
+      </div>
+      <!-- Карточка с таблицей -->
+      <div class="card">
+        <div class="card-header text-end bg-white">
+          <a href="{% url 'users:ticket_edit' ticket.pk %}"
+             class="btn btn-primary">
+            <i class="bi bi-pencil"></i> Редактировать заявку
+          </a>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-bordered table-striped mb-0">
+            <tbody>
+              <tr>
+                <th class="th-status">Статус</th>
+                <td>
+                  {% if ticket.status == 'new' %}
+                    <span class="badge bg-primary">Новое</span>
+                  {% elif ticket.status == 'in_progress' %}
+                    <span class="badge bg-warning">В работе</span>
+                  {% elif ticket.status == 'done' %}
+                    <span class="badge bg-success">Выполнено</span>
+                  {% else %}
+                    {{ ticket.get_status_display }}
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Владелец</th>
+                <td>
+                  {% if ticket.user %}
+                    <a href="{% url 'users:owner_detail' ticket.user.pk %}">{{ ticket.user.get_full_name }}</a>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Телефон</th>
+                <td>{{ ticket.phone|default:"—" }}</td>
+              </tr>
+              <tr>
+                <th>Квартира</th>
+                <td>
+                  {% if ticket.apartment %}
+                    <a href="{% url 'building:apartment_detail' ticket.apartment.pk %}">
+                      {{ ticket.apartment.number }}, {{ ticket.apartment.house.title }}
+                    </a>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Тип мастера</th>
+                <td>{{ ticket.role.name|default:"Любой специалист" }}</td>
+              </tr>
+              <tr>
+                <th>Мастер</th>
+                <td>
+                  {% if ticket.master %}
+                    <a href="{% url 'users:user_detail' ticket.master.pk %}">
+                      {{ ticket.master.get_full_name }} ({{ ticket.master.role.name|default:"Сотрудник" }})
+                    </a>
+                  {% else %}
+                    <span class="text-muted">Не назначен</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Описание</th>
+                <td>{{ ticket.description|linebreaksbr }}</td>
+              </tr>
+              <tr>
+                <th>Добавлено</th>
+                <td>{{ ticket.created_at|date:"d.m.Y - H:i" }}</td>
+              </tr>
+              {% if ticket.comment %}
+                <tr>
+                  <th>Комментарий</th>
+                  <td>{{ ticket.comment|safe }}</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}

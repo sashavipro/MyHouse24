@@ -6,7 +6,9 @@ import logging
 import openpyxl
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.core.exceptions import ValidationError
+from django.db import DatabaseError
+from django.db import transaction
 from django.db.models import IntegerField
 from django.db.models import Max
 from django.db.models import ProtectedError
@@ -47,30 +49,30 @@ from src.finance.models import Service
 from src.finance.models import Tariff
 from src.finance.models import Unit
 from src.users.models import User
-from src.users.permissions import Permissions
+from src.users.permissions import RoleRequiredMixin
 
 logger = logging.getLogger(__name__)
 
 
-class AdminStatsView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+class AdminStatsView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
     """Display the main admin panel dashboard."""
 
     template_name = "core/adminlte/admin_stats.html"
-    permission_required = Permissions.STATISTICS
+    permission_required = "has_statistics"
 
     def get_context_data(self, **kwargs):
         """Add data required for the dashboard to the context."""
         return super().get_context_data(**kwargs)
 
 
-class ManageServicesView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class ManageServicesView(LoginRequiredMixin, RoleRequiredMixin, View):
     """Processes GET and POST requests for managing Services and Units of Measure.
 
     With correct handling of deletion errors.
     """
 
     template_name = "core/adminlte/admin_services.html"
-    permission_required = Permissions.SERVICE
+    permission_required = "has_service"
 
     def get(self, request, *args, **kwargs):
         """Display form sets for editing."""
@@ -93,7 +95,8 @@ class ManageServicesView(LoginRequiredMixin, PermissionRequiredMixin, View):
             formset = ServiceFormSet(request.POST, prefix="services")
             if formset.is_valid():
                 try:
-                    formset.save()
+                    with transaction.atomic():
+                        formset.save()
                     return redirect("finance:manage_services")
                 except ProtectedError:
                     messages.error(
@@ -115,7 +118,8 @@ class ManageServicesView(LoginRequiredMixin, PermissionRequiredMixin, View):
             formset = UnitFormSet(request.POST, prefix="units")
             if formset.is_valid():
                 try:
-                    formset.save()
+                    with transaction.atomic():
+                        formset.save()
                     return redirect("finance:manage_services")
                 except ProtectedError:
                     messages.error(
@@ -136,30 +140,30 @@ class ManageServicesView(LoginRequiredMixin, PermissionRequiredMixin, View):
         return redirect("finance:manage_services")
 
 
-class TariffListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class TariffListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     """Display a list of tariffs."""
 
     model = Tariff
     template_name = "core/adminlte/tariff_list.html"
-    permission_required = Permissions.TARIFF
+    permission_required = "has_tariff"
 
 
-class TariffDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+class TariffDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     """Display detailed information about a single tariff."""
 
     model = Tariff
     template_name = "core/adminlte/tariff_detail.html"
     context_object_name = "tariff"
-    permission_required = Permissions.TARIFF
+    permission_required = "has_tariff"
 
 
-class TariffCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class TariffCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     """Handle the creation of a new tariff."""
 
     model = Tariff
     form_class = TariffForm
     template_name = "core/adminlte/tariff_form.html"
-    permission_required = Permissions.TARIFF
+    permission_required = "has_tariff"
 
     def get_success_url(self):
         """Redirect to the detail page of the newly created tariff."""
@@ -181,20 +185,21 @@ class TariffCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
         context = self.get_context_data(form=form)
         services_formset = context["services_formset"]
         if services_formset.is_valid():
-            self.object = form.save()
-            services_formset.instance = self.object
-            services_formset.save()
+            with transaction.atomic():
+                self.object = form.save()
+                services_formset.instance = self.object
+                services_formset.save()
             return redirect(self.get_success_url())
         return self.form_invalid(form)
 
 
-class TariffUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class TariffUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Handle updating an existing tariff."""
 
     model = Tariff
     form_class = TariffForm
     template_name = "core/adminlte/tariff_form.html"
-    permission_required = Permissions.TARIFF
+    permission_required = "has_tariff"
 
     def get_success_url(self):
         """Redirect to the detail page of the updated tariff."""
@@ -218,49 +223,50 @@ class TariffUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         context = self.get_context_data(form=form)
         services_formset = context["services_formset"]
         if services_formset.is_valid():
-            self.object = form.save()
-            services_formset.instance = self.object
-            services_formset.save()
+            with transaction.atomic():
+                self.object = form.save()
+                services_formset.instance = self.object
+                services_formset.save()
             return redirect(self.get_success_url())
         return self.form_invalid(form)
 
 
-class ArticleListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class ArticleListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     """Display the page with the list of payment articles."""
 
     model = Article
     template_name = "core/adminlte/article_list.html"
-    permission_required = Permissions.ARTICLE
+    permission_required = "has_article"
 
 
-class ArticleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class ArticleCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     """Display the form for creating a new article."""
 
     model = Article
     form_class = ArticleForm
     template_name = "core/adminlte/article_form.html"
     success_url = reverse_lazy("finance:article_list")
-    permission_required = Permissions.ARTICLE
+    permission_required = "has_article"
 
 
-class ArticleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class ArticleUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Display the form for editing an existing article."""
 
     model = Article
     form_class = ArticleForm
     template_name = "core/adminlte/article_form.html"
     success_url = reverse_lazy("finance:article_list")
-    permission_required = Permissions.ARTICLE
+    permission_required = "has_article"
 
 
-class PaymentDetailsUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class PaymentDetailsUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Handle displaying and updating the singleton PaymentDetails object."""
 
     model = PaymentDetails
     form_class = PaymentDetailsForm
     template_name = "core/adminlte/payment_details_form.html"
     success_url = reverse_lazy("finance:payment_details")
-    permission_required = Permissions.PAYMENT_DETAILS
+    permission_required = "has_payment_details"
 
     def get_object(self, queryset=None):
         """Return the single PaymentDetails instance, creating it if needed.
@@ -271,12 +277,12 @@ class PaymentDetailsUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Upda
         return obj
 
 
-class CounterListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class CounterListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     """Display a page with a list of all counters."""
 
     model = Counter
     template_name = "core/adminlte/counter_list.html"
-    permission_required = Permissions.COUNTERS
+    permission_required = "has_counters"
 
     def get_context_data(self, **kwargs):
         """Add data for filters to the context."""
@@ -288,12 +294,12 @@ class CounterListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         return context
 
 
-class CounterReadingListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+class CounterReadingListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     """Show a GENERAL list of all indications with the option to filter."""
 
     model = CounterReading
     template_name = "core/adminlte/counter_reading_list.html"
-    permission_required = Permissions.COUNTERS
+    permission_required = "has_counters"
 
     def get_context_data(self, **kwargs):
         """Add data for filter dropdown lists to the context."""
@@ -307,13 +313,13 @@ class CounterReadingListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
         return context
 
 
-class CounterReadingCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class CounterReadingCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     """Processe the creation of a new meter reading."""
 
     model = CounterReading
     form_class = CounterReadingForm
     template_name = "core/adminlte/counter_reading_form.html"
-    permission_required = Permissions.COUNTERS
+    permission_required = "has_counters"
 
     def get_success_url(self):
         """Define the URL for redirection after successful saving."""
@@ -381,28 +387,34 @@ class CounterReadingCreateView(LoginRequiredMixin, PermissionRequiredMixin, Crea
             form.add_error(None, "Необходимо выбрать квартиру и услугу.")
             return self.form_invalid(form)
 
-        counter, _created = Counter.objects.get_or_create(
-            apartment=apartment,
-            service=service,
-            defaults={"serial_number": f"auto-{apartment.pk}-{service.pk}"},
-        )
+        try:
+            with transaction.atomic():
+                counter, _created = Counter.objects.get_or_create(
+                    apartment=apartment,
+                    service=service,
+                    defaults={"serial_number": f"auto-{apartment.pk}-{service.pk}"},
+                )
 
-        reading = form.save(commit=False)
-        reading.counter = counter
+                reading = form.save(commit=False)
+                reading.counter = counter
 
-        self.object = reading
-        reading.save()
+                self.object = reading
+                reading.save()
+        except (DatabaseError, ValidationError):
+            logger.exception("Error saving counter reading")
+            form.add_error(None, "Ошибка при сохранении показаний.")
+            return self.form_invalid(form)
 
         return redirect(self.get_success_url())
 
 
-class CounterReadingUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class CounterReadingUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Processe editing of existing meter readings."""
 
     model = CounterReading
     form_class = CounterReadingForm
     template_name = "core/adminlte/counter_reading_form.html"
-    permission_required = Permissions.COUNTERS
+    permission_required = "has_counters"
 
     def get_success_url(self):
         """After editing, always return to the history page."""
@@ -424,13 +436,42 @@ class CounterReadingUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Upda
         }
         return context
 
+    def form_valid(self, form):
+        """Find or creates a counter before saving the reading."""
+        apartment = form.cleaned_data.get("apartment")
+        service = form.cleaned_data.get("service")
 
-class ReceiptListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+        if not apartment or not service:
+            form.add_error(None, "Необходимо выбрать квартиру и услугу.")
+            return self.form_invalid(form)
+
+        try:
+            with transaction.atomic():
+                counter, _created = Counter.objects.get_or_create(
+                    apartment=apartment,
+                    service=service,
+                    defaults={"serial_number": f"auto-{apartment.pk}-{service.pk}"},
+                )
+
+                reading = form.save(commit=False)
+                reading.counter = counter
+
+                self.object = reading
+                reading.save()
+        except (DatabaseError, ValidationError):
+            logger.exception("Error updating counter reading")
+            form.add_error(None, "Ошибка при обновлении показаний.")
+            return self.form_invalid(form)
+
+        return redirect(self.get_success_url())
+
+
+class ReceiptListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     """Display a list of receipts with filters and statistics."""
 
     model = Receipt
     template_name = "core/adminlte/receipt_list.html"
-    permission_required = Permissions.RECEIPT
+    permission_required = "has_receipt"
 
     def get_context_data(self, **kwargs):
         """Add statistics and filter data to the context."""
@@ -451,21 +492,21 @@ class ReceiptListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         return context
 
 
-class ReceiptDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+class ReceiptDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     """Show detailed information for a single receipt."""
 
     model = Receipt
     template_name = "core/adminlte/receipt_detail.html"
-    permission_required = Permissions.RECEIPT
+    permission_required = "has_receipt"
 
 
-class ReceiptCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+class ReceiptCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     """Creating a new receipt."""
 
     model = Receipt
     form_class = ReceiptForm
     template_name = "core/adminlte/receipt_form.html"
-    permission_required = Permissions.RECEIPT
+    permission_required = "has_receipt"
 
     def get_success_url(self):
         """Redirect to the detail page of the newly created receipt."""
@@ -531,31 +572,40 @@ class ReceiptCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
         """Save the receipt and calculate the total amount from line items."""
         context = self.get_context_data(form=form)
         services_formset = context["services_formset"]
+
         if services_formset.is_valid():
-            self.object = form.save(commit=False)
-            self.object.total_amount = 0
-            self.object.save()
+            try:
+                with transaction.atomic():
+                    self.object = form.save(commit=False)
+                    self.object.total_amount = 0
+                    self.object.save()
 
-            services_formset.instance = self.object
-            services_formset.save()
+                    services_formset.instance = self.object
+                    services_formset.save()
 
-            total = (
-                self.object.receiptitem_set.aggregate(total=Sum("amount"))["total"] or 0
-            )
-            self.object.total_amount = total
-            self.object.save()
+                    total = (
+                        self.object.receiptitem_set.aggregate(total=Sum("amount"))[
+                            "total"
+                        ]
+                        or 0
+                    )
+                    self.object.total_amount = total
+                    self.object.save()
+            except (DatabaseError, ValidationError):
+                logger.exception("Error creating receipt")
+                return self.form_invalid(form)
 
             return redirect(self.get_success_url())
         return self.form_invalid(form)
 
 
-class ReceiptUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class ReceiptUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Editing an existing receipt with pre-filled fields."""
 
     model = Receipt
     form_class = ReceiptForm
     template_name = "core/adminlte/receipt_form.html"
-    permission_required = Permissions.RECEIPT
+    permission_required = "has_receipt"
 
     def get_success_url(self):
         """Redirect to the detail page of the updated receipt."""
@@ -589,26 +639,35 @@ class ReceiptUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
         """Save the receipt and recalculate the total amount."""
         context = self.get_context_data(form=form)
         services_formset = context["services_formset"]
-        if services_formset.is_valid():
-            self.object = form.save()
-            services_formset.instance = self.object
-            services_formset.save()
 
-            total = (
-                self.object.receiptitem_set.aggregate(total=Sum("amount"))["total"] or 0
-            )
-            self.object.total_amount = total
-            self.object.save()
+        if services_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    self.object = form.save()
+                    services_formset.instance = self.object
+                    services_formset.save()
+
+                    total = (
+                        self.object.receiptitem_set.aggregate(total=Sum("amount"))[
+                            "total"
+                        ]
+                        or 0
+                    )
+                    self.object.total_amount = total
+                    self.object.save()
+            except (DatabaseError, ValidationError):
+                logger.exception("Error updating receipt")
+                return self.form_invalid(form)
 
             return redirect(self.get_success_url())
         return self.form_invalid(form)
 
 
-class ReceiptPrintFormView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class ReceiptPrintFormView(LoginRequiredMixin, RoleRequiredMixin, View):
     """Show template selection page and generate Excel file from it."""
 
     template_name = "core/adminlte/receipt_print_form.html"
-    permission_required = Permissions.RECEIPT
+    permission_required = "has_receipt"
 
     def get(self, request, *args, **kwargs):
         """Display the template selection form."""
@@ -828,11 +887,11 @@ class ReceiptPrintFormView(LoginRequiredMixin, PermissionRequiredMixin, View):
         return response
 
 
-class ReceiptTemplateSettingsView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class ReceiptTemplateSettingsView(LoginRequiredMixin, RoleRequiredMixin, View):
     """Managing templates for printing receipts."""
 
     template_name = "core/adminlte/receipt_template_settings.html"
-    permission_required = Permissions.RECEIPT
+    permission_required = "has_receipt"
 
     def get(self, request, *args, **kwargs):
         """Handle GET requests for template management."""

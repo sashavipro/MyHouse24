@@ -3,6 +3,7 @@
 from django import forms
 from django.db.models import Q
 
+from src.finance.models import Receipt
 from src.users.models import User
 
 from .models import Apartment
@@ -173,21 +174,32 @@ class ApartmentForm(forms.ModelForm):
                 pass
 
     def clean_personal_account_number(self):
-        """Validate that the entered personal account number is not used."""
+        """Validate that the entered personal account number is valid and safe."""
         number = self.cleaned_data.get("personal_account_number")
-        if not number:
-            return None
 
-        query = PersonalAccount.objects.filter(number=number, apartment__isnull=False)
-
-        if self.instance and self.instance.pk:
-            query = query.exclude(apartment=self.instance)
-
-        if query.exists():
-            error_message = (
-                f'Лицевой счет "{number}" уже используется другой квартирой.'
+        if number:
+            query = PersonalAccount.objects.filter(
+                number=number, apartment__isnull=False
             )
-            raise forms.ValidationError(error_message)
+            if self.instance and self.instance.pk:
+                query = query.exclude(apartment=self.instance)
+
+            if query.exists():
+                error_message = (
+                    f'Лицевой счет "{number}" уже используется другой квартирой.'
+                )
+                raise forms.ValidationError(error_message)
+
+        if self.instance.pk and self.instance.personal_account:
+            old_account = self.instance.personal_account
+
+            if old_account.number != number:
+                if Receipt.objects.filter(apartment=self.instance).exists():
+                    error_msg = (
+                        f'Нельзя изменить лицевой счет "{old_account.number}", '
+                        f"так как по этой квартире уже есть сформированные квитанции."
+                    )
+                    raise forms.ValidationError(error_msg)
 
         return number
 

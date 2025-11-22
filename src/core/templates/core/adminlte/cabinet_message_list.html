@@ -42,7 +42,7 @@
       </div>
       <ol class="breadcrumb breadcrumb-custom">
         <li class="breadcrumb-item">
-          <a href="{% url 'users:cabinet' %}">Личный кабинет</a>
+          <a href="{% url 'cabinet:cabinet' %}">Личный кабинет</a>
         </li>
         <li class="breadcrumb-item active">Сообщения</li>
       </ol>
@@ -115,7 +115,7 @@
         searching: false,
         ordering: true,
         ajax: {
-          url: "{% url 'users:ajax_datatable_cabinet_messages' %}",
+          url: "{% url 'cabinet:ajax_datatable_cabinet_messages' %}",
           type: 'POST',
           headers: {
             'X-CSRFToken': csrfToken
@@ -217,7 +217,7 @@
         }
         if (!confirm(`Вы уверены, что хотите скрыть ${selectedIds.length} сообщений? Они исчезнут из этого списка.`)) return;
         $.ajax({
-          url: '/api/v1/users/cabinet/messages/bulk-hide',
+          url: '/api/v1/cabinet/cabinet/messages/bulk-hide',
           type: 'DELETE',
           headers: {
             'X-CSRFToken': csrfToken

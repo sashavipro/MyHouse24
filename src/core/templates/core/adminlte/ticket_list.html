@@ -1,0 +1,260 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Заявки
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Заявки вызова мастера</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Заявки</li>
+          </ol>
+        </div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-sm-12 text-end">
+          <a href="{% url 'users:ticket_add' %}" class="btn btn-success">Добавить заявку</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="d-flex justify-content-end p-3 border-bottom">
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    id="clear-filters-btn">Очистить</button>
+          </div>
+          <div class="table-responsive">
+            <table id="tickets-table" class="table table-hover table-striped mb-0 w-100">
+              <thead>
+                <tr>
+                  <th>№ заявки</th>
+                  <th>Удобное время</th>
+                  <th>Тип мастера</th>
+                  <th>Описание</th>
+                  <th>Квартира</th>
+                  <th>Владелец</th>
+                  <th>Телефон</th>
+                  <th>Мастер</th>
+                  <th>Статус</th>
+                  <th></th>
+                </tr>
+                <!-- Строка фильтров -->
+                <tr class="filter-row">
+                  <td>
+                    <input type="text" id="filter_id" class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <input type="text"
+                           id="filter_date"
+                           class="form-control form-control-sm"
+                           placeholder="дд.мм.гггг" />
+                  </td>
+                  <td>
+                    <select id="filter_role" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      {% for role in all_roles %}<option value="{{ role.name }}">{{ role.name }}</option>{% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <input type="text"
+                           id="filter_description"
+                           class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <input type="text"
+                           id="filter_apartment"
+                           class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <select id="filter_user" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      {% for owner in all_owners %}<option value="{{ owner.last_name }}">{{ owner.get_full_name }}</option>{% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <input type="text" id="filter_phone" class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <select id="filter_master" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      {% for master in all_masters %}
+                        <option value="{{ master.get_full_name }}">{{ master.get_full_name }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <select id="filter_status" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      <option value="new">Новое</option>
+                      <option value="in_progress">В работе</option>
+                      <option value="done">Выполнено</option>
+                    </select>
+                  </td>
+                  <td></td>
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <script>
+    $(document).ready(function() {
+      const table = $('#tickets-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false, // Отключаем глобальный поиск, т.к. используем свои фильтры
+        ordering: true,
+        ajax: {
+          url: "{% url 'users:ajax_datatable_tickets' %}",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          data: function(d) {
+            // Передаем значения из наших инпутов
+            d.pk = $('#filter_id').val();
+            d.date = $('#filter_date').val();
+            d.role = $('#filter_role').val();
+            d.description = $('#filter_description').val();
+            d.apartment = $('#filter_apartment').val();
+            d.user = $('#filter_user').val();
+            d.phone = $('#filter_phone').val();
+            d.master = $('#filter_master').val();
+            d.status = $('#filter_status').val();
+          }
+        },
+        columns: [{
+          data: 'pk'
+        }, {
+          data: 'date'
+        }, {
+          data: 'role'
+        }, {
+          data: 'description',
+          orderable: false
+        }, {
+          data: 'apartment'
+        }, {
+          data: 'user'
+        }, {
+          data: 'phone',
+          orderable: false
+        }, {
+          data: 'master'
+        }, {
+          data: 'status'
+        }, {
+          data: 'actions',
+          orderable: false,
+          searchable: false
+        }],
+        order: [
+          [0, 'desc']
+        ],
+        pageLength: 10,
+        language: {
+          "processing": "Загрузка...",
+          "zeroRecords": "Записи отсутствуют.",
+          "info": "Показано с _START_ по _END_ из _TOTAL_ записей",
+          "infoEmpty": "Нет записей для отображения",
+          "infoFiltered": "(отфильтровано из _MAX_)",
+          "paginate": {
+            "first": "«",
+            "last": "»",
+            "next": "›",
+            "previous": "‹"
+          }
+        },
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+      });
+
+      // --- Обработчики фильтров ---
+      let timer;
+      $('.filter-row input').on('keyup', function() {
+        clearTimeout(timer);
+        timer = setTimeout(() => table.ajax.reload(), 500);
+      });
+
+      $('.filter-row select').on('change', function() {
+        table.ajax.reload();
+      });
+
+      $('#clear-filters-btn').on('click', function() {
+        $('.filter-row input').val('');
+        $('.filter-row select').val('');
+        table.ajax.reload();
+      });
+
+      // --- Удаление (Админское) ---
+      $('#tickets-table').on('click', '.delete-ticket-btn', function(e) {
+        e.stopPropagation();
+        const id = $(this).data('id');
+        if (confirm('Вы уверены, что хотите удалить эту заявку?')) {
+          $.ajax({
+            url: `/api/v1/admin/ticket/${id}`, // Используем эндпоинт из api.py (delete_ticket_admin)
+            type: 'DELETE',
+            headers: {
+              'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(res) {
+              if (res.status === 'success') {
+                // alert(res.message); // Можно раскомментировать
+                table.ajax.reload(null, false);
+              } else {
+                alert('Ошибка: ' + res.message);
+              }
+            },
+            error: function(err) {
+              alert('Произошла ошибка при удалении');
+            }
+          });
+        }
+      });
+
+      // --- Клик по строке для перехода к деталям ---
+      $('#tickets-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a').length) return;
+        const url = table.row(this).data()?.DT_RowAttr?.['data-detail-url'];
+        if (url) window.location.href = url;
+      });
+    });
+  </script>
+  <style>
+    .filter-row td {
+      padding: 8px !important;
+      background-color: #f8f9fa;
+    }
+
+    /* Скрываем стандартные стрелки сортировки DataTables, если мешают */
+    #tickets-table thead .dt-column-order {
+      display: none !important;
+    }
+
+    #tickets-table tbody tr {
+      cursor: pointer;
+    }
+  </style>
+{% endblock scripts %}

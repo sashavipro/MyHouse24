@@ -7,9 +7,10 @@ from ninja import Router
 from src.finance.schemas import DeleteItemsSchema
 
 from .models import Message
-from .models import MessageRecipient
+from .models import Ticket
 from .models import User
 from .schemas import RoleResponseSchema
+from .schemas import SimpleUserSchema
 from .schemas import StatusResponse
 
 router = Router(tags=["Users"])
@@ -80,17 +81,35 @@ def bulk_delete_messages(request, payload: DeleteItemsSchema):
     return {"status": "success", "message": f"Успешно удалено {count} сообщений."}
 
 
-@router.delete("/cabinet/messages/bulk-hide", response=StatusResponse)
-def bulk_hide_messages(request, payload: DeleteItemsSchema):
-    """Hide messages for the current owner."""
+@router.delete("/admin/ticket/{ticket_id}", response=StatusResponse)
+def delete_ticket_admin(request, ticket_id: int):
+    """Delete a ticket by ID (admin access)."""
     if (
         not request.user.is_authenticated
-        or request.user.user_type != User.UserType.OWNER
+        or request.user.user_type != User.UserType.EMPLOYEE
     ):
-        return 403, {"status": "error", "message": "Доступ запрещен."}
+        return 403, {"status": "error", "message": "Forbidden"}
 
-    count = MessageRecipient.objects.filter(
-        message_id__in=payload.ids, user=request.user
-    ).update(is_hidden=True)
+    ticket = get_object_or_404(Ticket, id=ticket_id)
+    ticket.delete()
+    return {"status": "success", "message": "Заявка успешно удалена."}
 
-    return {"status": "success", "message": f"Успешно скрыто {count} сообщений."}
+
+@router.get("/masters/by-role", response=list[SimpleUserSchema])
+def get_masters_by_role(request, role_id: int | None = None):
+    """Return a list of employees (masters).
+
+    If role_id is passed, filters by role.
+    Shows employees with status active or new.
+    """
+    queryset = User.objects.filter(user_type="employee")
+
+    queryset = queryset.exclude(status="inactive")
+
+    if role_id:
+        queryset = queryset.filter(role_id=role_id)
+
+    return [
+        {"id": u.id, "name": f"{u.last_name} {u.first_name}".strip() or u.username}
+        for u in queryset
+    ]

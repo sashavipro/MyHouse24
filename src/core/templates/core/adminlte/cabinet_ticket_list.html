@@ -1,0 +1,124 @@
+{% extends 'core/adminlte/cabinet_layout.html' %}
+
+{% block title %}
+  Вызов мастера
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Вызов мастера</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'cabinet:cabinet' %}">Личный кабинет</a>
+            </li>
+            <li class="breadcrumb-item active">Вызов мастера</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="text-end mb-3">
+        <a href="{% url 'cabinet:cabinet_ticket_add' %}" class="btn btn-success">Создать заявку</a>
+      </div>
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table id="tickets-table" class="table table-hover table-striped mb-0 w-100">
+              <thead>
+                <tr>
+                  <th>№ заявки</th>
+                  <th>Тип мастера</th>
+                  <th>Описание</th>
+                  <th>Удобное время</th>
+                  <th>Статус</th>
+                  <th></th>
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <script>
+    $(document).ready(function() {
+      const table = $('#tickets-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false,
+        ordering: false,
+        ajax: {
+          url: "{% url 'cabinet:ajax_datatable_cabinet_tickets' %}",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+        },
+        columns: [{
+            data: 'pk'
+          }, // <--- ВАЖНО: 'pk', а не 'id'
+          {
+            data: 'role'
+          }, {
+            data: 'description'
+          }, {
+            data: 'date_time'
+          }, {
+            data: 'status'
+          }, {
+            data: 'actions',
+            className: 'text-center'
+          }
+        ],
+        pageLength: 10,
+        language: {
+          "processing": "Загрузка...",
+          "zeroRecords": "Записи отсутствуют.",
+          "info": "Показано с _START_ по _END_ из _TOTAL_ записей",
+          "infoEmpty": "Нет записей для отображения",
+          "infoFiltered": "(отфильтровано из _MAX_)",
+          "paginate": {
+            "first": "«",
+            "last": "»",
+            "next": "›",
+            "previous": "‹"
+          }
+        },
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+      });
+
+      // Удаление
+      $('#tickets-table').on('click', '.delete-ticket-btn', function() {
+        const id = $(this).data('id');
+        if (confirm('Вы уверены, что хотите удалить эту заявку?')) {
+          $.ajax({
+            url: `/api/v1/cabinet/ticket/${id}`,
+            type: 'DELETE',
+            headers: {
+              'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(res) {
+              table.ajax.reload(null, false);
+            },
+            error: function(err) {
+              alert('Ошибка при удалении');
+            }
+          });
+        }
+      });
+    });
+  </script>
+{% endblock scripts %}

@@ -12,7 +12,7 @@ from django.urls import reverse
 from django.utils.html import escape
 
 from .models import Message
-from .models import MessageRecipient
+from .models import Ticket
 from .models import User
 
 MIN_YEAR = 1900
@@ -20,6 +20,7 @@ MAX_YEAR = 2100
 MAX_DAYS_IN_MONTH = 31
 SNIPPET_LENGTH = 70
 RECIPIENT_DISPLAY_LIMIT = 2
+DESCRIPTION_TRUNCATE_LEN = 50
 
 
 class UserAjaxDatatableView(LoginRequiredMixin, AjaxDatatableView):
@@ -513,81 +514,227 @@ class MessageAjaxDatatableView(LoginRequiredMixin, AjaxDatatableView):
         return row
 
 
-class CabinetMessageAjaxDatatableView(LoginRequiredMixin, AjaxDatatableView):
-    """Provide data for the message table in the owner's personal account.
+class TicketAjaxDatatableView(LoginRequiredMixin, AjaxDatatableView):
+    """Server-side processing for Ticket list DataTable."""
 
-    Brought to a uniform structure.
-    """
-
-    model = Message
-    title = "Входящие сообщения"
-    initial_order = [["date", "desc"]]
+    model = Ticket
+    title = "Заявки"
+    initial_order = [["pk", "desc"]]
+    show_column_filters = False
 
     column_defs = [
         {
-            "name": "checkbox",
-            "title": "",
+            "name": "pk",
+            "title": "№ заявки",
+            "visible": True,
+            "width": "80px",
+            "orderable": True,
+        },
+        {
+            "name": "date",
+            "title": "Удобное время",
+            "orderable": True,
+            "searchable": False,
+        },
+        {
+            "name": "role",
+            "title": "Тип мастера",
+            "foreign_field": "role__name",
+            "orderable": True,
+            "searchable": False,
+        },
+        {
+            "name": "description",
+            "title": "Описание",
             "orderable": False,
             "searchable": False,
-            "width": "20px",
-            "className": "text-center",
         },
-        {"name": "sender", "title": "Отправитель", "orderable": False},
-        {"name": "text", "title": "Текст", "orderable": False},
-        {"name": "date", "title": "Дата", "orderable": True},
+        {
+            "name": "apartment",
+            "title": "Квартира",
+            "foreign_field": "apartment__number",
+            "orderable": True,
+            "searchable": False,
+        },
+        {
+            "name": "user",
+            "title": "Владелец",
+            "foreign_field": "user__last_name",
+            "orderable": True,
+            "searchable": False,
+        },
+        {"name": "phone", "title": "Телефон", "orderable": False, "searchable": False},
+        {
+            "name": "master",
+            "title": "Мастер",
+            "foreign_field": "master__last_name",
+            "orderable": True,
+            "searchable": False,
+        },
+        {
+            "name": "status",
+            "title": "Статус",
+            "orderable": True,
+            "searchable": False,
+            "width": "100px",
+        },
         {
             "name": "actions",
             "title": "",
             "orderable": False,
             "searchable": False,
-            "width": "50px",
+            "width": "80px",
+            "className": "text-end",
         },
     ]
 
     def get_initial_queryset(self, request=None):
-        """Return visible messages addressed to the current user."""
-        visible_message_ids = MessageRecipient.objects.filter(
-            user=request.user, is_hidden=False
-        ).values_list("message_id", flat=True)
+        """Build the initial queryset and apply permissions logic."""
+        queryset = Ticket.objects.select_related(
+            "role", "apartment", "user", "master"
+        ).prefetch_related("apartment__house")
 
-        queryset = Message.objects.filter(pk__in=visible_message_ids).select_related(
-            "sender"
-        )
+        user = request.user
+
+        is_director = user.role and user.role.name == "Директор"
+
+        if user.is_superuser or is_director:
+            pass
+
+        elif user.user_type == User.UserType.OWNER:
+            queryset = queryset.filter(user=user)
+
+        else:
+            queryset = queryset.filter(Q(master=user) | Q(user=user))
 
         if not request:
             return queryset
 
-        search_value = request.POST.get("search_value", "").strip()
-        if search_value:
-            query = (
-                Q(title__icontains=search_value)
-                | Q(text__icontains=search_value)
-                | Q(sender__first_name__icontains=search_value)
-                | Q(sender__last_name__icontains=search_value)
-            )
-            queryset = queryset.filter(query).distinct()
+        filters = {
+            "pk": request.POST.get("pk"),
+            "date": request.POST.get("date"),
+            "role": request.POST.get("role"),
+            "description": request.POST.get("description"),
+            "apartment": request.POST.get("apartment"),
+            "user": request.POST.get("user"),
+            "phone": request.POST.get("phone"),
+            "master": request.POST.get("master"),
+            "status": request.POST.get("status"),
+        }
+
+        return self.apply_filters(queryset, filters)
+
+    def apply_filters(self, queryset, filters):
+        """Apply filters to the queryset based on POST parameters."""
+        q_obj = Q()
+
+        for key, value in filters.items():
+            if not value:
+                continue
+
+            cleaned_val = value.strip()
+
+            if key == "date":
+                queryset = self._filter_by_date(queryset, cleaned_val)
+            else:
+                q_obj &= self._get_column_filter(key, cleaned_val)
+
+        return queryset.filter(q_obj)
+
+    def _get_column_filter(self, key, value):
+        """Get Q object for a specific column filter."""
+        filter_map = {
+            "pk": lambda v: Q(pk__icontains=v),
+            "role": lambda v: Q(role__name__icontains=v),
+            "apartment": lambda v: Q(apartment__number__icontains=v),
+            "user": lambda v: Q(user__first_name__icontains=v)
+            | Q(user__last_name__icontains=v),
+            "master": lambda v: Q(master__first_name__icontains=v)
+            | Q(master__last_name__icontains=v),
+            "status": lambda v: Q(status=v),
+            "phone": lambda v: Q(phone__icontains=v) | Q(user__phone__icontains=v),
+            "description": lambda v: Q(description__icontains=v),
+        }
+
+        filter_func = filter_map.get(key)
+        return filter_func(value) if filter_func else Q()
+
+    def _filter_by_date(self, queryset, value):
+        """Apply smart date filtering with multiple formats.
+
+        Formats supported:
+        - DD.MM.YYYY (exact date)
+        - MM.YYYY (month and year)
+        - YYYY (year only)
+        """
+        try:
+            if re.match(r"^\d{1,2}\.\d{1,2}\.\d{4}$", value):
+                day, month, year = value.split(".")
+                date_iso = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                return queryset.filter(date=date_iso)
+
+            if re.match(r"^\d{1,2}\.\d{4}$", value):
+                month, year = value.split(".")
+                return queryset.filter(date__month=int(month), date__year=int(year))
+
+            if re.match(r"^\d{4}$", value):
+                year = int(value)
+                if MIN_YEAR < year < MAX_YEAR:
+                    return queryset.filter(date__year=year)
+        except (ValueError, TypeError):
+            pass
 
         return queryset
 
     def customize_row(self, row, obj):
-        """Fully generates data for a table row."""
-        row["checkbox"] = (
-            f'<input type="checkbox" '
-            f'class="form-check-input message-checkbox" data-id="{obj.pk}">'
-        )
-        row["sender"] = (
-            obj.sender.get_full_name() if obj.sender else "Системное сообщение"
-        )
+        """Customize each row's HTML output.
 
-        text_snippet = (
-            (obj.text[:SNIPPET_LENGTH] + "...")
-            if len(obj.text) > SNIPPET_LENGTH
-            else obj.text
+        Called for each object in the current page.
+        """
+        row["pk"] = obj.pk
+        row["date"] = f"{obj.date.strftime('%d.%m.%Y')} - {obj.time.strftime('%H:%M')}"
+        row["role"] = obj.role.name if obj.role else "—"
+        desc = escape(obj.description) if obj.description else "—"
+        row["description"] = (
+            f"{desc[:DESCRIPTION_TRUNCATE_LEN]}..."
+            if len(desc) > DESCRIPTION_TRUNCATE_LEN
+            else desc
         )
-        row["text"] = f"<strong>{escape(obj.title)}</strong> - {escape(text_snippet)}"
-        row["date"] = obj.date.strftime("%d.%m.%Y - %H:%M")
-        row["actions"] = ""
-        row["DT_RowAttr"] = {
-            "data-detail-url": reverse("users:cabinet_message_detail", args=[obj.pk])
+        if obj.apartment:
+            try:
+                house_title = obj.apartment.house.title if obj.apartment.house else "—"
+                row["apartment"] = f"кв. {obj.apartment.number}, {house_title}"
+            except AttributeError:
+                row["apartment"] = f"кв. {obj.apartment.number}"
+        else:
+            row["apartment"] = "—"
+        row["user"] = obj.user.get_full_name() if obj.user else "—"
+        row["phone"] = obj.phone or (obj.user.phone if obj.user else None) or "—"
+        row["master"] = obj.master.get_full_name() if obj.master else "—"
+        status_map = {
+            "new": ("Новое", "bg-primary"),
+            "in_progress": ("В работе", "bg-warning"),  # noqa: RUF001
+            "done": ("Выполнено", "bg-success"),
         }
+        status_label, badge_class = status_map.get(
+            obj.status, (obj.get_status_display(), "bg-secondary")
+        )
+        row["status"] = f'<span class="badge {badge_class}">{status_label}</span>'
+        edit_url = reverse("users:ticket_edit", args=[obj.pk])
+        row["actions"] = f"""
+            <div class="btn-group btn-group-sm" role="group">
+                <a href="{edit_url}" class="btn btn-primary"
+                   title="Редактировать" onclick="event.stopPropagation();">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <button type="button" class="btn btn-danger delete-ticket-btn"
+                        data-id="{obj.pk}" title="Удалить"
+                        onclick="event.stopPropagation();">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        """
+        detail_url = reverse("users:ticket_detail", args=[obj.pk])
+        row["DT_RowAttr"] = {"data-detail-url": detail_url}
+
         return row

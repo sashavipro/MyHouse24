@@ -3,9 +3,9 @@
 from django.urls import path
 
 from . import views
-from .datatables import CabinetMessageAjaxDatatableView
 from .datatables import MessageAjaxDatatableView
 from .datatables import OwnerAjaxDatatableView
+from .datatables import TicketAjaxDatatableView
 from .datatables import UserAjaxDatatableView
 
 app_name = "users"
@@ -45,8 +45,6 @@ urlpatterns = [
         OwnerAjaxDatatableView.as_view(),
         name="ajax_datatable_owners",
     ),
-    path("cabinet/", views.CabinetView.as_view(), name="cabinet"),
-    path("cabinet/edit/", views.CabinetUpdateView.as_view(), name="cabinet_edit"),
     path("adminlte/messages/", views.MessageListView.as_view(), name="message_list"),
     path(
         "adminlte/messages/add/", views.MessageCreateView.as_view(), name="message_add"
@@ -61,24 +59,21 @@ urlpatterns = [
         MessageAjaxDatatableView.as_view(),
         name="ajax_datatable_messages",
     ),
+    path("adminlte/tickets/", views.TicketListView.as_view(), name="ticket_list"),
+    path("adminlte/tickets/add/", views.TicketCreateView.as_view(), name="ticket_add"),
     path(
-        "cabinet/messages/",
-        views.CabinetMessageListView.as_view(),
-        name="cabinet_message_list",
+        "adminlte/tickets/<int:pk>/edit/",
+        views.TicketUpdateView.as_view(),
+        name="ticket_edit",
     ),
     path(
-        "cabinet/messages/<int:pk>/",
-        views.CabinetMessageDetailView.as_view(),
-        name="cabinet_message_detail",
+        "ajax-datatable/tickets/",
+        TicketAjaxDatatableView.as_view(),
+        name="ajax_datatable_tickets",
     ),
     path(
-        "ajax-datatable/cabinet/messages/",
-        CabinetMessageAjaxDatatableView.as_view(),
-        name="ajax_datatable_cabinet_messages",
-    ),
-    path(
-        "cabinet/tariffs/<int:apartment_id>/",
-        views.CabinetTariffDetailView.as_view(),
-        name="cabinet_tariff_detail",
+        "adminlte/tickets/<int:pk>/",
+        views.TicketDetailView.as_view(),
+        name="ticket_detail",
     ),
 ]

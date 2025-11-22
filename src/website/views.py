@@ -1,20 +1,29 @@
 """src/website/views.py."""
 
+import logging
+from pathlib import Path
+
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db import DatabaseError
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.urls import reverse
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 from django.views.generic import UpdateView
 from django.views.generic import View
 
-from src.users.permissions import Permissions
+from src.users.permissions import RoleRequiredMixin
 from src.website.models import AboutUsPage
 from src.website.models import ContactPage
 from src.website.models import Document
@@ -34,6 +43,8 @@ from .forms import MainPageForm
 from .forms import SeoBlockForm
 from .forms import ServiceBlockFormSet
 from .forms import SliderImageFormSet
+
+logger = logging.getLogger(__name__)
 
 
 class HomePageView(TemplateView):
@@ -90,14 +101,14 @@ class ContactsPageView(TemplateView):
         return context
 
 
-class AdminHomePageView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class AdminHomePageView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Handle the editing of the main page content."""
 
     model = MainPage
     form_class = MainPageForm
     template_name = "core/adminlte/admin_home_page.html"
     success_url = reverse_lazy("website:admin_home")
-    permission_required = Permissions.MANAGEMENT
+    permission_required = "has_management"
 
     def get_object(self, queryset=None):
         """Return the single main page instance, creating if necessary."""
@@ -169,23 +180,29 @@ class AdminHomePageView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
             and blocks_formset.is_valid()
             and slider_formset.is_valid()
         ):
-            self.object = form.save()
-            seo_form.save()
-            blocks_formset.save()
-            slider_formset.save()
+            try:
+                with transaction.atomic():
+                    self.object = form.save()
+                    seo_form.save()
+                    blocks_formset.save()
+                    slider_formset.save()
+            except (DatabaseError, ValidationError):
+                logger.exception("Error saving home page")
+                return self.form_invalid(form)
+
             return super().form_valid(form)
 
         return self.form_invalid(form)
 
 
-class AdminAboutPageView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class AdminAboutPageView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Handle the editing of the 'About Us' page content."""
 
     model = AboutUsPage
     form_class = AboutUsPageForm
     template_name = "core/adminlte/admin_about_page.html"
     success_url = reverse_lazy("website:admin_about")
-    permission_required = Permissions.MANAGEMENT
+    permission_required = "has_management"
 
     def get_object(self, queryset=None):
         """Return the single page instance, creating galleries if needed."""
@@ -235,14 +252,19 @@ class AdminAboutPageView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
 
     def form_valid(self, form, seo_form, docs_formset):
         """If the forms are valid, save the associated models."""
-        form.save()
-        seo_form.save()
-        docs_formset.save()
+        try:
+            with transaction.atomic():
+                form.save()
+                seo_form.save()
+                docs_formset.save()
 
-        for file in self.request.FILES.getlist("gallery1_files"):
-            Image.objects.create(gallery=self.object.gallery1, image=file)
-        for file in self.request.FILES.getlist("gallery2_files"):
-            Image.objects.create(gallery=self.object.gallery2, image=file)
+                for file in self.request.FILES.getlist("gallery1_files"):
+                    Image.objects.create(gallery=self.object.gallery1, image=file)
+                for file in self.request.FILES.getlist("gallery2_files"):
+                    Image.objects.create(gallery=self.object.gallery2, image=file)
+        except (DatabaseError, ValidationError):
+            logger.exception("Error saving about page")
+            return self.form_invalid(form, seo_form, docs_formset)
 
         return redirect(self.get_success_url())
 
@@ -255,12 +277,12 @@ class AdminAboutPageView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
         return self.render_to_response(context)
 
 
-class AdminServicesPageView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class AdminServicesPageView(LoginRequiredMixin, RoleRequiredMixin, View):
     """Handle the 'Services' admin page."""
 
     template_name = "core/adminlte/admin_services_page.html"
     success_url = reverse_lazy("website:admin_services")
-    permission_required = Permissions.MANAGEMENT
+    permission_required = "has_management"
 
     def get(self, request, *args, **kwargs):
         """Handle GET request: instantiate and display the forms."""
@@ -289,22 +311,26 @@ class AdminServicesPageView(LoginRequiredMixin, PermissionRequiredMixin, View):
         )
 
         if seo_form.is_valid() and formset.is_valid():
-            seo_form.save()
-            formset.save()
-            return redirect(self.success_url)
+            try:
+                with transaction.atomic():
+                    seo_form.save()
+                    formset.save()
+                return redirect(self.success_url)
+            except (DatabaseError, ValidationError):
+                logger.exception("Error saving services page")
 
         context = {"form": seo_form, "formset": formset}
         return render(request, self.template_name, context)
 
 
-class AdminContactsPageView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+class AdminContactsPageView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
     """Handle the editing of the 'Contacts' page content."""
 
     model = ContactPage
     form_class = ContactPageForm
     template_name = "core/adminlte/admin_contacts_page.html"
     success_url = reverse_lazy("website:admin_contacts")
-    permission_required = Permissions.MANAGEMENT
+    permission_required = "has_management"
 
     def get_object(self, queryset=None):
         """Return the single 'Contacts' page instance."""
@@ -333,17 +359,23 @@ class AdminContactsPageView(LoginRequiredMixin, PermissionRequiredMixin, UpdateV
         context = self.get_context_data()
         seo_form = context["seo_form"]
         if seo_form.is_valid():
-            self.object = form.save()
-            seo_form.save()
-            return super().form_valid(form)
+            try:
+                with transaction.atomic():
+                    self.object = form.save()
+                    seo_form.save()
+                return super().form_valid(form)
+            except (DatabaseError, ValidationError):
+                logger.exception("Error saving contacts page")
+                return self.form_invalid(form)
+
         return self.form_invalid(form)
 
 
 @method_decorator(require_POST, name="dispatch")
-class DeleteDocumentView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class DeleteDocumentView(LoginRequiredMixin, RoleRequiredMixin, View):
     """Handle an AJAX request to delete a document."""
 
-    permission_required = Permissions.MANAGEMENT
+    permission_required = "has_management"
 
     def post(self, request, *args, **kwargs):
         """Find and delete a document by its ID."""
@@ -362,10 +394,10 @@ class DeleteDocumentView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 
 @method_decorator(require_POST, name="dispatch")
-class DeleteGalleryImageView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class DeleteGalleryImageView(LoginRequiredMixin, RoleRequiredMixin, View):
     """Handle an AJAX request to delete an image from a gallery."""
 
-    permission_required = Permissions.MANAGEMENT
+    permission_required = "has_management"
 
     def post(self, request, *args, **kwargs):
         """Find and delete an image by its ID."""
@@ -381,3 +413,73 @@ class DeleteGalleryImageView(LoginRequiredMixin, PermissionRequiredMixin, View):
             )
         except Image.DoesNotExist as e:
             return JsonResponse({"status": "error", "message": str(e)}, status=404)
+
+
+class UpdateSeoFilesView(LoginRequiredMixin, RoleRequiredMixin, View):
+    """Generate and save robots.txt and sitemap.xml files."""
+
+    permission_required = "has_management"
+
+    def get(self, request, *args, **kwargs):
+        """Handle the generation process."""
+        try:
+            domain = request.build_absolute_uri("/")[:-1]
+            self._generate_robots(domain)
+            self._generate_sitemap(domain)
+            messages.success(
+                request, "Файлы robots.txt и sitemap.xml успешно обновлены."
+            )
+        except (OSError, DatabaseError, ValidationError) as e:
+            logger.exception("Error updating SEO files")
+            messages.error(request, f"Ошибка при обновлении файлов: {e}")
+
+        return redirect("website:admin_home")
+
+    def _generate_robots(self, domain):
+        """Create robots.txt file."""
+        content = (
+            f"User-agent: *\n"
+            f"Disallow: /admin/\n"
+            f"Disallow: /adminlte/\n"
+            f"Disallow: /cabinet/\n"
+            f"\n"
+            f"Sitemap: {domain}/media/sitemap.xml"
+        )
+
+        file_path = Path(settings.MEDIA_ROOT) / "robots.txt"
+        with file_path.open("w", encoding="utf-8") as f:
+            f.write(content)
+
+    def _generate_sitemap(self, domain):
+        """Create sitemap.xml file."""
+        pages = [
+            "website:home",
+            "website:about",
+            "website:services",
+            "website:contacts",
+        ]
+
+        xml_content = ['<?xml version="1.0" encoding="UTF-8"?>']
+        xml_content.append(
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        )
+
+        date_now = timezone.now().strftime("%Y-%m-%d")
+
+        for page_name in pages:
+            try:
+                url = domain + reverse(page_name)
+                xml_content.append("  <url>")
+                xml_content.append(f"    <loc>{url}</loc>")
+                xml_content.append(f"    <lastmod>{date_now}</lastmod>")
+                xml_content.append("    <changefreq>weekly</changefreq>")
+                xml_content.append("    <priority>0.8</priority>")
+                xml_content.append("  </url>")
+            except Exception:
+                logger.exception("Error generating URL for %s", page_name)
+
+        xml_content.append("</urlset>")
+
+        file_path = Path(settings.MEDIA_ROOT) / "sitemap.xml"
+        with file_path.open("w", encoding="utf-8") as f:
+            f.write("\n".join(xml_content))

@@ -3,6 +3,15 @@
 {% block title %}
   {{ page_title }}
 {% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    #receipts-table .dt-column-order::before,
+    #receipts-table .dt-column-order::after {
+      display: none !important;
+    }
+  </style>
+{% endblock styles %}
 {% block content %}
   <section class="content-header">
     <div class="container-fluid">
@@ -13,7 +22,7 @@
         <div class="col-sm-6">
           <ol class="breadcrumb float-sm-end">
             <li class="breadcrumb-item">
-              <a href="{% url 'users:cabinet' %}">Личный кабинет</a>
+              <a href="{% url 'cabinet:cabinet' %}">Личный кабинет</a>
             </li>
             <li class="breadcrumb-item active">Квитанции</li>
           </ol>
@@ -25,7 +34,6 @@
     <div class="container-fluid">
       <div class="card">
         <div class="card-body">
-          {# === ИЗМЕНЕНИЕ: Добавлен ID к таблице === #}
           <table id="receipts-table" class="table table-hover">
             <thead>
               <tr>
@@ -34,11 +42,13 @@
                 <th>Статус</th>
                 <th class="text-end">Сумма</th>
               </tr>
-              {# === ИЗМЕНЕНИЕ: Добавлены ID к фильтрам === #}
               <tr>
                 <td></td>
                 <td>
-                  <input type="date" id="date-filter" class="form-control form-control-sm" />
+                  <input type="text"
+                         id="date-filter"
+                         class="form-control form-control-sm"
+                         placeholder="дд.мм.гггг" />
                 </td>
                 <td>
                   <select id="status-filter" class="form-select form-select-sm">
@@ -63,7 +73,6 @@
         href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
-  {# JS-код из вашего файла полностью корректен и остается без изменений #}
   <script>
     $(document).ready(function() {
       const csrfToken = '{{ csrf_token }}';
@@ -87,23 +96,25 @@
           }
         },
         columns: [{
-          data: 'number',
-          orderable: true
-        }, {
-          data: 'date',
-          orderable: true
-        }, {
-          data: 'status_html',
-          orderable: true
-        }, {
-          data: 'total_amount',
-          orderable: true,
-          className: 'text-end'
-        }],
+            data: 'number',
+            orderable: true
+          }, {
+            data: 'date',
+            orderable: true
+          }, {
+            data: 'status',
+            orderable: false
+          }, // Статус оставляем без сортировки
+          {
+            data: 'total_amount',
+            orderable: true,
+            className: 'text-end'
+          }
+        ],
         order: [
           [1, 'desc']
         ],
-        pageLength: 20,
+        pageLength: 10,
         language: {
           "processing": "Загрузка...",
           "zeroRecords": "Квитанции не найдены.",
@@ -128,7 +139,16 @@
         }
       });
 
-      $('#date-filter, #status-filter').on('change', function() {
+      // --- Логика фильтров ---
+      let timer;
+      // Для текстовых полей используем 'keyup' с задержкой
+      $('#date-filter').on('keyup', function() {
+        clearTimeout(timer);
+        timer = setTimeout(() => table.ajax.reload(), 500); // Перезагрузка через 0.5 сек после окончания ввода
+      });
+
+      // Для выпадающих списков оставляем 'change'
+      $('#status-filter').on('change', function() {
         table.ajax.reload();
       });
 

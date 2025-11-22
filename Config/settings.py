@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "src.building.apps.BuildingConfig",
     "src.users.apps.UsersConfig",
     "src.website.apps.WebsiteConfig",
+    "src.cabinet.apps.CabinetConfig",
     "ninja",
     "ajax_datatable",
     'hcaptcha',

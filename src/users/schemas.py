@@ -44,3 +44,10 @@ class RoleResponseSchema(Schema):
     """Define the data structure for a role name response."""
 
     role_name: str
+
+
+class SimpleUserSchema(Schema):
+    """Schema for simple user representation (id and name)."""
+
+    id: int
+    name: str

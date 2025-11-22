@@ -5,6 +5,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import login
 from django.contrib.auth import logout
 from django.shortcuts import redirect
+from django.urls import NoReverseMatch
 from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView
@@ -12,7 +13,6 @@ from django.views.generic import FormView
 from src.core.forms import CustomAuthenticationForm
 from src.core.forms import ResidentHCaptchaForm
 from src.users.models import User
-from src.users.utils import get_employee_home_url
 
 
 class LoginView(FormView):
@@ -22,17 +22,48 @@ class LoginView(FormView):
     form_class = CustomAuthenticationForm
 
     def get_success_url(self):
-        """Determine the redirect URL based on the user's role."""
+        """Determine the redirect URL based on the user's role and its fields."""
         user = self.request.user
 
+        if not user.is_authenticated:
+            return reverse("core:login")
+
         if user.user_type == User.UserType.OWNER:
-            return reverse("users:cabinet")
+            return reverse("cabinet:cabinet")
 
         if user.user_type == User.UserType.EMPLOYEE:
-            home_url = get_employee_home_url(user)
+            user_role = getattr(user, "role", None)
+            if not user_role:
+                logout(self.request)
+                messages.error(
+                    self.request, "Your account does not have a role assigned."
+                )
+                return reverse("core:login")
 
-            if home_url:
-                return home_url
+            role_field_url_map = (
+                ("has_statistics", "finance:admin_stats"),
+                ("has_receipt", "finance:receipt_list"),
+                ("has_message", "users:message_list"),
+                ("has_personal_account", "building:personal_account_list"),
+                ("has_apartment", "building:apartment_list"),
+                ("has_owner", "users:owner_list"),
+                ("has_house", "building:house_list"),
+                ("has_counters", "finance:counter_list"),
+                ("has_management", "website:admin_home"),
+                ("has_service", "finance:manage_services"),
+                ("has_tariff", "finance:tariff_list"),
+                ("has_role", "users:admin_roles"),
+                ("has_user", "users:user_list"),
+                ("has_payment_details", "finance:payment_details"),
+                ("has_article", "finance:article_list"),
+            )
+
+            for field_name, url_name in role_field_url_map:
+                if getattr(user_role, field_name, False):
+                    try:
+                        return reverse(url_name)
+                    except NoReverseMatch:
+                        continue
 
             logout(self.request)
             messages.error(

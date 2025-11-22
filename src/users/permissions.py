@@ -1,78 +1,68 @@
 """src/users/permissions.py."""
 
-import logging
-
-from django.contrib.auth.models import Group
-from django.contrib.auth.models import Permission
-
-from .models import Role
-
-logger = logging.getLogger(__name__)
+from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.shortcuts import redirect
 
 
-class Permissions:
-    """Centralized class for access rights.
+class RoleRequiredMixin(PermissionRequiredMixin):
+    """A custom mixin that inherits from PermissionRequiredMixin.
 
-    Each attribute is ONE right that grants access to an entire section.
+    It checks permissions based on Boolean fields (`has_...`) in the associated
+    Role model.
     """
 
-    STATISTICS = "finance.view_statistics"
-    CASHBOX = "finance.view_cashbox"
-    RECEIPT = "finance.view_receipt"
-    PERSONAL_ACCOUNT = "building.view_personalaccount"
-    APARTMENT = "building.view_apartment"
-    OWNER = "users.view_owner"
-    HOUSE = "building.view_house"
-    MESSAGE = "users.view_message"
-    TICKET = "tickets.view_ticket"
-    COUNTERS = "finance.view_counter"
-    MANAGEMENT = "website.view_mainpage"
-    SERVICE = "finance.view_service"
-    TARIFF = "finance.view_tariff"
-    ROLE = "users.view_role"
-    USER = "users.view_user"
-    PAYMENT_DETAILS = "finance.view_paymentdetails"
-    ARTICLE = "finance.view_article"
+    def get_permission_required(self):
+        """Override this method to ensure permission_required is handled correctly.
 
+        This ensures correct handling whether it's a string or an iterable.
+        """
+        if self.permission_required is None:
+            return None
 
-PERMISSION_MAP = {
-    "statistics": [Permissions.STATISTICS],
-    "cashbox": [Permissions.CASHBOX],
-    "receipt": [Permissions.RECEIPT],
-    "personal_account": [Permissions.PERSONAL_ACCOUNT],
-    "apartment": [Permissions.APARTMENT],
-    "owner": [Permissions.OWNER],
-    "house": [Permissions.HOUSE],
-    "message": [Permissions.MESSAGE],
-    "ticket": [Permissions.TICKET],
-    "counters": [Permissions.COUNTERS],
-    "management": [Permissions.MANAGEMENT],
-    "service": [Permissions.SERVICE],
-    "tariff": [Permissions.TARIFF],
-    "role": [Permissions.ROLE],
-    "user": [Permissions.USER],
-    "payment_details": [Permissions.PAYMENT_DETAILS],
-    "article": [Permissions.ARTICLE],
-}
+        if isinstance(self.permission_required, (list, tuple)):
+            return self.permission_required[0] if self.permission_required else None
 
+        return str(self.permission_required)
 
-def sync_role_with_group(role: Role):
-    """Synchronize the Role object with the corresponding Django Group."""
-    group, _ = Group.objects.get_or_create(name=role.name)
-    permissions_to_set = []
+    def has_permission(self):
+        """Override the standard permission check method.
 
-    for perm_key, perm_list in PERMISSION_MAP.items():
-        if getattr(role, f"has_{perm_key}", False):
-            for perm_string in perm_list:
-                app_label, codename = perm_string.split(".")
-                try:
-                    perm = Permission.objects.get(
-                        content_type__app_label=app_label, codename=codename
-                    )
-                    permissions_to_set.append(perm)
-                except Permission.DoesNotExist:
-                    logger.warning(
-                        "Permission '%s' not found and was skipped.", perm_string
-                    )
+        Returns True if the user has the required permission in their role.
+        """
+        if not self.request.user.is_authenticated:
+            return False
 
-    group.permissions.set(permissions_to_set)
+        if self.request.user.is_superuser:
+            return True
+
+        if not self.request.user.is_staff and self.request.user.user_type != "employee":
+            return False
+
+        permission = self.get_permission_required()
+        if not permission:
+            return True
+
+        user_role = getattr(self.request.user, "role", None)
+
+        if (
+            user_role
+            and isinstance(permission, str)
+            and getattr(user_role, permission, False)
+        ):
+            return True
+
+        return False
+
+    def handle_no_permission(self):
+        """Override the standard permission denied handler.
+
+        It adds a message and performs a custom redirect.
+        """
+        messages.error(
+            self.request,
+            "У вас нет прав для доступа к этой странице.",  # noqa: RUF001
+        )
+
+        home_url = getattr(self.request, "user_home_url", None) or "core:login"
+        return redirect(home_url)

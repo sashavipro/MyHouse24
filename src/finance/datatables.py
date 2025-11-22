@@ -1,6 +1,7 @@
 """src/finance/datatables.py."""
 
 import datetime
+import re
 
 from ajax_datatable.views import AjaxDatatableView
 from django.db.models import IntegerField
@@ -16,6 +17,9 @@ from .models import Counter
 from .models import CounterReading
 from .models import Receipt
 from .models import Tariff
+
+MIN_YEAR = 1900
+MAX_YEAR = 2100
 
 
 class ArticleAjaxDatatableView(AjaxDatatableView):
@@ -480,6 +484,29 @@ class ReceiptAjaxDatatableView(AjaxDatatableView):
         },
     ]
 
+    def _filter_by_date(self, queryset, value):
+        """Apply date-based filters to the queryset for the 'date' field."""
+        try:
+            if re.match(r"^\d{1,2}\.\d{1,2}\.\d{4}$", value):
+                # DTZ007: naive datetime is fine here as we extract .date() immediately
+                filter_date = datetime.datetime.strptime(value, "%d.%m.%Y").date()  # noqa: DTZ007
+                return queryset.filter(date=filter_date)
+            if re.match(r"^\d{1,2}\.\d{4}$", value):
+                month, year = value.split(".")
+                return queryset.filter(date__month=int(month), date__year=int(year))
+            if re.match(r"^\d{4}$", value):
+                year = int(value)
+                if MIN_YEAR < year < MAX_YEAR:
+                    return queryset.filter(date__year=year)
+            if re.match(r"^\d{1,2}$", value):
+                day_or_month = int(value)
+                return queryset.filter(
+                    Q(date__day=day_or_month) | Q(date__month=day_or_month)
+                )
+        except (ValueError, TypeError):
+            pass
+        return queryset
+
     def get_initial_queryset(self, request=None):
         """Build optimized database query and collect filters."""
         queryset = Receipt.objects.select_related(
@@ -501,28 +528,21 @@ class ReceiptAjaxDatatableView(AjaxDatatableView):
 
     def apply_filters(self, queryset, filters):
         """Apply a dictionary of filters to a queryset."""
-        query_conditions = Q()
         for key, value in filters.items():
             if value:
-                if key == "is_posted":
-                    query_conditions &= Q(is_posted=(value.lower() == "true"))
-                elif key == "date":
-                    try:
-                        filter_date = (
-                            datetime.datetime.strptime(value, "%d.%m.%Y")
-                            .replace(tzinfo=timezone.get_current_timezone())
-                            .date()
-                        )
-                        query_conditions &= Q(date=filter_date)
-                    except ValueError:
-                        pass
+                cleaned_value = value.strip()
+                if key == "date":
+                    queryset = self._filter_by_date(queryset, cleaned_value)
+                elif key == "is_posted":
+                    queryset = queryset.filter(
+                        is_posted=(cleaned_value.lower() == "true")
+                    )
                 elif key == "month":
                     pass
                 else:
-                    cleaned_value = value.strip() if isinstance(value, str) else value
-                    query_conditions &= Q(**{key: cleaned_value})
+                    queryset = queryset.filter(**{key: cleaned_value})
 
-        return queryset.filter(query_conditions)
+        return queryset.filter()
 
     def customize_row(self, row, obj):
         """Customize row data."""

@@ -23,10 +23,10 @@
         <div class="col-sm-6">
           <ol class="breadcrumb float-sm-end breadcrumb-transparent">
             <li class="breadcrumb-item">
-              <a href="{% url 'users:cabinet' %}">Личный кабинет</a>
+              <a href="{% url 'cabinet:cabinet' %}">Личный кабинет</a>
             </li>
             <li class="breadcrumb-item">
-              <a href="{% url 'users:cabinet_message_list' %}">Сообщения</a>
+              <a href="{% url 'cabinet:cabinet_message_list' %}">Сообщения</a>
             </li>
             <li class="breadcrumb-item active">Просмотр</li>
           </ol>
@@ -46,7 +46,7 @@
         </div>
         <div class="card-body">{{ message.text|safe }}</div>
         <div class="card-footer">
-          <a href="{% url 'users:cabinet_message_list' %}"
+          <a href="{% url 'cabinet:cabinet_message_list' %}"
              class="btn btn-secondary">
             <i class="bi bi-arrow-left me-2"></i>Назад к списку
           </a>

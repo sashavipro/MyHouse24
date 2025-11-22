@@ -10,6 +10,7 @@ from src.building.models import House
 from src.building.models import Section
 from src.users.models import Message
 from src.users.models import Role
+from src.users.models import Ticket
 from src.users.models import User
 
 
@@ -431,4 +432,111 @@ class MessageForm(forms.ModelForm):
             raise forms.ValidationError(error_msg)
 
         cleaned_data["final_recipients"] = final_recipients
+        return cleaned_data
+
+
+class TicketForm(forms.ModelForm):
+    """Form for creating and editing tickets."""
+
+    class Meta:
+        """Meta class."""
+
+        model = Ticket
+        fields = [
+            "date",
+            "time",
+            "user",
+            "description",
+            "apartment",
+            "role",
+            "status",
+            "master",
+            "comment",
+        ]
+        widgets = {
+            "date": forms.TextInput(
+                attrs={"class": "form-control date-picker", "placeholder": "ДД.ММ.ГГГГ"}  # noqa: RUF001
+            ),
+            "time": forms.TextInput(
+                attrs={
+                    "class": "form-control time-picker",
+                    "placeholder": "Выберите время",
+                }
+            ),
+            "user": forms.Select(
+                attrs={
+                    "class": "form-select select2-owner",
+                    "data-placeholder": "Выберите владельца...",
+                }
+            ),
+            "apartment": forms.Select(
+                attrs={
+                    "class": "form-select select2-apartment",
+                    "data-placeholder": "Сначала выберите владельца...",
+                }
+            ),
+            "description": forms.Textarea(attrs={"class": "form-control", "rows": 5}),
+            "role": forms.Select(
+                attrs={"class": "form-select", "data-placeholder": "Любой специалист"}
+            ),
+            "status": forms.Select(attrs={"class": "form-select"}),
+            "master": forms.Select(
+                attrs={"class": "form-select", "data-placeholder": "Выберите..."}
+            ),
+            "comment": forms.Textarea(attrs={"class": "tinymce-editor"}),
+        }
+        labels = {
+            "date": "",
+            "time": "",
+            "user": "Владелец квартиры",
+            "description": "Описание",
+            "apartment": "Квартира",
+            "role": "Тип мастера",
+            "status": "Статус",
+            "master": "Мастер",
+            "comment": "Комментарий",
+        }
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the form with dynamic querysets for fields."""
+        super().__init__(*args, **kwargs)
+
+        self.fields["user"].queryset = User.objects.filter(
+            user_type=User.UserType.OWNER
+        ).order_by("last_name", "first_name")
+
+        self.fields["master"].queryset = User.objects.filter(
+            user_type=User.UserType.EMPLOYEE
+        ).order_by("last_name", "first_name")
+        self.fields["master"].required = False
+
+        if self.data:
+            self.fields["apartment"].queryset = Apartment.objects.all()
+        elif self.instance.pk and self.instance.user:
+            self.fields["apartment"].queryset = Apartment.objects.filter(
+                owner=self.instance.user
+            )
+        else:
+            self.fields["apartment"].queryset = Apartment.objects.none()
+
+    def clean(self):
+        """Validate form data ensuring consistency between user and apartment."""
+        cleaned_data = super().clean()
+        apartment = cleaned_data.get("apartment")
+        user = cleaned_data.get("user")
+
+        if not apartment:
+            self.add_error("apartment", "Необходимо выбрать квартиру")
+
+        if not user:
+            self.add_error("user", "Необходимо выбрать владельца квартиры")
+
+        if apartment and user:
+            if apartment.owner != user:
+                error_msg = (
+                    f"Квартира №{apartment.number} не принадлежит владельцу "
+                    f"{user.get_full_name()}."
+                )
+                raise forms.ValidationError(error_msg)
+
         return cleaned_data

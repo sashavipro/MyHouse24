@@ -35,4 +35,9 @@ urlpatterns = [
         views.DeleteDocumentView.as_view(),
         name="delete_document",
     ),
+    path(
+        "adminlte/website/update-seo/",
+        views.UpdateSeoFilesView.as_view(),
+        name="update_seo_files",
+    ),
 ]

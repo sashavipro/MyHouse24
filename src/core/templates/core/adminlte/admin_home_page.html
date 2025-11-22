@@ -40,7 +40,8 @@
           <div class="card-header">
             <h3 class="card-title">Редактирование страницы "Главная"</h3>
             <div class="card-tools">
-              <a href="#" class="btn btn-secondary btn-sm">
+              <a href="{% url 'website:update_seo_files' %}"
+                 class="btn btn-secondary btn-sm">
                 <span class="d-none d-sm-inline">Обновить robots и sitemap</span>
                 <i class="bi bi-arrow-clockwise d-sm-none" aria-hidden="true"></i>
               </a>
@@ -71,7 +72,6 @@
             <!-- Краткая информация -->
             <h3 class="page-header mt-4">Краткая информация</h3>
             <hr />
-            {# === ИСПРАВЛЕНИЕ ЗДЕСЬ: используем 'form' вместо 'main_page_form' === #}
             <div class="mb-3">
               <label class="form-label" for="{{ form.title.id_for_label }}">Заголовок</label>
               {{ form.title }}{{ form.title.errors }}
@@ -91,7 +91,6 @@
             {{ blocks_formset.management_form }}
             <div class="row">
               {% for block_form in blocks_formset %}
-                {# Используем другое имя, чтобы не было конфликта #}
                 <div class="col-md-6 col-lg-4">
                   <h4>Блок {{ forloop.counter }}</h4>
                   {% if block_form.instance.image %}

@@ -174,19 +174,33 @@ class Ticket(models.Model):
         "building.Apartment", on_delete=models.CASCADE, verbose_name="Apartment"
     )
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, verbose_name="User (author/master)"
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="Владелец",
+        related_name="tickets_created",
     )
+    master = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Мастер",
+        related_name="tickets_assigned",
+        limit_choices_to={"user_type": "employee"},
+    )
+    comment = models.TextField(blank=True, verbose_name="Комментарий")
     phone = models.CharField(max_length=20, blank=True, verbose_name="Phone")
     description = models.TextField(verbose_name="Description")
-    date = models.DateField(auto_now_add=True, verbose_name="Date")
-    time = models.TimeField(auto_now_add=True, verbose_name="Time")
+    date = models.DateField(verbose_name="Желаемая дата")
+    time = models.TimeField(verbose_name="Желаемое время")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:
         """Meta class."""
 
-        verbose_name = "Application"
-        verbose_name_plural = "Applications"
-        ordering = ["-date", "-time"]
+        verbose_name = "Заявка"
+        verbose_name_plural = "Заявки"
+        ordering = ["-created_at"]
 
     def __str__(self):
         """__str__."""
