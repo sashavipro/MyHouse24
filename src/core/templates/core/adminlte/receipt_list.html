@@ -3,6 +3,102 @@
 {% block title %}
   Квитанции на оплату
 {% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <!-- Подключаем Bootstrap Datepicker -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" />
+  <style>
+    /* Стили для иконок в боксах */
+    .small-box {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .small-box .icon {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      z-index: 0;
+      font-size: 70px;
+      color: rgba(0, 0, 0, 0.15);
+      transition: all 0.3s linear;
+    }
+
+    .small-box:hover .icon {
+      font-size: 80px;
+      transform: rotate(-10deg);
+    }
+
+    .small-box .inner {
+      position: relative;
+      z-index: 1;
+      padding: 20px;
+    }
+
+    .small-box h3 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .small-box p {
+      font-size: 1.1rem;
+      margin-bottom: 0;
+    }
+
+    .filter-row td {
+      padding: 8px !important;
+      background-color: #f8f9fa;
+      vertical-align: middle;
+    }
+
+    #receipts-table tbody tr {
+      cursor: pointer;
+    }
+
+    .actions-column {
+      width: 120px;
+    }
+
+    table.dataTable thead th,
+    table.dataTable tbody td {
+      vertical-align: middle;
+    }
+
+    #receipts-table thead .dt-column-order {
+      display: none !important;
+    }
+
+    #receipts-table thead th {
+      padding-right: 0.75rem !important;
+      user-select: none;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    #receipts-table thead th:first-child {
+      text-align: center;
+    }
+
+    #receipts-table thead th:last-child {
+      text-align: right;
+    }
+
+    /* Стили для datepicker */
+    .datepicker-dropdown {
+      z-index: 9999 !important;
+    }
+
+    .input-group .input-group-text {
+      cursor: pointer;
+    }
+
+    .sup-currency {
+      font-size: 20px;
+    }
+  </style>
+{% endblock styles %}
 {% block content %}
   <section class="content-header">
     <div class="container-fluid">
@@ -25,27 +121,45 @@
     <div class="container-fluid">
       <!-- Статистика -->
       <div class="row mb-3">
-        <div class="col-lg-3 col-md-4 col-sm-6">
-          <div class="card text-white bg-info">
-            <div class="card-body">
-              <h3 class="mb-0">{{ total_cash|floatformat:2 }} грн</h3>
-              <p class="mb-0">Состояние кассы</p>
+        <!-- Состояние кассы -->
+        <div class="col-lg-4 col-md-4 col-12">
+          <div class="small-box bg-success">
+            <div class="inner">
+              <h3 id="stats-cash">
+                {{ total_cash|floatformat:2 }} <sup class="sup-currency">грн</sup>
+              </h3>
+              <p>Состояние кассы</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-cash-coin"></i>
             </div>
           </div>
         </div>
-        <div class="col-lg-3 col-md-4 col-sm-6">
-          <div class="card text-white bg-success">
-            <div class="card-body">
-              <h3 class="mb-0">{{ total_balance|floatformat:2 }} грн</h3>
-              <p class="mb-0">Баланс по счетам</p>
+        <!-- Баланс по счетам -->
+        <div class="col-lg-4 col-md-4 col-12">
+          <div class="small-box bg-info">
+            <div class="inner">
+              <h3 id="stats-balance">
+                {{ total_balance_accounts|floatformat:2 }} <sup class="sup-currency">грн</sup>
+              </h3>
+              <p>Баланс по счетам</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-wallet2"></i>
             </div>
           </div>
         </div>
-        <div class="col-lg-3 col-md-4 col-sm-6">
-          <div class="card text-white bg-danger">
-            <div class="card-body">
-              <h3 class="mb-0">{{ total_debt|floatformat:2 }} грн</h3>
-              <p class="mb-0">Задолженность по счетам</p>
+        <!-- Задолженность -->
+        <div class="col-lg-4 col-md-4 col-12">
+          <div class="small-box bg-danger">
+            <div class="inner">
+              <h3 id="stats-debt">
+                {{ total_debt|floatformat:2 }} <sup class="sup-currency">грн</sup>
+              </h3>
+              <p>Задолженность по счетам</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-graph-down-arrow"></i>
             </div>
           </div>
         </div>
@@ -107,10 +221,18 @@
                     </select>
                   </td>
                   <td>
-                    <input type="text"
-                           id="filter_date"
-                           class="form-control form-control-sm"
-                           placeholder="дд.мм.гггг" />
+                    <!-- DATEPICKER С ИКОНКОЙ -->
+                    <div class="input-group input-group-sm">
+                      <input type="text"
+                             id="filter_date"
+                             class="form-control form-control-sm datepicker-input"
+                             placeholder="дд.мм.гггг"
+                             autocomplete="off" />
+                      <span class="input-group-text"
+                            onclick="$('#filter_date').datepicker('show')">
+                        <i class="bi bi-calendar"></i>
+                      </span>
+                    </div>
                   </td>
                   <td>
                     <input type="text"
@@ -153,9 +275,28 @@
         href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <!-- Подключаем Bootstrap Datepicker -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.ru.min.js"></script>
   <script>
     $(document).ready(function() {
-      const csrfToken = '{{ csrf_token }}'; // Эта переменная хранит токен
+      const csrfToken = '{{ csrf_token }}';
+
+      // === ИНИЦИАЛИЗАЦИЯ DATEPICKER ===
+      $('#filter_date').datepicker({
+        format: 'dd.mm.yyyy',
+        language: 'ru',
+        autoclose: true,
+        todayHighlight: true,
+        orientation: 'bottom auto',
+        clearBtn: true,
+        weekStart: 1
+      }).on('changeDate', function(e) {
+        table.ajax.reload();
+      }).on('clearDate', function(e) {
+        table.ajax.reload();
+      });
+
       const table = $('#receipts-table').DataTable({
         serverSide: true,
         processing: true,
@@ -212,7 +353,17 @@
         ],
         pageLength: 10,
         language: {
-          /* Ваша локализация */
+          processing: "Загрузка...",
+          zeroRecords: "Квитанции не найдены",
+          info: "Показано с _START_ по _END_ из _TOTAL_ квитанций",
+          infoEmpty: "Нет квитанций для отображения",
+          infoFiltered: "(отфильтровано из _MAX_)",
+          paginate: {
+            first: "«",
+            last: "»",
+            next: "›",
+            previous: "‹"
+          }
         },
         dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         "drawCallback": function(settings) {
@@ -222,13 +373,17 @@
 
       // --- Логика фильтров ---
       let timer;
-      $('#filter_number, #filter_apartment_number, #filter_date, #filter_month').on('keyup', () => {
+      $('#filter_number, #filter_apartment_number, #filter_month').on('keyup', () => {
         clearTimeout(timer);
         timer = setTimeout(() => table.ajax.reload(), 500);
       });
+
       $('#filter_status, #filter_owner, #filter_is_posted').on('change', () => table.ajax.reload());
+
       $('#clear-filters-btn').on('click', () => {
-        $('.filter-row input, .filter-row select').val('').trigger('change');
+        $('.filter-row input, .filter-row select').val('');
+        $('#filter_date').datepicker('clearDates'); // Очищаем datepicker
+        table.ajax.reload();
       });
 
       // --- Логика массового выделения ---
@@ -286,9 +441,8 @@
         });
       });
 
-      // --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ: Логика индивидуального удаления ---
+      // --- Логика индивидуального удаления ---
       $('#receipts-table tbody').on('click', '.delete-receipt-btn', function(e) {
-        // Останавливаем всплытие события - это КРИТИЧНО!
         e.stopPropagation();
         e.preventDefault();
 
@@ -317,46 +471,16 @@
           }
         });
       });
+
+      // --- Применяем фильтры из URL ---
+      const urlParams = new URLSearchParams(window.location.search);
+      $('.filter-row input, .filter-row select').each(function() {
+        const paramName = $(this).attr('id').replace('filter_', '');
+        const paramValue = urlParams.get(paramName);
+        if (paramValue) {
+          $(this).val(paramValue).trigger('change');
+        }
+      });
     });
   </script>
-  <style>
-    /* ... (Ваши стили остаются без изменений) ... */
-    .filter-row td {
-      padding: 8px !important;
-      background-color: #f8f9fa;
-      vertical-align: middle;
-    }
-
-    #receipts-table tbody tr {
-      cursor: pointer;
-    }
-
-    .actions-column {
-      width: 120px;
-    }
-
-    table.dataTable thead th,
-    table.dataTable tbody td {
-      vertical-align: middle;
-    }
-
-    #receipts-table thead .dt-column-order {
-      display: none !important;
-    }
-
-    #receipts-table thead th {
-      padding-right: 0.75rem !important;
-      user-select: none;
-      text-align: left;
-      vertical-align: middle;
-    }
-
-    #receipts-table thead th:first-child {
-      text-align: center;
-    }
-
-    #receipts-table thead th:last-child {
-      text-align: right;
-    }
-  </style>
 {% endblock scripts %}

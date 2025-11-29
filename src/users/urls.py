@@ -76,4 +76,32 @@ urlpatterns = [
         views.TicketDetailView.as_view(),
         name="ticket_detail",
     ),
+    path(
+        "adminlte/messages/send/<int:owner_id>/",
+        views.MessageToOwnerCreateView.as_view(),
+        name="message_to_owner",
+    ),
+    path(
+        "adminlte/owners/impersonate/<int:pk>/",
+        views.ImpersonateUserView.as_view(),
+        name="owner_impersonate",
+    ),
+    path(
+        "adminlte/stop-impersonate/",
+        views.StopImpersonateView.as_view(),
+        name="stop_impersonate",
+    ),
+    path(
+        "adminlte/owners/invite/", views.InviteOwnerView.as_view(), name="owner_invite"
+    ),
+    path(
+        "invite/accept/<uuid:token>/",
+        views.AcceptInvitationView.as_view(),
+        name="accept_invitation",
+    ),
+    path(
+        "invite/set-password/",
+        views.SetInitialPasswordView.as_view(),
+        name="set_password",
+    ),
 ]

@@ -28,7 +28,11 @@
     <div class="container-fluid">
       <div class="card">
         <div class="card-header d-flex justify-content-end">
-          <a href="#" class="btn btn-secondary me-2">Перейти в кабинет</a>
+          <a href="{% url 'users:owner_impersonate' owner_obj.pk %}"
+             class="btn btn-secondary me-2"
+             onclick="return confirm('Вы уверены, что хотите войти в кабинет этого пользователя?');">
+            Перейти в кабинет
+          </a>
           <a href="{% url 'users:owner_edit' owner_obj.pk %}"
              class="btn btn-primary">Редактировать профиль</a>
         </div>

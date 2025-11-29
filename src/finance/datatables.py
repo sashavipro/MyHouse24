@@ -1,7 +1,6 @@
 """src/finance/datatables.py."""
 
 import datetime
-import re
 
 from ajax_datatable.views import AjaxDatatableView
 from django.db.models import IntegerField
@@ -13,13 +12,11 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import Article
+from .models import CashBox
 from .models import Counter
 from .models import CounterReading
 from .models import Receipt
 from .models import Tariff
-
-MIN_YEAR = 1900
-MAX_YEAR = 2100
 
 
 class ArticleAjaxDatatableView(AjaxDatatableView):
@@ -484,29 +481,6 @@ class ReceiptAjaxDatatableView(AjaxDatatableView):
         },
     ]
 
-    def _filter_by_date(self, queryset, value):
-        """Apply date-based filters to the queryset for the 'date' field."""
-        try:
-            if re.match(r"^\d{1,2}\.\d{1,2}\.\d{4}$", value):
-                # DTZ007: naive datetime is fine here as we extract .date() immediately
-                filter_date = datetime.datetime.strptime(value, "%d.%m.%Y").date()  # noqa: DTZ007
-                return queryset.filter(date=filter_date)
-            if re.match(r"^\d{1,2}\.\d{4}$", value):
-                month, year = value.split(".")
-                return queryset.filter(date__month=int(month), date__year=int(year))
-            if re.match(r"^\d{4}$", value):
-                year = int(value)
-                if MIN_YEAR < year < MAX_YEAR:
-                    return queryset.filter(date__year=year)
-            if re.match(r"^\d{1,2}$", value):
-                day_or_month = int(value)
-                return queryset.filter(
-                    Q(date__day=day_or_month) | Q(date__month=day_or_month)
-                )
-        except (ValueError, TypeError):
-            pass
-        return queryset
-
     def get_initial_queryset(self, request=None):
         """Build optimized database query and collect filters."""
         queryset = Receipt.objects.select_related(
@@ -529,20 +503,30 @@ class ReceiptAjaxDatatableView(AjaxDatatableView):
     def apply_filters(self, queryset, filters):
         """Apply a dictionary of filters to a queryset."""
         for key, value in filters.items():
-            if value:
-                cleaned_value = value.strip()
-                if key == "date":
-                    queryset = self._filter_by_date(queryset, cleaned_value)
-                elif key == "is_posted":
-                    queryset = queryset.filter(
-                        is_posted=(cleaned_value.lower() == "true")
-                    )
-                elif key == "month":
-                    pass
-                else:
-                    queryset = queryset.filter(**{key: cleaned_value})
+            if not value:
+                continue
 
-        return queryset.filter()
+            cleaned_value = value.strip()
+
+            if key == "date":
+                try:
+                    # Parse as date components to avoid timezone issues
+                    day, month, year = map(int, cleaned_value.split("."))
+                    filter_date = datetime.date(year, month, day)
+                    queryset = queryset.filter(date=filter_date)
+                except (ValueError, AttributeError):
+                    pass
+
+            elif key == "is_posted":
+                queryset = queryset.filter(is_posted=(cleaned_value.lower() == "true"))
+
+            elif key == "month":
+                pass
+
+            else:
+                queryset = queryset.filter(**{key: cleaned_value})
+
+        return queryset
 
     def customize_row(self, row, obj):
         """Customize row data."""
@@ -604,4 +588,125 @@ class ReceiptAjaxDatatableView(AjaxDatatableView):
                 </button>
             </div>
         """
+        return row
+
+
+class CashBoxAjaxDatatableView(AjaxDatatableView):
+    """Provide data for the CashBox transaction table."""
+
+    model = CashBox
+    title = "Касса"  # noqa: RUF001
+    initial_order = [["date", "desc"]]
+    show_column_filters = False
+
+    column_defs = [
+        {"name": "number", "title": "№", "orderable": True},
+        {"name": "date", "title": "Дата", "orderable": True},
+        {"name": "is_posted", "title": "Статус", "orderable": True},
+        {"name": "article", "title": "Тип платежа", "foreign_field": "article__name"},
+        {"name": "owner", "title": "Владелец", "searchable": False, "orderable": False},
+        {
+            "name": "personal_account",
+            "title": "Лицевой счет",
+            "foreign_field": "personal_account__number",
+        },
+        {
+            "name": "type_display",
+            "title": "Приход/Расход",
+            "searchable": False,
+            "orderable": False,
+        },
+        {"name": "amount", "title": "Сумма (грн)", "className": "text-end"},
+        {"name": "actions", "title": "", "searchable": False, "orderable": False},
+    ]
+
+    def get_initial_queryset(self, request=None):
+        """Build initial queryset and apply filters."""
+        queryset = CashBox.objects.select_related("article", "personal_account")
+
+        if not request:
+            return queryset
+
+        filters = {
+            "number__icontains": request.POST.get("number"),
+            "date": request.POST.get("date"),
+            "is_posted": request.POST.get("is_posted"),
+            "article_id": request.POST.get("article"),
+            "personal_account__apartment__owner_id": request.POST.get("owner"),
+            "personal_account__number__icontains": request.POST.get("personal_account"),
+            "article__type": request.POST.get("type"),
+        }
+
+        return self.apply_filters(queryset, filters)
+
+    def apply_filters(self, queryset, filters):
+        """Apply filters to the queryset."""
+        for key, value in filters.items():
+            if not value:
+                continue
+
+            cleaned_value = value.strip()
+
+            if key == "date":
+                try:
+                    # Parse as date components to avoid timezone issues
+                    day, month, year = map(int, cleaned_value.split("."))
+                    filter_date = datetime.date(year, month, day)
+                    queryset = queryset.filter(date=filter_date)
+                except (ValueError, AttributeError):
+                    pass
+
+            elif key == "is_posted":
+                queryset = queryset.filter(is_posted=(cleaned_value.lower() == "true"))
+            else:
+                queryset = queryset.filter(**{key: cleaned_value})
+
+        return queryset
+
+    def customize_row(self, row, obj):
+        """Customize row rendering."""
+        row["date"] = obj.date.strftime("%d.%m.%Y")
+
+        if obj.is_posted:
+            row["is_posted"] = '<span class="badge bg-success">Проведен</span>'
+        else:
+            row["is_posted"] = '<span class="badge bg-danger">Не проведен</span>'  # noqa: RUF001
+
+        owner_name = "-"
+        if (
+            obj.personal_account
+            and hasattr(obj.personal_account, "apartment")
+            and obj.personal_account.apartment
+            and obj.personal_account.apartment.owner
+        ):
+            owner_name = obj.personal_account.apartment.owner.get_full_name()
+        row["owner"] = owner_name
+
+        if obj.article.type == "income":
+            row["type_display"] = '<span class="text-success">Приход</span>'
+            row["amount"] = f'<span class="text-success">{obj.amount}</span>'
+        else:
+            row["type_display"] = '<span class="text-danger">Расход</span>'
+            row["amount"] = f'<span class="text-danger">-{obj.amount}</span>'
+
+        edit_url = reverse("finance:cashbox_update", args=[obj.pk])
+        detail_url = reverse("finance:cashbox_detail", args=[obj.pk])
+
+        row["DT_RowAttr"] = {
+            "data-detail-url": detail_url,
+            "style": "cursor: pointer;",
+        }
+
+        row["actions"] = f"""
+                    <div class="btn-group btn-group-sm">
+                        <a href="{edit_url}" class="btn btn-primary"
+                         title="Редактировать" onclick="event.stopPropagation();">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <button class="btn btn-danger delete-cashbox-btn"
+                                data-id="{obj.pk}" title="Удалить">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                """
         return row

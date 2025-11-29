@@ -1,0 +1,236 @@
+{% extends 'core/adminlte/cabinet_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Оплата заказа
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    .payment-wrapper {
+      background-color: #f0f2f5;
+      min-height: 80vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    .payment-container {
+      background-color: #fff;
+      width: 700px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      padding: 40px;
+    }
+
+    /* Левая колонка (информация) */
+    .order-info {
+      text-align: right;
+      padding-right: 30px;
+      border-right: 1px solid #eee;
+    }
+
+    .order-id-box {
+      background-color: #e1f0ff;
+      padding: 5px 10px;
+      display: inline-block;
+      margin-bottom: 15px;
+      font-weight: bold;
+      color: #555;
+    }
+
+    .info-label {
+      color: #777;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .merchant-logo {
+      margin-top: 30px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 4px;
+      display: inline-block;
+      width: 120px;
+      text-align: center;
+    }
+
+    /* Правая колонка (карта) */
+    .card-column {
+      padding-left: 30px;
+    }
+
+    .credit-card-box {
+      background: linear-gradient(to bottom, #dbeaf9 0%, #bfdcfc 100%);
+      border: 1px solid #b3d3f2;
+      border-radius: 10px;
+      padding: 20px;
+      width: 100%;
+      max-width: 350px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .credit-card-box label {
+      color: #333;
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    .card-number-input {
+      font-size: 16px;
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+    }
+
+    .card-row {
+      display: flex;
+      justify-content: flex-end;
+      /* Сдвигаем срок и CVV вправо */
+      align-items: center;
+      gap: 10px;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      max-width: 350px;
+    }
+
+    .pay-button {
+      background: linear-gradient(to bottom, #88c1e8 0%, #5ba4cf 100%);
+      border: 1px solid #4c93be;
+      color: white;
+      font-weight: bold;
+      padding: 10px 30px;
+      border-radius: 4px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      transition: all 0.2s;
+      width: 100%;
+      max-width: 150px;
+    }
+
+    .pay-button:hover {
+      background: linear-gradient(to bottom, #7bb5dd 0%, #4a93be 100%);
+    }
+
+    .info-value-lg {
+      font-size: 18px;
+    }
+
+    .masterpass-icon {
+      font-size: 24px;
+      color: #ff5f00;
+    }
+
+    @media (max-width: 768px) {
+      .order-info {
+        text-align: center;
+        border-right: none;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+        padding-right: 0;
+      }
+
+      .card-column {
+        padding-left: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <div class="payment-wrapper">
+    <div class="payment-container">
+      <form method="post">
+        {% csrf_token %}
+        <div class="row">
+          <!-- Левая часть: Информация о заказе -->
+          <div class="col-md-5 order-info">
+            <div class="order-id-box">ID заказа: {{ receipt.number }}</div>
+            <div class="info-label">Сумма:</div>
+            <div class="info-value info-value-lg">{{ receipt.total_amount|floatformat:2 }} грн</div>
+            <div class="info-label">Торговец:</div>
+            <div class="info-value">MyHouse24</div>
+            <div class="info-label">Назначение:</div>
+            <div class="info-value">Оплата ком. услуг ({{ receipt.date|date:"d.m.Y" }})</div>
+            <div class="mt-4">
+              <small class="text-muted">Другие способы оплаты:</small>
+              <br />
+              <div class="merchant-logo">
+                <i class="bi bi-credit-card-2-front masterpass-icon"></i>
+                <span class="fw-bold">Masterpass</span>
+              </div>
+            </div>
+          </div>
+          <!-- Правая часть: Визуальная карта -->
+          <div class="col-md-7 card-column">
+            <div class="credit-card-box">
+              <!-- Номер карты -->
+              <div class="mb-3">
+                <label for="{{ form.card_number.id_for_label }}">Номер карточки</label>
+                {{ form.card_number }}
+                {% if form.card_number.errors %}<div class="text-danger small">{{ form.card_number.errors.0 }}</div>{% endif %}
+              </div>
+              <!-- Срок и CVV -->
+              <div class="card-row">
+                <div class="text-end">
+                  <label for="{{ form.expiry_date.id_for_label }}">Срок действия:</label>
+                </div>
+                <div>{{ form.expiry_date }}</div>
+              </div>
+              <div class="card-row mt-2">
+                <div class="text-end">
+                  <label for="{{ form.cvv.id_for_label }}">CVV2:</label>
+                </div>
+                <div>{{ form.cvv }}</div>
+              </div>
+              <!-- Ошибки валидации для мелких полей -->
+              {% if form.expiry_date.errors or form.cvv.errors %}
+                <div class="text-danger small mt-2 text-end">{{ form.expiry_date.errors.0 }} {{ form.cvv.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <!-- Итого и Кнопка -->
+            <div class="total-row">
+              <div>
+                <span class="text-muted">Сумма к оплате:</span>
+                <h4 class="mb-0 fw-bold">{{ receipt.total_amount|floatformat:2 }} грн</h4>
+              </div>
+              <div>
+                <button type="submit" class="pay-button">Оплатить</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // Маски для красоты ввода
+      $('#id_card_number').mask('0000 0000 0000 0000');
+      $('#id_expiry_date').mask('00 / 00');
+      $('#id_cvv').mask('000');
+    });
+  </script>
+{% endblock scripts %}

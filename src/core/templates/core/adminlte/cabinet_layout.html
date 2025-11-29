@@ -122,7 +122,9 @@
                 <ul class="nav nav-treeview">
                   {% for apartment in request.user.apartments.all %}
                     <li class="nav-item">
-                      <a href="#" class="nav-link">
+                      <!-- ССЫЛКА НА НОВУЮ СВОДКУ -->
+                      <a href="{% url 'cabinet:cabinet_summary' apartment_id=apartment.pk %}"
+                         class="nav-link {% if request.resolver_match.url_name == 'cabinet_summary' and request.resolver_match.kwargs.apartment_id == apartment.pk %}active{% endif %}">
                         <i class="nav-icon bi bi-building"></i>
                         <p>{{ apartment.house.title }}, кв.{{ apartment.number }}</p>
                       </a>

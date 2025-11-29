@@ -140,6 +140,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
@@ -153,3 +154,14 @@ LOGIN_URL = "core:login"
 
 HCAPTCHA_SITEKEY = env("HCAPTCHA_SITE_KEY")
 HCAPTCHA_SECRET = env("HCAPTCHA_SECRET_KEY")
+
+EMAIL_BACKEND = env('EMAIL_BACKEND')
+EMAIL_HOST = env('EMAIL_HOST')
+EMAIL_PORT = env('EMAIL_PORT')
+EMAIL_USE_TLS = env('EMAIL_USE_TLS')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+
+CELERY_BROKER_URL = env('CELERY_BROKER_URL')
+
+SITE_URL = env("SITE_URL")

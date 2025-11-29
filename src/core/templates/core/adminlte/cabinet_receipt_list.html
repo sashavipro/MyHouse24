@@ -5,10 +5,22 @@
 {% endblock title %}
 {% block styles %}
   {{ block.super }}
+  <!-- Подключаем Bootstrap Datepicker -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" />
   <style>
     #receipts-table .dt-column-order::before,
     #receipts-table .dt-column-order::after {
       display: none !important;
+    }
+
+    /* Стили для datepicker */
+    .datepicker-dropdown {
+      z-index: 9999 !important;
+    }
+
+    .input-group .input-group-text {
+      cursor: pointer;
     }
   </style>
 {% endblock styles %}
@@ -45,10 +57,18 @@
               <tr>
                 <td></td>
                 <td>
-                  <input type="text"
-                         id="date-filter"
-                         class="form-control form-control-sm"
-                         placeholder="дд.мм.гггг" />
+                  <!-- DATEPICKER С ИКОНКОЙ -->
+                  <div class="input-group input-group-sm">
+                    <input type="text"
+                           id="date-filter"
+                           class="form-control form-control-sm datepicker-input"
+                           placeholder="дд.мм.гггг"
+                           autocomplete="off" />
+                    <span class="input-group-text"
+                          onclick="$('#date-filter').datepicker('show')">
+                      <i class="bi bi-calendar"></i>
+                    </span>
+                  </div>
                 </td>
                 <td>
                   <select id="status-filter" class="form-select form-select-sm">
@@ -73,10 +93,28 @@
         href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <!-- Подключаем Bootstrap Datepicker -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.ru.min.js"></script>
   <script>
     $(document).ready(function() {
       const csrfToken = '{{ csrf_token }}';
       const ajaxUrl = '{{ ajax_url }}';
+
+      // === ИНИЦИАЛИЗАЦИЯ DATEPICKER ===
+      $('#date-filter').datepicker({
+        format: 'dd.mm.yyyy',
+        language: 'ru',
+        autoclose: true,
+        todayHighlight: true,
+        orientation: 'bottom auto',
+        clearBtn: true,
+        weekStart: 1
+      }).on('changeDate', function(e) {
+        table.ajax.reload();
+      }).on('clearDate', function(e) {
+        table.ajax.reload();
+      });
 
       const table = $('#receipts-table').DataTable({
         serverSide: true,
@@ -96,36 +134,34 @@
           }
         },
         columns: [{
-            data: 'number',
-            orderable: true
-          }, {
-            data: 'date',
-            orderable: true
-          }, {
-            data: 'status',
-            orderable: false
-          }, // Статус оставляем без сортировки
-          {
-            data: 'total_amount',
-            orderable: true,
-            className: 'text-end'
-          }
-        ],
+          data: 'number',
+          orderable: true
+        }, {
+          data: 'date',
+          orderable: true
+        }, {
+          data: 'status',
+          orderable: false
+        }, {
+          data: 'total_amount',
+          orderable: true,
+          className: 'text-end'
+        }],
         order: [
           [1, 'desc']
         ],
         pageLength: 10,
         language: {
-          "processing": "Загрузка...",
-          "zeroRecords": "Квитанции не найдены.",
-          "info": "Показано с _START_ по _END_ из _TOTAL_ квитанций",
-          "infoEmpty": "Нет квитанций для отображения",
-          "infoFiltered": "(отфильтровано из _MAX_)",
-          "paginate": {
-            "first": "«",
-            "last": "»",
-            "next": "›",
-            "previous": "‹"
+          processing: "Загрузка...",
+          zeroRecords: "Квитанции не найдены.",
+          info: "Показано с _START_ по _END_ из _TOTAL_ квитанций",
+          infoEmpty: "Нет квитанций для отображения",
+          infoFiltered: "(отфильтровано из _MAX_)",
+          paginate: {
+            first: "«",
+            last: "»",
+            next: "›",
+            previous: "‹"
           }
         },
         dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
@@ -140,14 +176,7 @@
       });
 
       // --- Логика фильтров ---
-      let timer;
-      // Для текстовых полей используем 'keyup' с задержкой
-      $('#date-filter').on('keyup', function() {
-        clearTimeout(timer);
-        timer = setTimeout(() => table.ajax.reload(), 500); // Перезагрузка через 0.5 сек после окончания ввода
-      });
-
-      // Для выпадающих списков оставляем 'change'
+      // Для выпадающего списка оставляем 'change'
       $('#status-filter').on('change', function() {
         table.ajax.reload();
       });
@@ -155,6 +184,7 @@
       $('#clear-filters-btn').on('click', function() {
         $('#date-filter').val('');
         $('#status-filter').val('');
+        $('#date-filter').datepicker('clearDates'); // Очищаем datepicker
         table.ajax.reload();
       });
     });

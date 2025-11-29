@@ -199,3 +199,25 @@ def search_apartments_by_owner(
         results.append({"id": apt.id, "text": text})
 
     return {"results": results, "pagination": {"more": page_obj.has_next()}}
+
+
+@router.get("/personal-accounts/by-owner", response=list[dict])
+def get_personal_accounts_by_owner(request, owner_id: int):
+    """Возвращает список лицевых счетов, принадлежащих владельцу (через квартиры)."""
+    accounts = PersonalAccount.objects.filter(apartment__owner_id=owner_id).values(
+        "id", "number"
+    )
+
+    return list(accounts)
+
+
+@router.get("/personal-accounts/{account_id}/owner-info")
+def get_personal_account_owner_info(request, account_id: int):
+    """Возвращает ID владельца для выбранного лицевого счета."""
+    account = get_object_or_404(PersonalAccount, id=account_id)
+
+    owner_id = None
+    if account.apartment and account.apartment.owner:
+        owner_id = account.apartment.owner.id
+
+    return {"owner_id": owner_id}

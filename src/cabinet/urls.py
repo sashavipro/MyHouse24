@@ -6,6 +6,8 @@ from . import views
 from .datatables import CabinetMessageAjaxDatatableView
 from .datatables import CabinetReceiptAjaxDatatableView
 from .datatables import CabinetTicketAjaxDatatableView
+from .views import ReceiptPdfView
+from .views import ReceiptPrintView
 
 app_name = "cabinet"
 
@@ -66,5 +68,28 @@ urlpatterns = [
         "ajax-datatable/cabinet/tickets/",
         CabinetTicketAjaxDatatableView.as_view(),
         name="ajax_datatable_cabinet_tickets",
+    ),
+    path(
+        "cabinet/receipts/<int:pk>/pdf/", ReceiptPdfView.as_view(), name="receipt_pdf"
+    ),
+    path(
+        "cabinet/receipts/<int:pk>/print/",
+        ReceiptPrintView.as_view(),
+        name="receipt_print",
+    ),
+    path(
+        "cabinet/apartment/<int:apartment_id>/summary/",
+        views.CabinetSummaryView.as_view(),
+        name="cabinet_summary",
+    ),
+    path(
+        "cabinet/receipts/<int:pk>/pay/",
+        views.PaymentSelectBankView.as_view(),
+        name="receipt_pay_select",
+    ),
+    path(
+        "cabinet/receipts/<int:pk>/pay/process/",
+        views.PaymentProcessView.as_view(),
+        name="receipt_pay_process",
     ),
 ]

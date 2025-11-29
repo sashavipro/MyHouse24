@@ -1,6 +1,7 @@
 """src/users/models.py."""
 
 import logging
+import uuid
 
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import Group
@@ -106,7 +107,28 @@ class User(AbstractUser):
     )
 
     def save(self, *args, **kwargs):
-        """Override the save method to sync user's groups with their role."""
+        """Auto-assign 'Director' role to superusers.
+
+        Sync user's groups with their role.
+        """
+        if self.is_superuser and not self.role:
+            try:
+                all_permissions = {}
+                # Using get_fields() instead of accessing _meta.fields directly
+                for field in Role._meta.get_fields():  # noqa: SLF001
+                    if hasattr(field, "name") and field.name.startswith("has_"):
+                        all_permissions[field.name] = True
+
+                director_role, _ = Role.objects.get_or_create(
+                    name="Директор", defaults=all_permissions
+                )
+
+                self.role = director_role
+                self.user_type = self.UserType.EMPLOYEE
+            except (DatabaseError, IntegrityError):
+                # logging.exception automatically includes exception info
+                logger.exception("Auto-assign role error")
+
         super().save(*args, **kwargs)
 
         if self.role:
@@ -259,3 +281,18 @@ class MessageRecipient(models.Model):
     def __str__(self):
         """__str__."""
         return f"Recipient '{self.user}' for message '{self.message.title}'"
+
+
+class Invitation(models.Model):
+    """Model to store one-time invitation tokens."""
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, verbose_name="Пользователь"
+    )
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    def __str__(self):
+        """Str."""
+        return f"Invitation for {self.user.email}"

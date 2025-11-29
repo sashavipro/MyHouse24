@@ -72,6 +72,7 @@ class CounterReadingSchema(Schema):
     date: datetime
     month_display: str
     service_name: str
+    service_id: int
     value: float
     unit_name: str
 

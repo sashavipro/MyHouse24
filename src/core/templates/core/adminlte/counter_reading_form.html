@@ -124,15 +124,25 @@
 {% endblock content %}
 {% block scripts %}
   {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/ru.js"></script>
   {{ initial_data|json_script:"initial-data" }}
   <script>
     $(document).ready(function() {
-      // Визуальные элементы
+      // 1. Инициализация Flatpickr
+      flatpickr(".date-picker", {
+        dateFormat: "Y-m-d",
+        locale: "ru",
+        altInput: true,
+        altFormat: "d.m.Y",
+        disableMobile: "true",
+        defaultDate: new Date()
+      });
+
+      // 2. Визуальные элементы
       const houseSelect = $('#id_house');
       const sectionSelect = $('#id_section');
       const apartmentSelect = $('#id_apartment_select');
-
-      // Скрытый элемент для отправки
       const hiddenApartmentInput = $('#id_apartment');
 
       const initialData = JSON.parse(document.getElementById('initial-data')?.textContent || '{}');

@@ -109,92 +109,142 @@
           })
         },
         columns: [{
-            data: 'house',
-            orderable: false
-          }, // Сортировка отключена
-          {
-            data: 'section',
-            orderable: false
-          }, {
-            data: 'apartment_number',
-            orderable: true
-          }, // Сортировка оставлена
-          {
-            data: 'service',
-            orderable: false
-          }, // Сортировка отключена
-          {
-            data: 'latest_reading',
-            orderable: false
-          }, {
-            data: 'unit',
-            orderable: false
-          }, {
-            data: 'actions',
-            orderable: false
-          }
-        ],
+          data: 'house',
+          orderable: false
+        }, {
+          data: 'section',
+          orderable: false
+        }, {
+          data: 'apartment_number',
+          orderable: true
+        }, {
+          data: 'service',
+          orderable: false
+        }, {
+          data: 'latest_reading',
+          orderable: false
+        }, {
+          data: 'unit',
+          orderable: false
+        }, {
+          data: 'actions',
+          orderable: false
+        }],
         order: [
           [2, 'asc']
-        ], // Сортировка по умолчанию по номеру квартиры
+        ],
         pageLength: 10,
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
         language: {
-          processing: "Загрузка...",
-          search: "Поиск:",
-          lengthMenu: "Показать _MENU_ записей",
-          info: "Показано с _START_ по _END_ из _TOTAL_ записей",
-          infoEmpty: "Показано 0 записей",
-          infoFiltered: "(отфильтровано из _MAX_ записей)",
-          loadingRecords: "Загрузка...",
-          zeroRecords: "Записи не найдены",
-          emptyTable: "Нет данных",
-          paginate: {
-            first: "Первая",
-            previous: "Предыдущая",
-            next: "Следующая",
-            last: "Последняя"
+          "processing": "Загрузка...",
+          "zeroRecords": "Записи отсутствуют.",
+          "info": "Показано с _START_ по _END_ из _TOTAL_ записей",
+          "infoEmpty": "Нет записей для отображения",
+          "infoFiltered": "(отфильтровано из _MAX_)",
+          "paginate": {
+            "first": "«",
+            "last": "»",
+            "next": "›",
+            "previous": "‹"
           }
-        },
-        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+        }
       });
 
-      // --- Логика фильтров ---
+      // --- Фильтры (обработчики событий) ---
       let timer;
       $('#filter_apartment_number').on('keyup', () => {
         clearTimeout(timer);
         timer = setTimeout(() => table.ajax.reload(), 500);
       });
 
-      $('#filter_house, #filter_section, #filter_service').on('change', () => table.ajax.reload());
+      $('#filter_service').on('change', () => table.ajax.reload());
 
+      // Обработчик изменения секции (просто перезагрузка)
+      $('#filter_section').on('change', () => table.ajax.reload());
+
+      // Кнопка очистки
       $('#clear-filters-btn').on('click', () => {
-        // Очищаем фильтры и перезагружаем таблицу
         $('#filter_house, #filter_apartment_number, #filter_service').val('');
         $('#filter_section').prop('disabled', true).html('<option value="">Выберите дом</option>');
         table.ajax.reload();
       });
 
+      // Обработчик изменения дома (загрузка секций)
       $('#filter_house').on('change', function() {
         const houseId = $(this).val();
         const sectionSelect = $('#filter_section');
+
         sectionSelect.prop('disabled', true).html('<option value="">Выберите дом</option>');
+
         if (houseId) {
           sectionSelect.html('<option value="">Загрузка...</option>');
           $.get(`/api/v1/buildings/house/${houseId}/sections`, data => {
             sectionSelect.html('<option value="">Все секции</option>');
             data.forEach(i => sectionSelect.append(new Option(i.name, i.id)));
             sectionSelect.prop('disabled', false);
+            table.ajax.reload(); // Перезагружаем таблицу после выбора дома
           });
+        } else {
+          table.ajax.reload(); // Перезагружаем таблицу, если дом убрали
         }
       });
 
-      // --- Обработчик клика по строке таблицы ---
-      $('#counters-table tbody').on('click', 'tr', function() {
+      // --- Клик по строке ---
+      $('#counters-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a').length) return;
         const href = $(this).data('href');
-        if (href) {
-          window.location.href = href;
-        }
+        if (href) window.location.href = href;
       });
+
+      // =========================================================
+      // --- ЛОГИКА ПРИМЕНЕНИЯ ФИЛЬТРОВ ИЗ URL (ПРИ ЗАГРУЗКЕ) ---
+      // =========================================================
+      function applyUrlFilters() {
+        const params = new URLSearchParams(window.location.search);
+        let hasFilters = false;
+
+        // 1. Простые поля
+        if (params.has('apartment_number')) {
+          $('#filter_apartment_number').val(params.get('apartment_number'));
+          hasFilters = true;
+        }
+        if (params.has('service')) {
+          $('#filter_service').val(params.get('service'));
+          hasFilters = true;
+        }
+
+        // 2. Дом и Секция
+        const houseId = params.get('house');
+        const sectionId = params.get('section');
+
+        if (houseId) {
+          $('#filter_house').val(houseId);
+
+          const sectionSelect = $('#filter_section');
+          sectionSelect.prop('disabled', true).html('<option value="">Загрузка...</option>');
+
+          // AJAX запрос секций
+          $.get(`/api/v1/buildings/house/${houseId}/sections`, data => {
+            sectionSelect.html('<option value="">Все секции</option>');
+            data.forEach(i => sectionSelect.append(new Option(i.name, i.id)));
+            sectionSelect.prop('disabled', false);
+
+            // Если в URL была секция, выбираем её
+            if (sectionId) {
+              sectionSelect.val(sectionId);
+            }
+
+            // Обновляем таблицу после загрузки зависимых полей
+            table.ajax.reload();
+          });
+        } else if (hasFilters) {
+          // Если дома нет, но есть другие фильтры - просто обновляем
+          table.ajax.reload();
+        }
+      }
+
+      // Запускаем функцию
+      applyUrlFilters();
     });
   </script>
   <style>
@@ -207,22 +257,15 @@
       display: none !important;
     }
 
-    #counters-table thead th {
-      padding-right: 0.75rem !important;
-      user-select: none;
+    #counters-table tbody tr {
+      cursor: pointer;
     }
 
-    #counters-table thead th {
-      padding-right: 0.75rem !important;
-      user-select: none;
-      text-align: left;
-      /* Выравниваем все заголовки по левому краю */
+    #counters-table td {
       vertical-align: middle;
-      /* Предотвращаем вертикальные "прыжки" */
     }
 
-    /* Выравниваем заголовок последней колонки (действия) по правому краю */
-    #counters-table thead th:last-child {
+    #counters-table th:last-child {
       text-align: right;
     }
   </style>

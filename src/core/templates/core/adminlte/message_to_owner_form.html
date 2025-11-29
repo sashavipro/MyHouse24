@@ -1,0 +1,85 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Новое сообщение
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+        rel="stylesheet" />
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Новое сообщение</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}"><i class="bi bi-house-door"></i> Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'users:message_list' %}">Сообщения</a>
+            </li>
+            <li class="breadcrumb-item active">Новое сообщение</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post">
+        {% csrf_token %}
+        <div class="card">
+          <div class="card-body">
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="mb-3">
+              {{ form.title.label_tag }}
+              {{ form.title }}
+              {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors }}</div>{% endif %}
+            </div>
+            <div class="mb-3">
+              {{ form.text.label_tag }}
+              {{ form.text }}
+              {% if form.text.errors %}<div class="text-danger small mt-1">{{ form.text.errors }}</div>{% endif %}
+            </div>
+            <h5 class="mt-4">Кому отправить:</h5>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">{{ form.owner.label }}</label>
+                {{ form.owner }}
+                {% if form.owner.errors %}<div class="text-danger small mt-1">{{ form.owner.errors }}</div>{% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{% url 'users:owner_list' %}" class="btn btn-secondary">Отменить</a>
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-envelope-fill me-2"></i>Отправить
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      $('.select2-simple').select2({
+        theme: 'bootstrap-5',
+        placeholder: "Выберите владельца...",
+        allowClear: true
+      });
+    });
+  </script>
+{% endblock scripts %}

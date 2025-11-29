@@ -48,7 +48,6 @@
             </div>
             <div class="mb-3">
               {{ form.text.label_tag }}
-              <!-- TinyMCE будет применен к этому textarea автоматически -->
               {{ form.text }}
               {% if form.text.errors %}<div class="text-danger small mt-1">{{ form.text.errors }}</div>{% endif %}
             </div>
@@ -92,51 +91,103 @@
   {{ block.super }}
   <script>
     $(document).ready(function() {
-      // --- Логика каскадных выпадающих списков ---
+      // --- Элементы формы ---
       const houseSelect = $('#{{ form.house.id_for_label }}');
       const sectionSelect = $('#{{ form.section.id_for_label }}');
       const floorSelect = $('#{{ form.floor.id_for_label }}');
       const apartmentSelect = $('#{{ form.apartment.id_for_label }}');
 
-      function resetSelect(select, placeholder) {
-        select.empty().append(new Option(placeholder, '')).prop('disabled', true);
+      // Функция сброса селекта
+      // placeholderText - текст, который будет показан (например, "Всем..." или "Выберите дом")
+      // disabled - нужно ли блокировать поле
+      function resetSelect(select, placeholderText, disabled = true) {
+        select.empty();
+        // Добавляем опцию с пустым value - это и есть "Выбрать всех"
+        select.append(new Option(placeholderText, ''));
+        select.prop('disabled', disabled);
       }
 
+      // Функция загрузки квартир
+      function loadApartments(houseId, sectionId) {
+        // Пока грузим, показываем текст загрузки
+        resetSelect(apartmentSelect, 'Загрузка...', true);
+
+        let url = `/api/v1/buildings/house/${houseId}/apartments`;
+
+        // Если выбрана конкретная секция, добавляем фильтр
+        if (sectionId) {
+          url += `?section=${sectionId}`;
+        }
+
+        $.get(url, function(apartments) {
+          // Очищаем и добавляем опцию "Всем..."
+          apartmentSelect.empty().append(new Option('Всем...', ''));
+
+          if (apartments.length > 0) {
+            apartments.forEach(apt => {
+              apartmentSelect.append(new Option(`кв.${apt.number}`, apt.id));
+            });
+            // Разблокируем поле, так как данные есть
+            apartmentSelect.prop('disabled', false);
+          } else {
+            // Если квартир нет, блокируем и пишем сообщение
+            apartmentSelect.empty().append(new Option('Нет квартир', ''));
+            apartmentSelect.prop('disabled', true);
+          }
+        });
+      }
+
+      // --- Обработчик изменения ДОМА ---
       houseSelect.on('change', function() {
         const houseId = $(this).val();
 
-        resetSelect(sectionSelect, 'Выберите...');
-        resetSelect(floorSelect, 'Выберите...');
-        resetSelect(apartmentSelect, 'Сначала выберите секцию');
+        if (!houseId) {
+          // Если выбрали "Всем..." (пустое значение) в поле Дома
+          // Блокируем остальные поля, так как секции/этажи зависят от конкретного дома
+          resetSelect(sectionSelect, 'Всем...', true);
+          resetSelect(floorSelect, 'Всем...', true);
+          resetSelect(apartmentSelect, 'Всем...', true);
+          return;
+        }
 
-        if (!houseId) return;
+        // Сбрасываем зависимые поля, но ставим "Загрузка..."
+        resetSelect(sectionSelect, 'Загрузка...', true);
+        resetSelect(floorSelect, 'Загрузка...', true);
+        resetSelect(apartmentSelect, 'Загрузка...', true);
 
-        // Загружаем секции
+        // 1. Загружаем СЕКЦИИ
         $.get(`/api/v1/buildings/house/${houseId}/sections`, function(sections) {
-          sectionSelect.prop('disabled', false);
+          sectionSelect.empty().append(new Option('Всем...', ''));
           sections.forEach(s => sectionSelect.append(new Option(s.name, s.id)));
+          sectionSelect.prop('disabled', false);
         });
 
-        // Загружаем этажи
+        // 2. Загружаем ЭТАЖИ
         $.get(`/api/v1/buildings/house/${houseId}/floors`, function(floors) {
-          floorSelect.prop('disabled', false);
+          floorSelect.empty().append(new Option('Всем...', ''));
           floors.forEach(f => floorSelect.append(new Option(f.name, f.id)));
+          floorSelect.prop('disabled', false);
         });
+
+        // 3. Загружаем КВАРТИРЫ (сразу для всего дома)
+        loadApartments(houseId, null);
       });
 
+      // --- Обработчик изменения СЕКЦИИ ---
       sectionSelect.on('change', function() {
         const houseId = houseSelect.val();
         const sectionId = $(this).val();
 
-        resetSelect(apartmentSelect, 'Выберите...');
+        if (!houseId) return;
 
-        if (!houseId || !sectionId) return;
-
-        apartmentSelect.prop('disabled', false);
-        $.get(`/api/v1/buildings/house/${houseId}/apartments?section=${sectionId}`, function(apartments) {
-          apartments.forEach(apt => apartmentSelect.append(new Option(apt.number, apt.id)));
-        });
+        // Перезагружаем квартиры.
+        // Если sectionId пустой ("Всем..."), загрузятся все квартиры дома.
+        loadApartments(houseId, sectionId);
       });
+
+      // Этажи и Квартиры независимы друг от друга в контексте выбора,
+      // поэтому на change этажа ничего перезагружать не нужно,
+      // фильтрация произойдет на бэкенде.
     });
   </script>
 {% endblock scripts %}

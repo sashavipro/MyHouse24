@@ -1,16 +1,25 @@
 """src/users/views.py."""
 
+import logging
+
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError
 from django.db import IntegrityError
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.urls import reverse
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.views.generic import DetailView
+from django.views.generic import FormView
 from django.views.generic import ListView
 from django.views.generic import UpdateView
 from django.views.generic import View
@@ -18,15 +27,21 @@ from django.views.generic import View
 from src.building.models import House
 
 from .forms import CustomUserForm
+from .forms import InviteOwnerForm
 from .forms import MessageForm
+from .forms import MessageToOwnerForm
 from .forms import OwnerForm
 from .forms import RoleFormSet
 from .forms import TicketForm
+from .models import Invitation
 from .models import Message
 from .models import Role
 from .models import Ticket
 from .models import User
 from .permissions import RoleRequiredMixin
+from .tasks import send_invitation_email_task
+
+logger = logging.getLogger(__name__)
 
 
 class AdminRolesPageView(LoginRequiredMixin, View):
@@ -286,11 +301,15 @@ class MessageCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
     permission_required = "has_message"
     success_url = reverse_lazy("users:message_list")
 
-    def get_context_data(self, **kwargs):
-        """Add available houses to the context."""
-        context = super().get_context_data(**kwargs)
-        context["houses"] = House.objects.all()
-        return context
+    def get_initial(self):
+        """Set initial data for the form based on URL parameters.
+
+        For example: ?to_debtors=true sets the 'to_debtors' checkbox.
+        """
+        initial = super().get_initial()
+        if self.request.GET.get("to_debtors") == "true":
+            initial["to_debtors"] = True
+        return initial
 
     def form_valid(self, form):
         """Save the message with sender and recipients."""
@@ -443,3 +462,199 @@ class TicketDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
     template_name = "core/adminlte/ticket_detail.html"
     permission_required = "has_ticket"
     context_object_name = "ticket"
+
+
+class MessageToOwnerCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
+    """Send a message to a specific owner with pre-filled selection."""
+
+    model = Message
+    form_class = MessageToOwnerForm
+    template_name = "core/adminlte/message_to_owner_form.html"
+    permission_required = "has_message"
+    success_url = reverse_lazy("users:message_list")
+
+    def get_initial(self):
+        """Pre-select the owner based on the URL parameter."""
+        initial = super().get_initial()
+        owner_id = self.kwargs.get("owner_id")
+        if owner_id:
+            initial["owner"] = owner_id
+        return initial
+
+    def get_context_data(self, **kwargs):
+        """Get context data."""
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = "Новое сообщение"
+        return context
+
+    def form_valid(self, form):
+        """Form valid."""
+        try:
+            with transaction.atomic():
+                self.object = form.save(commit=False)
+                self.object.sender = self.request.user
+                self.object.save()
+                recipient = form.cleaned_data["owner"]
+                self.object.recipients.add(recipient)
+
+        except (DatabaseError, IntegrityError):
+            logger.exception("Failed to save message")
+
+        messages.success(self.request, "Сообщение успешно отправлено.")
+        return redirect(self.success_url)
+
+
+class ImpersonateUserView(LoginRequiredMixin, RoleRequiredMixin, View):
+    """Log in as another user (owner) without password.
+
+    Stores the original admin ID in the session to allow switching back.
+    """
+
+    permission_required = "has_owner"
+
+    def get(self, request, pk):
+        """Get."""
+        original_user_id = request.user.pk
+
+        target_user = get_object_or_404(User, pk=pk, user_type=User.UserType.OWNER)
+
+        if not hasattr(target_user, "backend"):
+            target_user.backend = settings.AUTHENTICATION_BACKENDS[0]
+
+        login(request, target_user)
+
+        request.session["impersonator_id"] = original_user_id
+
+        messages.warning(request, f"Вы вошли как {target_user.get_full_name()}.")
+        return redirect("cabinet:cabinet")
+
+
+class StopImpersonateView(View):
+    """Manually switch back to the admin user."""
+
+    def get(self, request, *args, **kwargs):
+        """Get."""
+        impersonator_id = request.session.get("impersonator_id")
+
+        if impersonator_id:
+            try:
+                admin_user = User.objects.get(pk=impersonator_id)
+
+                if not hasattr(admin_user, "backend"):
+                    admin_user.backend = settings.AUTHENTICATION_BACKENDS[0]
+
+                login(request, admin_user)
+                messages.info(
+                    request,
+                    "Сеанс восстановления. Вы вернулись в панель администратора.",
+                )
+
+                next_url = request.GET.get("next")
+                if next_url:
+                    return redirect(next_url)
+                return redirect("users:owner_list")
+
+            except User.DoesNotExist:
+                pass
+
+        return redirect("core:login")
+
+
+class InviteOwnerView(LoginRequiredMixin, RoleRequiredMixin, FormView):
+    """View to create a placeholder user and send an invitation link."""
+
+    template_name = "core/adminlte/invite_owner.html"
+    form_class = InviteOwnerForm
+    success_url = reverse_lazy("users:owner_list")
+    permission_required = "has_owner"
+
+    def form_valid(self, form):
+        """Form valid."""
+        email = form.cleaned_data["email"]
+        phone = form.cleaned_data["phone"]
+
+        if User.objects.filter(email=email).exists():
+            messages.error(
+                self.request,
+                f"Пользователь с email {email} уже существует.",  # noqa: RUF001
+            )
+            return self.form_invalid(form)
+
+        try:
+            with transaction.atomic():
+                user = User.objects.create(
+                    email=email,
+                    username=email,
+                    phone=phone,
+                    user_type=User.UserType.OWNER,
+                    status=User.UserStatus.NEW,
+                    is_active=True,
+                )
+                user.set_unusable_password()
+                user.save()
+
+                invitation = Invitation.objects.create(user=user)
+
+                path = reverse("users:accept_invitation", args=[invitation.token])
+
+                link = f"{settings.SITE_URL}{path}"
+
+                transaction.on_commit(
+                    lambda: send_invitation_email_task.delay(email, link)
+                )
+
+            messages.success(self.request, f"Приглашение отправлено на {email}")
+            return super().form_valid(form)
+
+        except (DatabaseError, IntegrityError):
+            logger.exception("Failed to create invitation for %s", email)
+            messages.error(self.request, "Ошибка при создании приглашения")
+            return self.form_invalid(form)
+
+
+class AcceptInvitationView(View):
+    """Handle the click on the invitation link."""
+
+    def get(self, request, token):
+        """Get."""
+        invitation = get_object_or_404(Invitation, token=token)
+
+        if invitation.is_used:
+            messages.error(request, "Эта ссылка приглашения уже была использована.")
+            return redirect("core:login")
+
+        user = invitation.user
+        user.backend = settings.AUTHENTICATION_BACKENDS[0]
+        login(request, user)
+
+        invitation.is_used = True
+        invitation.save()
+
+        if user.status == User.UserStatus.NEW:
+            user.status = User.UserStatus.ACTIVE
+            user.save()
+
+        messages.success(request, "Аккаунт активирован! Пожалуйста, установите пароль.")
+
+        return redirect("users:set_password")
+
+
+class SetInitialPasswordView(LoginRequiredMixin, FormView):
+    """Allow the user to set their password after accepting invitation."""
+
+    template_name = "core/adminlte/set_password.html"
+    form_class = SetPasswordForm
+    success_url = reverse_lazy("cabinet:cabinet")
+
+    def get_form_kwargs(self):
+        """Get form kwargs."""
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        """Form valid."""
+        user = form.save()
+        update_session_auth_hash(self.request, user)
+        messages.success(self.request, "Пароль успешно установлен.")
+        return super().form_valid(form)

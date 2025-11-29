@@ -1,0 +1,416 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Касса
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <!-- Подключаем Bootstrap Datepicker -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" />
+  <style>
+    /* Стили для иконок в боках */
+    .small-box {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .small-box .icon {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      z-index: 0;
+      font-size: 70px;
+      color: rgba(0, 0, 0, 0.15);
+      transition: all 0.3s linear;
+    }
+
+    .small-box:hover .icon {
+      font-size: 80px;
+      transform: rotate(-10deg);
+    }
+
+    .small-box .inner {
+      position: relative;
+      z-index: 1;
+      padding: 20px;
+    }
+
+    .small-box h3 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .small-box p {
+      font-size: 1.1rem;
+      margin-bottom: 0;
+    }
+
+    /* Стили для единиц измерения в статистике */
+    .small-box h3 sup {
+      font-size: 20px;
+    }
+
+    /* Скрываем иконки сортировки (ромбики) */
+    table.dataTable thead .dt-column-order {
+      display: none !important;
+    }
+
+    /* Выравниваем фильтры */
+    .filter-row td {
+      padding: 8px !important;
+    }
+
+    /* Стили для datepicker */
+    .datepicker-dropdown {
+      z-index: 9999 !important;
+    }
+
+    .input-group .input-group-text {
+      cursor: pointer;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>Касса</h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item active">Касса</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <!-- Статистика -->
+      <div class="row mb-3">
+        <!-- Состояние кассы -->
+        <div class="col-lg-4 col-md-4 col-12">
+          <div class="small-box bg-success">
+            <div class="inner">
+              <h3 id="stats-cash">
+                {{ total_cash|floatformat:2 }} <sup>грн</sup>
+              </h3>
+              <p>Состояние кассы</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-cash-coin"></i>
+            </div>
+          </div>
+        </div>
+        <!-- Баланс по счетам -->
+        <div class="col-lg-4 col-md-4 col-12">
+          <div class="small-box bg-info">
+            <div class="inner">
+              <h3 id="stats-balance">
+                {{ total_balance_accounts|floatformat:2 }} <sup>грн</sup>
+              </h3>
+              <p>Баланс по счетам</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-wallet2"></i>
+            </div>
+          </div>
+        </div>
+        <!-- Задолженность -->
+        <div class="col-lg-4 col-md-4 col-12">
+          <div class="small-box bg-danger">
+            <div class="inner">
+              <h3 id="stats-debt">
+                {{ total_debt|floatformat:2 }} <sup>грн</sup>
+              </h3>
+              <p>Задолженность по счетам</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-graph-down-arrow"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Действия -->
+      <div class="row mb-3">
+        <div class="col-12 text-end">
+          <div class="btn-group">
+            <button type="button"
+                    class="btn btn-success dropdown-toggle"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">Выберите действие</button>
+            <ul class="dropdown-menu">
+              <li>
+                <a class="dropdown-item" href="{% url 'finance:cashbox_income_add' %}">Создать приход</a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="{% url 'finance:cashbox_expense_add' %}">Создать расход</a>
+              </li>
+              <li>
+                <hr class="dropdown-divider" />
+              </li>
+              <li>
+                <a class="dropdown-item" href="#" id="export-btn">Выгрузить в Excel</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <!-- Таблица -->
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="d-flex justify-content-end p-3 border-bottom">
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    id="clear-filters-btn">Очистить</button>
+          </div>
+          <div class="table-responsive">
+            <table id="cashbox-table" class="table table-hover table-striped mb-0 w-100">
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Дата</th>
+                  <th>Статус</th>
+                  <th>Тип платежа</th>
+                  <th>Владелец</th>
+                  <th>Лицевой счет</th>
+                  <th>Приход/Расход</th>
+                  <th class="text-end">Сумма (грн)</th>
+                  <th></th>
+                </tr>
+                <tr class="filter-row">
+                  <td>
+                    <input type="text" id="filter_number" class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <!-- DATEPICKER С ИКОНКОЙ -->
+                    <div class="input-group input-group-sm">
+                      <input type="text"
+                             id="filter_date"
+                             class="form-control form-control-sm datepicker-input"
+                             placeholder="дд.мм.гггг"
+                             autocomplete="off" />
+                      <span class="input-group-text"
+                            onclick="$('#filter_date').datepicker('show')">
+                        <i class="bi bi-calendar"></i>
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <select id="filter_is_posted" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      <option value="true">Проведен</option>
+                      <option value="false">Не проведен</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select id="filter_article" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      {% for article in articles %}<option value="{{ article.pk }}">{{ article.name }}</option>{% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <select id="filter_owner" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      {% for owner in owners %}<option value="{{ owner.pk }}">{{ owner.get_full_name }}</option>{% endfor %}
+                    </select>
+                  </td>
+                  <td>
+                    <input type="text" id="filter_account" class="form-control form-control-sm" />
+                  </td>
+                  <td>
+                    <select id="filter_type" class="form-select form-select-sm">
+                      <option value="">Все</option>
+                      <option value="income">Приход</option>
+                      <option value="expense">Расход</option>
+                    </select>
+                  </td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <!-- Подключаем Bootstrap Datepicker -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.ru.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // === ИНИЦИАЛИЗАЦИЯ DATEPICKER ===
+      $('#filter_date').datepicker({
+        format: 'dd.mm.yyyy',
+        language: 'ru',
+        autoclose: true,
+        todayHighlight: true,
+        orientation: 'bottom auto',
+        clearBtn: true,
+        weekStart: 1
+      }).on('changeDate', function(e) {
+        table.ajax.reload();
+      }).on('clearDate', function(e) {
+        table.ajax.reload();
+      });
+
+      const table = $('#cashbox-table').DataTable({
+        serverSide: true,
+        processing: true,
+        searching: false,
+        ordering: true,
+        ajax: {
+          url: "{% url 'finance:ajax_datatable_cashbox' %}",
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          data: function(d) {
+            d.number = $('#filter_number').val();
+            d.date = $('#filter_date').val();
+            d.is_posted = $('#filter_is_posted').val();
+            d.article = $('#filter_article').val();
+            d.owner = $('#filter_owner').val();
+            d.personal_account = $('#filter_account').val();
+            d.type = $('#filter_type').val();
+          }
+        },
+        columns: [{
+          data: 'number'
+        }, {
+          data: 'date'
+        }, {
+          data: 'is_posted'
+        }, {
+          data: 'article'
+        }, {
+          data: 'owner',
+          orderable: false
+        }, {
+          data: 'personal_account'
+        }, {
+          data: 'type_display',
+          orderable: false
+        }, {
+          data: 'amount',
+          className: 'text-end'
+        }, {
+          data: 'actions',
+          orderable: false
+        }],
+        order: [
+          [1, 'desc']
+        ],
+        pageLength: 10,
+        language: {
+          processing: "Загрузка...",
+          zeroRecords: "Записи не найдены",
+          info: "Показано с _START_ по _END_ из _TOTAL_ записей",
+          infoEmpty: "Нет записей для отображения",
+          infoFiltered: "(отфильтровано из _MAX_)",
+          paginate: {
+            first: "«",
+            last: "»",
+            next: "›",
+            previous: "‹"
+          }
+        },
+        dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+      });
+
+      // Фильтры
+      let timer;
+      $('.filter-row input').on('keyup', function() {
+        clearTimeout(timer);
+        timer = setTimeout(() => table.ajax.reload(), 500);
+      });
+      $('.filter-row select').on('change', () => table.ajax.reload());
+
+      $('#clear-filters-btn').on('click', () => {
+        $('.filter-row input').val('');
+        $('.filter-row select').val('');
+        $('#filter_date').datepicker('clearDates'); // Очищаем datepicker
+        table.ajax.reload();
+      });
+
+      // Обработчик удаления
+      $(document).on('click', '.delete-cashbox-btn', function(e) {
+        e.stopPropagation();
+        const id = $(this).data('id');
+        if (!confirm(`Вы уверены, что хотите удалить эту запись?`)) return;
+        $.ajax({
+          url: `/api/v1/finance/cashbox/${id}`,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          success: function(res) {
+            if (res.status === 'success') {
+              table.ajax.reload(null, false);
+              if (res.stats) {
+                $('#stats-cash').html(`${res.stats.total_cash.toFixed(2)} <sup>грн</sup>`);
+                $('#stats-balance').html(`${res.stats.total_balance.toFixed(2)} <sup>грн</sup>`);
+                $('#stats-debt').html(`${res.stats.total_debt.toFixed(2)} <sup>грн</sup>`);
+              }
+            } else {
+              alert('Ошибка: ' + res.message);
+            }
+          },
+          error: function() {
+            alert('Произошла ошибка при удалении записи.');
+          }
+        });
+      });
+
+      // Клик по строке
+      $('#cashbox-table tbody').on('click', 'tr', function(e) {
+        if ($(e.target).closest('button, a, input').length) return;
+        const detailUrl = $(this).data('detail-url');
+        if (detailUrl) window.location.href = detailUrl;
+      });
+
+      // Экспорт в Excel
+      $('#export-btn').on('click', function(e) {
+        e.preventDefault();
+        const params = new URLSearchParams({
+          number: $('#filter_number').val() || '',
+          date: $('#filter_date').val() || '',
+          is_posted: $('#filter_is_posted').val() || '',
+          article: $('#filter_article').val() || '',
+          owner: $('#filter_owner').val() || '',
+          personal_account: $('#filter_account').val() || '',
+          type: $('#filter_type').val() || ''
+        });
+        const exportUrl = "{% url 'finance:cashbox_export' %}?" + params.toString();
+        window.location.href = exportUrl;
+      });
+
+      // === ПРИМЕНЯЕМ ФИЛЬТРЫ ИЗ URL ===
+      const urlParams = new URLSearchParams(window.location.search);
+      $('.filter-row input, .filter-row select').each(function() {
+        let paramName = $(this).attr('id').replace('filter_', '');
+        if (paramName === 'account') paramName = 'personal_account';
+        const paramValue = urlParams.get(paramName);
+        if (paramValue) {
+          $(this).val(paramValue).trigger('change');
+        }
+      });
+    });
+  </script>
+{% endblock scripts %}

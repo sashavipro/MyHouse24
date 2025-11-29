@@ -1,11 +1,17 @@
 """src/finance/api.py."""
 
+from django.db import DatabaseError
+from django.db import transaction
 from django.db.models import ProtectedError
+from django.db.models import Sum
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import Router
 
+from src.building.models import PersonalAccount
+
 from .models import Article
+from .models import CashBox
 from .models import CounterReading
 from .models import Receipt
 from .models import Service
@@ -170,6 +176,7 @@ def get_apartment_counter_readings(request, apartment_id: int):
             "date": r.date,
             "month_display": f"{months[r.date.month]} {r.date.year}",
             "service_name": r.service.name,
+            "service_id": r.counter.service.id,
             "value": r.value,
             "unit_name": r.service.unit.name,
         }
@@ -201,4 +208,115 @@ def bulk_delete_receipts(request: HttpRequest, payload: DeleteItemsSchema):
         return 200, {
             "status": "success",
             "message": f"Успешно удалено {count} квитанций.",
+        }
+
+
+@router.get(
+    "/apartment/{apartment_id}/unread-readings", response=list[CounterReadingSchema]
+)
+def get_apartment_unread_readings(request, apartment_id: int):
+    """Return unread (new) counter readings for the apartment."""
+    readings = (
+        CounterReading.objects.filter(
+            counter__apartment_id=apartment_id, status=CounterReading.CounterStatus.NEW
+        )
+        .select_related("counter__service__unit")
+        .order_by("date")
+    )
+
+    return [
+        {
+            "id": r.id,
+            "number": r.number,
+            "status": r.status,
+            "status_display": r.get_status_display(),
+            "date": r.date,
+            "month_display": "",
+            "service_name": r.counter.service.name,
+            "service_id": r.counter.service.id,
+            "value": r.value,
+            "unit_name": r.counter.service.unit.name,
+        }
+        for r in readings
+    ]
+
+
+@router.post(
+    "/counter-readings/mark-as-considered",
+    response={200: StatusResponse, 500: StatusResponse},
+)
+def mark_readings_as_considered(request: HttpRequest, payload: DeleteItemsSchema):
+    """Mark counter readings as 'considered' (учтено)."""
+    try:
+        updated_count = CounterReading.objects.filter(
+            id__in=payload.ids, status=CounterReading.CounterStatus.NEW
+        ).update(status=CounterReading.CounterStatus.CONSIDERED)
+
+    # Fixed BLE001: Catch specific exceptions instead of bare Exception
+    except (DatabaseError, ValueError, AttributeError) as e:
+        return 500, {
+            "status": "error",
+            "message": f"Ошибка при обновлении статусов: {e}",
+        }
+    else:
+        return 200, {
+            "status": "success",
+            "message": f"Обновлено показаний: {updated_count}",
+        }
+
+
+@router.delete("/cashbox/{cashbox_id}")
+def delete_cashbox(request: HttpRequest, cashbox_id: int):
+    """Delete a cashbox transaction and return updated stats."""
+    cashbox_to_delete = get_object_or_404(CashBox, id=cashbox_id)
+
+    try:
+        with transaction.atomic():
+            if cashbox_to_delete.is_posted and cashbox_to_delete.personal_account:
+                account = cashbox_to_delete.personal_account
+                if cashbox_to_delete.article.type == Article.ArticleType.INCOME:
+                    account.balance -= cashbox_to_delete.amount
+                elif cashbox_to_delete.article.type == Article.ArticleType.EXPENSE:
+                    account.balance += cashbox_to_delete.amount
+                account.save()
+
+            cashbox_to_delete.delete()
+
+            income = (
+                CashBox.objects.filter(
+                    is_posted=True, article__type="income"
+                ).aggregate(s=Sum("amount"))["s"]
+                or 0
+            )
+            expense = (
+                CashBox.objects.filter(
+                    is_posted=True, article__type="expense"
+                ).aggregate(s=Sum("amount"))["s"]
+                or 0
+            )
+            total_cash = income - expense
+
+            total_balance = (
+                PersonalAccount.objects.aggregate(t=Sum("balance"))["t"] or 0
+            )
+
+            total_debt = (
+                PersonalAccount.objects.filter(balance__lt=0).aggregate(
+                    t=Sum("balance")
+                )["t"]
+                or 0
+            )
+
+    # Fixed BLE001: Catch specific exceptions instead of bare Exception
+    except (DatabaseError, ValueError, AttributeError, ProtectedError) as e:
+        return 500, {"status": "error", "message": str(e)}
+    else:
+        return {
+            "status": "success",
+            "message": "Запись удалена",
+            "stats": {
+                "total_cash": float(total_cash),
+                "total_balance": float(total_balance),
+                "total_debt": float(total_debt),
+            },
         }

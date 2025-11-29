@@ -3,6 +3,40 @@
 {% block title %}
   История показаний счетчиков
 {% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <!-- Подключаем Bootstrap Datepicker -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css" />
+  <style>
+    .filter-row td {
+      padding: 8px !important;
+      background-color: #f8f9fa;
+    }
+
+    #readings-table thead .dt-column-order {
+      display: none !important;
+    }
+
+    #readings-table thead th {
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    #readings-table thead th:last-child {
+      text-align: right;
+    }
+
+    /* Стили для datepicker */
+    .datepicker-dropdown {
+      z-index: 9999 !important;
+    }
+
+    .input-group .input-group-text {
+      cursor: pointer;
+    }
+  </style>
+{% endblock styles %}
 {% block content %}
   <section class="content-header">
     <div class="container-fluid">
@@ -68,13 +102,20 @@
                   </select>
                 </td>
                 <td>
-                  <input type="text"
-                         id="filter_date"
-                         class="form-control form-control-sm"
-                         placeholder="ДД.ММ.ГГГГ" />
+                  <!-- НОВЫЙ DATEPICKER С ИКОНКОЙ КАЛЕНДАРЯ -->
+                  <div class="input-group input-group-sm">
+                    <input type="text"
+                           id="filter_date"
+                           class="form-control form-control-sm datepicker-input"
+                           placeholder="ДД.ММ.ГГГГ"
+                           autocomplete="off" />
+                    <span class="input-group-text"
+                          onclick="$('#filter_date').datepicker('show')">
+                      <i class="bi bi-calendar"></i>
+                    </span>
+                  </div>
                 </td>
                 <td></td>
-                <!-- Поле для месяца удалено -->
                 <td>
                   <select id="filter_house" class="form-select form-select-sm">
                     <option value="">Все дома</option>
@@ -114,9 +155,29 @@
         href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.css" />
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
   <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+  <!-- Подключаем Bootstrap Datepicker -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.ru.min.js"></script>
   <script>
     $(document).ready(function() {
       const csrfToken = '{{ csrf_token }}';
+
+      // === ИНИЦИАЛИЗАЦИЯ DATEPICKER ===
+      $('#filter_date').datepicker({
+        format: 'dd.mm.yyyy',
+        language: 'ru',
+        autoclose: true,
+        todayHighlight: true,
+        orientation: 'bottom auto',
+        clearBtn: true,
+        weekStart: 1
+      }).on('changeDate', function(e) {
+        // Когда пользователь выбрал дату, перезагружаем таблицу
+        table.ajax.reload();
+      }).on('clearDate', function(e) {
+        // Когда пользователь очистил дату
+        table.ajax.reload();
+      });
 
       const table = $('#readings-table').DataTable({
         serverSide: true,
@@ -141,59 +202,64 @@
           })
         },
         columns: [{
-            data: 'number',
-            orderable: false
-          }, // Сортировка отключена
-          {
-            data: 'status',
-            orderable: false
-          }, {
-            data: 'date',
-            orderable: true
-          }, // Сортировка оставлена
-          {
-            data: 'month',
-            orderable: false
-          }, {
-            data: 'house',
-            orderable: false
-          }, {
-            data: 'section',
-            orderable: false
-          }, {
-            data: 'apartment_number',
-            orderable: false
-          }, {
-            data: 'service',
-            orderable: false
-          }, {
-            data: 'value',
-            orderable: false
-          }, // Сортировка отключена
-          {
-            data: 'unit',
-            orderable: false
-          }, {
-            data: 'actions',
-            orderable: false
-          }
-        ],
+          data: 'number',
+          orderable: false
+        }, {
+          data: 'status',
+          orderable: false
+        }, {
+          data: 'date',
+          orderable: true
+        }, {
+          data: 'month',
+          orderable: false
+        }, {
+          data: 'house',
+          orderable: false
+        }, {
+          data: 'section',
+          orderable: false
+        }, {
+          data: 'apartment_number',
+          orderable: false
+        }, {
+          data: 'service',
+          orderable: false
+        }, {
+          data: 'value',
+          orderable: false
+        }, {
+          data: 'unit',
+          orderable: false
+        }, {
+          data: 'actions',
+          orderable: false
+        }],
         order: [
           [2, 'desc']
-        ], // Сортировка по умолчанию по дате
+        ],
         pageLength: 10,
         language: {
-          /* ... ваша локализация ... */
+          processing: "Загрузка...",
+          zeroRecords: "Записи не найдены",
+          info: "Показано с _START_ по _END_ из _TOTAL_ записей",
+          infoEmpty: "Нет записей для отображения",
+          infoFiltered: "(отфильтровано из _MAX_)",
+          paginate: {
+            first: "«",
+            last: "»",
+            next: "›",
+            previous: "‹"
+          }
         },
         dom: '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
       });
 
-      // --- Функция для применения фильтров из GET-параметров URL ---
+      // Функция для применения фильтров из GET-параметров URL
       function applyUrlFilters() {
         const params = new URLSearchParams(window.location.search);
         let filtersApplied = false;
 
-        // Устанавливаем значения для простых полей
         if (params.has('apartment_number')) {
           $('#filter_apartment_number').val(params.get('apartment_number'));
           filtersApplied = true;
@@ -203,7 +269,6 @@
           filtersApplied = true;
         }
 
-        // Обрабатываем дом и зависимую от него секцию
         if (params.has('house')) {
           const houseId = params.get('house');
           const sectionId = params.get('section');
@@ -213,40 +278,41 @@
           const sectionSelect = $('#filter_section');
           if (houseId) {
             sectionSelect.prop('disabled', true).html('<option value="">Загрузка...</option>');
-            // Загружаем секции для выбранного дома
             $.get(`/api/v1/buildings/house/${houseId}/sections`, data => {
               sectionSelect.html('<option value="">Все секции</option>');
               data.forEach(i => sectionSelect.append(new Option(i.name, i.id)));
               sectionSelect.prop('disabled', false);
-              // Устанавливаем значение секции ПОСЛЕ их загрузки
               if (sectionId) {
                 sectionSelect.val(sectionId);
               }
-              // Перезагружаем таблицу после установки всех фильтров
               table.ajax.reload();
             });
           }
         } else if (filtersApplied) {
-          // Если дома нет, но есть другие фильтры, перезагружаем таблицу
           table.ajax.reload();
         }
       }
 
-      // --- Логика фильтров ---
+      // Логика фильтров (для текстовых полей без datepicker)
       let timer;
-      $('#filter_number, #filter_apartment_number, #filter_date').on('keyup', () => {
+      $('#filter_number, #filter_apartment_number').on('keyup', () => {
         clearTimeout(timer);
         timer = setTimeout(() => table.ajax.reload(), 500);
       });
 
+      // Для селектов
       $('#filter_status, #filter_house, #filter_section, #filter_service').on('change', () => {
         table.ajax.reload();
       });
 
+      // Очистка фильтров
       $('#clear-filters-btn').on('click', () => {
-        $('.filter-row input, .filter-row select').val('').trigger('change');
+        $('.filter-row input, .filter-row select').val('');
+        $('#filter_date').datepicker('clearDates'); // Очищаем datepicker
+        table.ajax.reload();
       });
 
+      // Зависимость секции от дома
       $('#filter_house').on('change', function() {
         const houseId = $(this).val();
         const sectionSelect = $('#filter_section');
@@ -261,7 +327,7 @@
         }
       });
 
-      // --- AJAX-удаление показания ---
+      // AJAX-удаление показания
       $(document).on('click', '.delete-reading-btn', function() {
         if (!confirm('Вы уверены, что хотите удалить это показание?')) return;
         const readingId = $(this).data('id');
@@ -278,30 +344,8 @@
         });
       });
 
-      // --- Применяем фильтры из URL при первой загрузке страницы ---
+      // Применяем фильтры из URL при первой загрузке страницы
       applyUrlFilters();
     });
   </script>
-  <style>
-    .filter-row td {
-      padding: 8px !important;
-      background-color: #f8f9fa;
-    }
-
-    #readings-table thead .dt-column-order {
-      display: none !important;
-    }
-
-    #readings-table thead th {
-      text-align: left;
-      /* Выравниваем все заголовки по левому краю */
-      vertical-align: middle;
-      /* Предотвращаем вертикальные "прыжки" */
-    }
-
-    /* Выравниваем заголовок последней колонки (действия) по правому краю */
-    #readings-table thead th:last-child {
-      text-align: right;
-    }
-  </style>
 {% endblock scripts %}

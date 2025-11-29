@@ -416,10 +416,11 @@ class OwnerAjaxDatatableView(LoginRequiredMixin, AjaxDatatableView):
         detail_url = reverse("users:owner_detail", args=[obj.pk])
         row["DT_RowAttr"] = {"data-detail-url": detail_url}
         edit_url = reverse("users:owner_edit", args=[obj.pk])
+        send_msg_url = reverse("users:message_to_owner", args=[obj.pk])
         row["actions"] = f"""
             <div class="text-end" style="white-space: nowrap;">
-                <a href="#" class="btn btn-sm btn-secondary"
-                 title="Send message" onclick="event.stopPropagation();">
+                <a href="{send_msg_url}" class="btn btn-sm btn-default text-secondary"
+                 title="Отправить сообщение" onclick="event.stopPropagation();">
                     <i class="bi bi-envelope"></i>
                 </a>
                 <a href="{edit_url}" class="btn btn-sm btn-primary"

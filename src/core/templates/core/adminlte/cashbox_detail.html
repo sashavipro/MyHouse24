@@ -1,0 +1,203 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  {% if cashbox.type == 'income' %}
+    Приходная
+  {% else %}
+    Расходная
+  {% endif %}
+  ведомость
+{% endblock title %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>
+            {% if cashbox.type == 'income' %}
+              Приходная
+            {% else %}
+              Расходная
+            {% endif %}
+            ведомость
+          </h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:cashbox_list' %}">Касса</a>
+            </li>
+            <li class="breadcrumb-item active">Ведомость №{{ cashbox.number }}</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <div class="input-group">
+            <span class="input-group-text">№</span>
+            <input type="text"
+                   class="form-control"
+                   value="{{ cashbox.number }}"
+                   readonly />
+          </div>
+        </div>
+        <div class="col-auto d-flex align-items-center">от</div>
+        <div class="col-md-3">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+            <input type="text"
+                   class="form-control"
+                   value="{{ cashbox.date|date:'d.m.Y' }}"
+                   readonly />
+          </div>
+        </div>
+      </div>
+      <div class="card card-primary card-outline">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3 class="card-title">
+            {% if cashbox.type == 'income' %}
+              Приход
+            {% else %}
+              Расход
+            {% endif %}
+          </h3>
+          <!-- Группа кнопок действий -->
+          <div class="btn-group">
+            <!-- Ссылка на экспорт с фильтром по номеру текущей ведомости -->
+            <a href="{% url 'finance:cashbox_export' %}?number={{ cashbox.number }}"
+               class="btn btn-sm btn-default border"
+               title="Выгрузить в Excel">
+              <i class="bi bi-file-earmark-excel"></i> Выгрузить
+            </a>
+            <a href="{% url 'finance:cashbox_update' cashbox.pk %}"
+               class="btn btn-sm btn-primary">
+              <i class="bi bi-pencil"></i> Редактировать
+            </a>
+            <button type="button"
+                    class="btn btn-sm btn-danger delete-cashbox-btn"
+                    data-id="{{ cashbox.pk }}">
+              <i class="bi bi-trash"></i> Удалить
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <table class="table table-bordered table-striped">
+            <tbody>
+              <tr>
+                <th class="text-nowrap">Владелец квартиры</th>
+                <td>
+                  {% if cashbox.personal_account and cashbox.personal_account.apartment.owner %}
+                    <a href="{% url 'users:owner_detail' cashbox.personal_account.apartment.owner.pk %}">
+                      {{ cashbox.personal_account.apartment.owner.get_full_name }}
+                    </a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Лицевой счет</th>
+                <td>
+                  {% if cashbox.personal_account %}
+                    <a href="{% url 'building:personal_account_detail' cashbox.personal_account.pk %}">
+                      {{ cashbox.personal_account.number }}
+                    </a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Статья</th>
+                <td>{{ cashbox.article.name }}</td>
+              </tr>
+              <tr>
+                <th>Квитанция</th>
+                <td>
+                  {% if cashbox.receipt %}
+                    <a href="{% url 'finance:receipt_detail' cashbox.receipt.pk %}">
+                      {{ cashbox.receipt.number }} от {{ cashbox.receipt.date|date:"d.m.Y" }}
+                    </a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Услуга</th>
+                <td>-</td>
+              </tr>
+              <tr>
+                <th>Менеджер</th>
+                <td>
+                  {% if cashbox.manager %}
+                    <a href="{% url 'users:user_detail' cashbox.manager.pk %}">{{ cashbox.manager.get_full_name }}</a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Сумма</th>
+                <td>
+                  {% if cashbox.type == 'income' %}
+                    <span class="text-success fw-bold">{{ cashbox.amount }} грн</span>
+                  {% else %}
+                    <span class="text-danger fw-bold">-{{ cashbox.amount }} грн</span>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th>Комментарий</th>
+                <td>{{ cashbox.comment|default:"-" }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script>
+    $(document).ready(function() {
+      // Логика удаления записи
+      $('.delete-cashbox-btn').on('click', function() {
+        const id = $(this).data('id');
+        if (!confirm(`Вы уверены, что хотите удалить эту запись? Это может повлиять на баланс лицевого счета.`)) return;
+        const csrfToken = '{{ csrf_token }}';
+
+        $.ajax({
+          url: `/api/v1/finance/cashbox/${id}`,
+          type: 'DELETE',
+          headers: {
+            'X-CSRFToken': csrfToken
+          },
+          success: function(res) {
+            if (res.status === 'success') {
+              alert('Запись успешно удалена');
+              // Редирект на список после удаления
+              window.location.href = "{% url 'finance:cashbox_list' %}";
+            } else {
+              alert('Ошибка: ' + res.message);
+            }
+          },
+          error: function(xhr) {
+            const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Произошла ошибка при удалении записи.';
+            alert(msg);
+          }
+        });
+      });
+    });
+  </script>
+{% endblock scripts %}

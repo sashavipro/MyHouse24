@@ -1,5 +1,6 @@
 """src/finance/views.py."""
 
+import datetime
 import io
 import logging
 
@@ -12,8 +13,10 @@ from django.db import transaction
 from django.db.models import IntegerField
 from django.db.models import Max
 from django.db.models import ProtectedError
+from django.db.models import Q
 from django.db.models import Sum
 from django.db.models.functions import Cast
+from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
@@ -26,10 +29,16 @@ from django.views.generic import DetailView
 from django.views.generic import ListView
 from django.views.generic import TemplateView
 from django.views.generic import UpdateView
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
 
 from src.building.models import Apartment
 from src.building.models import House
+from src.building.models import PersonalAccount
+from src.core.utils import ReceiptExcelGenerator
 from src.finance.forms import ArticleForm
+from src.finance.forms import CashBoxExpenseForm
+from src.finance.forms import CashBoxIncomeForm
 from src.finance.forms import CounterReadingForm
 from src.finance.forms import PaymentDetailsForm
 from src.finance.forms import PrintTemplateForm
@@ -40,6 +49,7 @@ from src.finance.forms import TariffForm
 from src.finance.forms import TariffServiceFormSet
 from src.finance.forms import UnitFormSet
 from src.finance.models import Article
+from src.finance.models import CashBox
 from src.finance.models import Counter
 from src.finance.models import CounterReading
 from src.finance.models import PaymentDetails
@@ -48,6 +58,7 @@ from src.finance.models import Receipt
 from src.finance.models import Service
 from src.finance.models import Tariff
 from src.finance.models import Unit
+from src.users.models import Ticket
 from src.users.models import User
 from src.users.permissions import RoleRequiredMixin
 
@@ -61,8 +72,111 @@ class AdminStatsView(LoginRequiredMixin, RoleRequiredMixin, TemplateView):
     permission_required = "has_statistics"
 
     def get_context_data(self, **kwargs):
-        """Add data required for the dashboard to the context."""
-        return super().get_context_data(**kwargs)
+        """Get context data."""
+        context = super().get_context_data(**kwargs)
+
+        context["houses_count"] = House.objects.count()
+        context["active_owners_count"] = User.objects.filter(
+            user_type=User.UserType.OWNER, status=User.UserStatus.ACTIVE
+        ).count()
+        context["tickets_in_progress_count"] = Ticket.objects.filter(
+            status=Ticket.TicketStatus.IN_PROGRESS
+        ).count()
+        context["apartments_count"] = Apartment.objects.count()
+        context["personal_accounts_count"] = PersonalAccount.objects.count()
+        context["tickets_new_count"] = Ticket.objects.filter(
+            status=Ticket.TicketStatus.NEW
+        ).count()
+
+        context["total_debt_accounts"] = (
+            PersonalAccount.objects.filter(balance__lt=0).aggregate(s=Sum("balance"))[
+                "s"
+            ]
+            or 0
+        )
+        context["total_balance_accounts"] = (
+            PersonalAccount.objects.aggregate(s=Sum("balance"))["s"] or 0
+        )
+
+        income_total = (
+            CashBox.objects.filter(
+                is_posted=True, article__type=Article.ArticleType.INCOME
+            ).aggregate(s=Sum("amount"))["s"]
+            or 0
+        )
+        expense_total = (
+            CashBox.objects.filter(
+                is_posted=True, article__type=Article.ArticleType.EXPENSE
+            ).aggregate(s=Sum("amount"))["s"]
+            or 0
+        )
+        context["cashbox_balance"] = income_total - expense_total
+
+        today = timezone.now()
+        current_year = today.year
+
+        months_labels = []
+        for month in range(1, 13):
+            date_obj = datetime.date(current_year, month, 1)
+            months_labels.append(date_obj.strftime("%b., %Y"))
+
+        context["chart_labels"] = months_labels
+
+        receipts_data = (
+            Receipt.objects.filter(date__year=current_year, is_posted=True)
+            .annotate(month=TruncMonth("date"))
+            .values("month")
+            .annotate(total=Sum("total_amount"))
+            .order_by("month")
+        )
+
+        payments_data = (
+            CashBox.objects.filter(
+                date__year=current_year,
+                is_posted=True,
+                article__type=Article.ArticleType.INCOME,
+            )
+            .annotate(month=TruncMonth("date"))
+            .values("month")
+            .annotate(total=Sum("amount"))
+            .order_by("month")
+        )
+
+        context["chart_receipts_debt"] = self._fill_monthly_data(receipts_data)
+        context["chart_receipts_paid"] = self._fill_monthly_data(payments_data)
+
+        cashbox_income_data = payments_data
+
+        cashbox_expense_data = (
+            CashBox.objects.filter(
+                date__year=current_year,
+                is_posted=True,
+                article__type=Article.ArticleType.EXPENSE,
+            )
+            .annotate(month=TruncMonth("date"))
+            .values("month")
+            .annotate(total=Sum("amount"))
+            .order_by("month")
+        )
+
+        context["chart_cashbox_income"] = self._fill_monthly_data(cashbox_income_data)
+        context["chart_cashbox_expense"] = self._fill_monthly_data(cashbox_expense_data)
+
+        return context
+
+    def _fill_monthly_data(self, queryset_data):
+        """Map DB aggregation result to a list of 12 months."""
+        data_map = {
+            entry["month"].strftime("%m"): float(entry["total"])
+            for entry in queryset_data
+            if entry["month"]
+        }
+
+        result = []
+        for i in range(1, 13):
+            key = f"{i:02d}"
+            result.append(data_map.get(key, 0.0))
+        return result
 
 
 class ManageServicesView(LoginRequiredMixin, RoleRequiredMixin, View):
@@ -362,6 +476,13 @@ class CounterReadingCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView
         initial = super().get_initial()
         initial["date"] = timezone.localdate()
 
+        result = CounterReading.objects.aggregate(
+            max_number=Max(Cast("number", output_field=IntegerField()))
+        )
+        last_number = result.get("max_number") or 0
+
+        initial["number"] = str(last_number + 1)
+
         apartment_id = self.request.GET.get("apartment")
         if apartment_id:
             try:
@@ -476,8 +597,22 @@ class ReceiptListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         """Add statistics and filter data to the context."""
         context = super().get_context_data(**kwargs)
-        context["total_cash"] = 0
-        context["total_balance"] = (
+
+        income = (
+            CashBox.objects.filter(is_posted=True, article__type="income").aggregate(
+                s=Sum("amount")
+            )["s"]
+            or 0
+        )
+        expense = (
+            CashBox.objects.filter(is_posted=True, article__type="expense").aggregate(
+                s=Sum("amount")
+            )["s"]
+            or 0
+        )
+        context["total_cash"] = income - expense
+
+        context["total_balance_accounts"] = (
             Apartment.objects.aggregate(total=Sum("personal_account__balance"))["total"]
             or 0
         )
@@ -569,7 +704,7 @@ class ReceiptCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
         return context
 
     def form_valid(self, form):
-        """Save the receipt and calculate the total amount from line items."""
+        """Save the receipt, calculate total, and update counter readings."""
         context = self.get_context_data(form=form)
         services_formset = context["services_formset"]
 
@@ -591,6 +726,21 @@ class ReceiptCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
                     )
                     self.object.total_amount = total
                     self.object.save()
+
+                    service_ids = self.object.receiptitem_set.values_list(
+                        "service_id", flat=True
+                    )
+
+                    if self.object.apartment:
+                        readings_to_update = CounterReading.objects.filter(
+                            counter__apartment=self.object.apartment,
+                            counter__service_id__in=service_ids,
+                            status=CounterReading.CounterStatus.NEW,
+                        )
+                        readings_to_update.update(
+                            status=CounterReading.CounterStatus.CONSIDERED
+                        )
+
             except (DatabaseError, ValidationError):
                 logger.exception("Error creating receipt")
                 return self.form_invalid(form)
@@ -636,16 +786,27 @@ class ReceiptUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
         return context
 
     def form_valid(self, form):
-        """Save the receipt and recalculate the total amount."""
+        """Save the receipt, calculate total, and update counter readings."""
         context = self.get_context_data(form=form)
         services_formset = context["services_formset"]
 
         if services_formset.is_valid():
             try:
                 with transaction.atomic():
-                    self.object = form.save()
+                    old_service_ids = set(
+                        self.object.receiptitem_set.values_list("service_id", flat=True)
+                    )
+
+                    self.object = form.save(commit=False)
+                    self.object.total_amount = 0
+                    self.object.save()
+
                     services_formset.instance = self.object
                     services_formset.save()
+
+                    new_service_ids = set(
+                        self.object.receiptitem_set.values_list("service_id", flat=True)
+                    )
 
                     total = (
                         self.object.receiptitem_set.aggregate(total=Sum("amount"))[
@@ -655,6 +816,32 @@ class ReceiptUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
                     )
                     self.object.total_amount = total
                     self.object.save()
+
+                    if self.object.apartment:
+                        added_services = new_service_ids - old_service_ids
+                        if added_services:
+                            CounterReading.objects.filter(
+                                counter__apartment=self.object.apartment,
+                                counter__service_id__in=added_services,
+                                status=CounterReading.CounterStatus.NEW,
+                            ).update(status=CounterReading.CounterStatus.CONSIDERED)
+
+                        removed_services = old_service_ids - new_service_ids
+                        if removed_services:
+                            CounterReading.objects.filter(
+                                counter__apartment=self.object.apartment,
+                                counter__service_id__in=removed_services,
+                                status=CounterReading.CounterStatus.CONSIDERED,
+                            ).update(status=CounterReading.CounterStatus.NEW)
+
+                        remained_services = new_service_ids & old_service_ids
+                        if remained_services:
+                            CounterReading.objects.filter(
+                                counter__apartment=self.object.apartment,
+                                counter__service_id__in=remained_services,
+                                status=CounterReading.CounterStatus.NEW,
+                            ).update(status=CounterReading.CounterStatus.CONSIDERED)
+
             except (DatabaseError, ValidationError):
                 logger.exception("Error updating receipt")
                 return self.form_invalid(form)
@@ -702,171 +889,22 @@ class ReceiptPrintFormView(LoginRequiredMixin, RoleRequiredMixin, View):
         template_obj = get_object_or_404(PrintTemplate, pk=template_id)
 
         try:
-            workbook = self._generate_receipt_workbook(receipt, template_obj)
+            generator = ReceiptExcelGenerator(receipt, template_obj.template_file.path)
+            workbook = generator.generate_workbook()
 
             if "download" in request.POST:
                 return self._create_download_response(workbook, receipt)
 
             if "send_email" in request.POST:
-                pass
+                messages.info(request, "Отправка на E-mail в разработке.")
 
         except Exception:
             logger.exception("Error generating receipt Excel file")
+            messages.error(request, "Ошибка при формировании файла квитанции.")
 
         templates = PrintTemplate.objects.all().order_by("-is_default", "name")
         return render(
             request, self.template_name, {"receipt": receipt, "templates": templates}
-        )
-
-    def _generate_receipt_workbook(self, receipt, template_obj):
-        """Generate Excel workbook from receipt and template."""
-        workbook = openpyxl.load_workbook(template_obj.template_file.path)
-        sheet = workbook.active
-        context = self._build_template_context(receipt)
-        self._replace_template_variables(sheet, context)
-        items = receipt.receiptitem_set.select_related("service__unit").all()
-        template_row_idx = self._find_template_row(sheet)
-
-        if template_row_idx and items:
-            self._insert_receipt_items(sheet, template_row_idx, items)
-
-        return workbook
-
-    def _build_template_context(self, receipt):
-        """Build context dictionary for template variable replacement."""
-        status_map = {
-            "paid": "Оплачена",
-            "partially_paid": "Частично оплачена",
-            "unpaid": "Неоплачена",
-        }
-
-        period = "—"
-        if receipt.period_start and receipt.period_end:
-            period = (
-                f"{receipt.period_start.strftime('%d.%m.%Y')} "
-                f"- {receipt.period_end.strftime('%d.%m.%Y')}"
-            )
-
-        return {
-            "{{ receipt.is_posted }}": (
-                "Conducted" if receipt.is_posted else "Not conducted"
-            ),
-            "{{ receipt.status }}": status_map.get(receipt.status, "—"),
-            "{{ receipt.period }}": period,
-            "{{ personal_account.number }}": (
-                receipt.apartment.personal_account.number
-                if receipt.apartment.personal_account
-                else "—"
-            ),
-            "{{ owner.phone }}": (
-                receipt.apartment.owner.phone
-                if receipt.apartment.owner and receipt.apartment.owner.phone
-                else "—"
-            ),
-            "{{ apartment.house }}": receipt.apartment.house.title,
-            "{{ apartment.number }}": receipt.apartment.number,
-            "{{ apartment.section }}": (
-                receipt.apartment.section.name if receipt.apartment.section else "—"
-            ),
-            "{{ receipt.tariff }}": receipt.tariff.name if receipt.tariff else "—",
-            "{{ receipt.total_amount }}": f"{receipt.total_amount:.2f}",
-            "{{ receipt.number }}": receipt.number,
-            "{{ receipt.date }}": receipt.date.strftime("%d.%m.%Y"),
-            "{{ owner.full_name }}": (
-                receipt.apartment.owner.get_full_name()
-                if receipt.apartment.owner
-                else "—"
-            ),
-        }
-
-    def _replace_template_variables(self, sheet, context):
-        """Replace template variables in sheet cells with actual values."""
-        for row in sheet.iter_rows():
-            for cell in row:
-                if isinstance(cell.value, str):
-                    for key, value in context.items():
-                        if key in cell.value:
-                            cell.value = cell.value.replace(key, str(value))
-
-    def _find_template_row(self, sheet):
-        """Find the row containing item template variables."""
-        for i, row in enumerate(sheet.iter_rows(), 1):
-            for cell in row:
-                if isinstance(cell.value, str) and (
-                    "{{ item.name }}" in cell.value or "{{ item.number }}" in cell.value
-                ):
-                    return i
-        return None
-
-    def _insert_receipt_items(self, sheet, template_row_idx, items):
-        """Insert receipt items into the sheet using the template row."""
-        template_row = sheet[template_row_idx]
-
-        for i, item in enumerate(items, 1):
-            sheet.insert_rows(template_row_idx + i)
-            new_row = sheet[template_row_idx + i]
-
-            self._copy_row_style(template_row, new_row)
-            self._populate_item_row(new_row, template_row, item, i)
-
-        sheet.delete_rows(template_row_idx)
-
-    def _copy_row_style(self, template_row, new_row):
-        """Copy cell styles from template row to new row."""
-        for j, template_cell in enumerate(template_row, 1):
-            new_cell = new_row[j - 1]
-            if template_cell.has_style:
-                new_cell.font = template_cell.font.copy()
-                new_cell.border = template_cell.border.copy()
-                new_cell.fill = template_cell.fill.copy()
-                new_cell.number_format = template_cell.number_format
-                new_cell.protection = template_cell.protection.copy()
-                new_cell.alignment = template_cell.alignment.copy()
-
-    def _populate_item_row(self, new_row, template_row, item, item_number):
-        """Populate new row with receipt item data."""
-        for j, template_cell in enumerate(template_row, 1):
-            new_cell = new_row[j - 1]
-
-            if not isinstance(template_cell.value, str):
-                continue
-
-            val_str = self._replace_item_placeholders(
-                template_cell.value, item, item_number
-            )
-
-            try:
-                numeric_placeholders = [
-                    "{{ item.consumption }}",
-                    "{{ item.price }}",
-                    "{{ item.amount }}",
-                    "{{ item.number }}",
-                ]
-                if any(p in template_cell.value for p in numeric_placeholders):
-                    new_cell.value = float(val_str.replace(",", "."))
-                else:
-                    new_cell.value = val_str
-            except (ValueError, TypeError):
-                new_cell.value = val_str
-
-    def _replace_item_placeholders(self, template_value, item, item_number):
-        """Replace item placeholders with actual values."""
-        return (
-            template_value.replace("{{ item.number }}", str(item_number))
-            .replace("{{ item.name }}", item.service.name)
-            .replace(
-                "{{ item.consumption }}",
-                f"{item.consumption:.3f}" if item.consumption is not None else "",
-            )
-            .replace("{{ item.unit }}", item.service.unit.name)
-            .replace(
-                "{{ item.price }}",
-                f"{item.price_per_unit:.2f}" if item.price_per_unit is not None else "",
-            )
-            .replace(
-                "{{ item.amount }}",
-                f"{item.amount:.2f}" if item.amount is not None else "",
-            )
         )
 
     def _create_download_response(self, workbook, receipt):
@@ -878,7 +916,7 @@ class ReceiptPrintFormView(LoginRequiredMixin, RoleRequiredMixin, View):
         response = HttpResponse(
             virtual_workbook.read(),
             content_type=(
-                "application/vnd.openxmlformats-officedocument." "spreadsheetml.sheet"
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             ),
         )
         response["Content-Disposition"] = (
@@ -924,3 +962,260 @@ class ReceiptTemplateSettingsView(LoginRequiredMixin, RoleRequiredMixin, View):
         return render(
             request, self.template_name, {"templates": templates, "form": form}
         )
+
+
+class CashBoxListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
+    """CashBoxListView."""
+
+    model = CashBox
+    template_name = "core/adminlte/cashbox_list.html"
+    permission_required = "has_cashbox"
+
+    def get_context_data(self, **kwargs):
+        """Get the context data for the template."""
+        context = super().get_context_data(**kwargs)
+        income = (
+            CashBox.objects.filter(is_posted=True, article__type="income").aggregate(
+                s=Sum("amount")
+            )["s"]
+            or 0
+        )
+        expense = (
+            CashBox.objects.filter(is_posted=True, article__type="expense").aggregate(
+                s=Sum("amount")
+            )["s"]
+            or 0
+        )
+        context["total_cash"] = income - expense
+
+        context["total_balance_accounts"] = (
+            Apartment.objects.aggregate(total=Sum("personal_account__balance"))["total"]
+            or 0
+        )
+        context["total_debt"] = (
+            Apartment.objects.filter(personal_account__balance__lt=0).aggregate(
+                total=Sum("personal_account__balance")
+            )["total"]
+            or 0
+        )
+        context["articles"] = Article.objects.all()
+        context["owners"] = User.objects.filter(user_type=User.UserType.OWNER)
+        return context
+
+
+class CashBoxIncomeCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
+    """CashBoxIncomeCreateView."""
+
+    model = CashBox
+    form_class = CashBoxIncomeForm
+    template_name = "core/adminlte/cashbox_income_form.html"
+    success_url = reverse_lazy("finance:cashbox_list")
+    permission_required = "has_cashbox"
+
+    def get_initial(self):
+        """Get the initial data for the template."""
+        initial = super().get_initial()
+        last = CashBox.objects.aggregate(Max("id"))["id__max"] or 0
+        initial["number"] = f"{last + 1}".zfill(10)
+        initial["date"] = timezone.now().date()
+        initial["manager"] = self.request.user
+
+        pa_id = self.request.GET.get("personal_account_id")
+        if pa_id:
+            from src.building.models import PersonalAccount
+
+            try:
+                pa = PersonalAccount.objects.select_related("apartment__owner").get(
+                    pk=pa_id
+                )
+                initial["personal_account"] = pa
+
+                if pa.apartment and pa.apartment.owner:
+                    initial["owner"] = pa.apartment.owner
+            except PersonalAccount.DoesNotExist:
+                pass
+
+        return initial
+
+    def form_valid(self, form):
+        """Form validation."""
+        with transaction.atomic():
+            response = super().form_valid(form)
+            if self.object.is_posted and self.object.personal_account:
+                self.object.personal_account.balance += self.object.amount
+                self.object.personal_account.save()
+            return response
+
+
+class CashBoxExpenseCreateView(LoginRequiredMixin, RoleRequiredMixin, CreateView):
+    """CashBox Expense Create View."""
+
+    model = CashBox
+    form_class = CashBoxExpenseForm
+    template_name = "core/adminlte/cashbox_expense_form.html"
+    success_url = reverse_lazy("finance:cashbox_list")
+    permission_required = "has_cashbox"
+
+    def get_initial(self):
+        """Get initial data for the template."""
+        initial = super().get_initial()
+        last = CashBox.objects.aggregate(Max("id"))["id__max"] or 0
+        initial["number"] = f"{last + 1}".zfill(10)
+        initial["date"] = timezone.now().date()
+        initial["manager"] = self.request.user
+        return initial
+
+    def form_valid(self, form):
+        """Form validation."""
+        return super().form_valid(form)
+
+
+class CashBoxUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
+    """Depending on the type of article, we substitute the appropriate template."""
+
+    model = CashBox
+    permission_required = "has_cashbox"
+    success_url = reverse_lazy("finance:cashbox_list")
+
+    def get_form_class(self):
+        """Get form class."""
+        if self.object.article.type == "income":
+            return CashBoxIncomeForm
+        return CashBoxExpenseForm
+
+    def get_template_names(self):
+        """Get template names."""
+        if self.object.article.type == "income":
+            return ["core/adminlte/cashbox_income_form.html"]
+        return ["core/adminlte/cashbox_expense_form.html"]
+
+
+class CashBoxDetailView(LoginRequiredMixin, RoleRequiredMixin, DetailView):
+    """Display detailed information about a cashbox transaction."""
+
+    model = CashBox
+    template_name = "core/adminlte/cashbox_detail.html"
+    permission_required = "has_cashbox"
+    context_object_name = "cashbox"
+
+
+class ExportCashBoxExcelView(LoginRequiredMixin, RoleRequiredMixin, View):
+    """Export filtered CashBox transactions to Excel."""
+
+    permission_required = "has_cashbox"
+
+    def get(self, request, *args, **kwargs):
+        """Get."""
+        queryset = self.filter_queryset(request)
+
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Касса"  # noqa: RUF001
+
+        headers = [
+            "№",
+            "Дата",
+            "Статус",
+            "Тип платежа",
+            "Владелец",
+            "Лицевой счет",
+            "Приход/Расход",
+            "Сумма (грн)",
+            "Комментарий",
+        ]
+        sheet.append(headers)
+
+        for cell in sheet[1]:
+            cell.font = Font(bold=True)
+
+        for item in queryset:
+            owner_name = "-"
+            if (
+                item.personal_account
+                and item.personal_account.apartment
+                and item.personal_account.apartment.owner
+            ):
+                owner_name = item.personal_account.apartment.owner.get_full_name()
+
+            status = "Проведен" if item.is_posted else "Не проведен"  # noqa: RUF001
+
+            type_display = (
+                "Приход"
+                if item.article.type == Article.ArticleType.INCOME
+                else "Расход"
+            )
+
+            amount = item.amount
+            if item.article.type == Article.ArticleType.EXPENSE:
+                amount = -amount
+
+            row = [
+                item.number,
+                item.date.strftime("%d.%m.%Y"),
+                status,
+                item.article.name,
+                owner_name,
+                item.personal_account.number if item.personal_account else "-",
+                type_display,
+                amount,
+                item.comment,
+            ]
+            sheet.append(row)
+
+        column_widths = [15, 12, 12, 25, 30, 20, 15, 15, 40]
+        for i, width in enumerate(column_widths, 1):
+            sheet.column_dimensions[get_column_letter(i)].width = width
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = 'attachment; filename="cashbox_export.xlsx"'
+
+        workbook.save(response)
+        return response
+
+    def filter_queryset(self, request):
+        """Replicate the filtering logic from Datatables."""
+        queryset = CashBox.objects.select_related(
+            "article", "personal_account", "personal_account__apartment__owner"
+        ).order_by("-date", "-id")
+
+        number = request.GET.get("number", "").strip()
+        date = request.GET.get("date", "").strip()
+        is_posted = request.GET.get("is_posted", "").strip()
+        article = request.GET.get("article", "").strip()
+        owner = request.GET.get("owner", "").strip()
+        account = request.GET.get("personal_account", "").strip()
+        type_op = request.GET.get("type", "").strip()
+
+        q = Q()
+
+        if number:
+            q &= Q(number__icontains=number)
+
+        try:
+            import re
+
+            if re.match(r"^\d{1,2}\.\d{1,2}\.\d{4}$", date):
+                day, month, year = map(int, date.split("."))
+                filter_date = datetime.date(year, month, day)
+                q &= Q(date=filter_date)
+        except (ValueError, AttributeError):
+            pass
+
+        if is_posted:
+            q &= Q(is_posted=(is_posted.lower() == "true"))
+
+        if article:
+            q &= Q(article_id=article)
+
+        if owner:
+            q &= Q(personal_account__apartment__owner_id=owner)
+
+        if account:
+            q &= Q(personal_account__number__icontains=account)
+
+        if type_op:
+            q &= Q(article__type=type_op)
+
+        return queryset.filter(q)

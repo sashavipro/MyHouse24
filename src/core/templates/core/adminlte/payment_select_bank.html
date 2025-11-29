@@ -1,0 +1,28 @@
+{% extends 'core/adminlte/cabinet_layout.html' %}
+
+{% block content %}
+  <div class="container mt-4">
+    <h3>Выберите способ оплаты</h3>
+    <form action="{% url 'cabinet:receipt_pay_process' receipt.pk %}"
+          method="get">
+      <div class="form-check mb-3">
+        <input class="form-check-input"
+               type="radio"
+               name="bank"
+               id="privat"
+               value="privat"
+               checked />
+        <label class="form-check-label" for="privat">Приват24</label>
+      </div>
+      <div class="form-check mb-3">
+        <input class="form-check-input"
+               type="radio"
+               name="bank"
+               id="mono"
+               value="mono" />
+        <label class="form-check-label" for="mono">Monobank</label>
+      </div>
+      <button type="submit" class="btn btn-success">Перейти к оплате</button>
+    </form>
+  </div>
+{% endblock content %}

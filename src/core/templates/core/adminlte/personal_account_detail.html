@@ -33,7 +33,10 @@
           <div class="d-flex justify-content-between align-items-center">
             <h3 class="card-title">Просмотр лицевого счета</h3>
             <div>
-              <a href="#" class="btn btn-sm btn-success disabled"><i class="bi bi-currency-dollar"></i> Принять платеж</a>
+              <a href="{% url 'finance:cashbox_income_add' %}?personal_account_id={{ account.pk }}"
+                 class="btn btn-sm btn-success">
+                <i class="bi bi-currency-dollar"></i> Принять платеж
+              </a>
               {% if account.apartment %}
                 <a href="{% url 'finance:receipt_add' %}?apartment={{ account.apartment.pk }}"
                    class="btn btn-sm btn-info">
@@ -94,9 +97,22 @@
           </table>
         </div>
         <div class="card-footer">
-          <a href="#" class="me-3 disabled">Посмотреть показания счетчиков</a>
-          <a href="#" class="me-3 disabled">Посмотреть приходы</a>
-          <a href="#" class="me-3 disabled">Посмотреть квитанции</a>
+          <!-- Счетчики -->
+          {% if account.apartment %}
+            <a href="{% url 'finance:counter_list' %}?house={{ account.apartment.house.pk }}{% if account.apartment.section %}&section={{ account.apartment.section.pk }}{% endif %}&apartment_number={{ account.apartment.number }}"
+               class="me-3">Посмотреть показания счетчиков</a>
+          {% else %}
+            <span class="me-3 text-muted">Посмотреть показания счетчиков</span>
+          {% endif %}
+          <!-- Приходы: account + type + owner -->
+          <a href="{% url 'finance:cashbox_list' %}?account={{ account.number }}&type=income{% if account.apartment and account.apartment.owner %}&owner={{ account.apartment.owner.pk }}{% endif %}"
+             class="me-3">Посмотреть приходы</a>
+          <!-- Квитанции -->
+          {% if account.apartment %}
+            <a href="{% url 'finance:receipt_list' %}?apartment_number={{ account.apartment.number }}{% if account.apartment.owner %}&owner={{ account.apartment.owner.pk }}{% endif %}">Посмотреть квитанции</a>
+          {% else %}
+            <span class="text-muted">Посмотреть квитанции</span>
+          {% endif %}
         </div>
       </div>
     </div>

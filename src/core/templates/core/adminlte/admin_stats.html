@@ -5,8 +5,88 @@
 {% block title %}
   Статистика
 {% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    /* Стили для красивых карточек (Small Box) */
+    .small-box {
+      position: relative;
+      display: block;
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+      border-radius: 2px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      /* Чтобы огромная иконка не вылезала за границы */
+    }
+
+    .small-box .inner {
+      padding: 10px;
+      position: relative;
+      /* Чтобы текст был поверх иконки */
+      z-index: 2;
+      color: #fff;
+      /* Белый текст */
+    }
+
+    .small-box h3 {
+      font-size: 38px;
+      font-weight: bold;
+      margin: 0 0 10px 0;
+      white-space: nowrap;
+      padding: 0;
+    }
+
+    .small-box p {
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+
+    /* Стили для ИКОНКИ */
+    .small-box .icon {
+      position: absolute;
+      top: -10px;
+      right: 10px;
+      z-index: 0;
+      /* На задний план */
+      font-size: 90px;
+      /* Большая иконка */
+      color: rgba(0, 0, 0, 0.15);
+      /* Полупрозрачная */
+      transition: all 0.3s linear;
+    }
+
+    /* Эффект при наведении */
+    .small-box:hover .icon {
+      font-size: 95px;
+      transform: scale(1.1);
+    }
+
+    .small-box-footer {
+      position: relative;
+      text-align: center;
+      padding: 3px 0;
+      color: #fff;
+      color: rgba(255, 255, 255, 0.8);
+      display: block;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.1);
+      text-decoration: none;
+    }
+
+    .small-box-footer:hover {
+      color: #fff;
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .chart-canvas {
+      min-height: 250px;
+      height: 250px;
+      max-height: 250px;
+      max-width: 100%;
+    }
+  </style>
+{% endblock styles %}
 {% block content %}
-  <!-- Content Header (Page header) -->
   <div class="content-header">
     <div class="container-fluid">
       <div class="row mb-2">
@@ -16,18 +96,211 @@
       </div>
     </div>
   </div>
-  <!-- /.content-header -->
-  <!-- Main content -->
   <section class="content">
     <div class="container-fluid">
-      <!-- Здесь будет ваша статистика -->
-      <div class="alert alert-info">
-        <h5>
-          <i class="icon bi bi-info-circle"></i> Добро пожаловать!
-        </h5>
-        Это главная страница вашей административной панели.
+      <!-- ВЕРХНИЙ РЯД: 6 БОКСОВ -->
+      <div class="row">
+        <!-- 1. Дома -->
+        <div class="col-lg-4 col-6">
+          <div class="small-box bg-primary">
+            <div class="inner">
+              <h3>{{ houses_count }}</h3>
+              <p>Домов</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-building"></i>
+            </div>
+            <a href="{% url 'building:house_list' %}" class="small-box-footer">Перейти в дома <i class="bi bi-arrow-right-circle"></i></a>
+          </div>
+        </div>
+        <!-- 2. Активные владельцы -->
+        <div class="col-lg-4 col-6">
+          <div class="small-box bg-success">
+            <div class="inner">
+              <h3>{{ active_owners_count }}</h3>
+              <p>Активных владельцев</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-people-fill"></i>
+            </div>
+            <a href="{% url 'users:owner_list' %}" class="small-box-footer">Перейти к владельцам <i class="bi bi-arrow-right-circle"></i></a>
+          </div>
+        </div>
+        <!-- 3. Заявки в работе -->
+        <div class="col-lg-4 col-6">
+          <div class="small-box bg-warning">
+            <div class="inner">
+              <h3>{{ tickets_in_progress_count }}</h3>
+              <p>Заявок мастера в работе</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-tools"></i>
+            </div>
+            <a href="{% url 'users:ticket_list' %}" class="small-box-footer">Перейти в заявки <i class="bi bi-arrow-right-circle"></i></a>
+          </div>
+        </div>
+        <!-- 4. Квартиры -->
+        <div class="col-lg-4 col-6">
+          <div class="small-box bg-primary">
+            <div class="inner">
+              <h3>{{ apartments_count }}</h3>
+              <p>Квартир</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-key-fill"></i>
+            </div>
+            <a href="{% url 'building:apartment_list' %}" class="small-box-footer">Перейти в квартиры <i class="bi bi-arrow-right-circle"></i></a>
+          </div>
+        </div>
+        <!-- 5. Лицевые счета -->
+        <div class="col-lg-4 col-6">
+          <div class="small-box bg-success">
+            <div class="inner">
+              <h3>{{ personal_accounts_count }}</h3>
+              <p>Лицевых счетов</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-person-vcard"></i>
+            </div>
+            <a href="{% url 'building:personal_account_list' %}"
+               class="small-box-footer">Перейти к счетам <i class="bi bi-arrow-right-circle"></i></a>
+          </div>
+        </div>
+        <!-- 6. Новые заявки -->
+        <div class="col-lg-4 col-6">
+          <div class="small-box bg-warning">
+            <div class="inner">
+              <h3>{{ tickets_new_count }}</h3>
+              <p>Новых заявок мастера</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-person-plus-fill"></i>
+            </div>
+            <a href="{% url 'users:ticket_list' %}" class="small-box-footer">Перейти в заявки <i class="bi bi-arrow-right-circle"></i></a>
+          </div>
+        </div>
+      </div>
+      <!-- КОНЕЦ ВЕРХНЕГО РЯДА -->
+      <!-- СРЕДНИЙ РЯД: ГРАФИК 1 и ИНФО-БОКСЫ -->
+      <div class="row">
+        <!-- График погашения -->
+        <div class="col-lg-8">
+          <div class="card">
+            <div class="card-header border-0">
+              <h3 class="card-title">График погашения квитанций, грн</h3>
+            </div>
+            <div class="card-body">
+              <canvas id="receiptsChart" class="chart-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+        <!-- Инфо-боксы справа -->
+        <div class="col-lg-4">
+          <!-- Задолженность -->
+          <div class="info-box mb-3 bg-danger">
+            <span class="info-box-icon"><i class="bi bi-cash"></i></span>
+            <div class="info-box-content">
+              <span class="info-box-text">ЗАДОЛЖЕННОСТЬ ПО СЧЕТАМ, ГРН</span>
+              <span class="info-box-number">{{ total_debt_accounts|floatformat:2 }}</span>
+            </div>
+          </div>
+          <!-- Баланс -->
+          <div class="info-box mb-3 bg-info">
+            <span class="info-box-icon"><i class="bi bi-wallet2"></i></span>
+            <div class="info-box-content">
+              <span class="info-box-text">БАЛАНС ПО СЧЕТАМ, ГРН</span>
+              <span class="info-box-number">{{ total_balance_accounts|floatformat:2 }}</span>
+            </div>
+          </div>
+          <!-- Касса -->
+          <div class="info-box mb-3 bg-success">
+            <span class="info-box-icon"><i class="bi bi-cash-coin"></i></span>
+            <div class="info-box-content">
+              <span class="info-box-text">СОСТОЯНИЕ КАССЫ, ГРН</span>
+              <span class="info-box-number">{{ cashbox_balance|floatformat:2 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- НИЖНИЙ РЯД: ГРАФИК 2 -->
+      <div class="row">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header border-0">
+              <h3 class="card-title">График приходов и расходов по кассе, грн</h3>
+            </div>
+            <div class="card-body">
+              <canvas id="cashboxChart" class="chart-canvas"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
-  <!-- /.content -->
 {% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <!-- ChartJS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Передача данных из Django в JS -->
+  {{ chart_labels|json_script:"chart-labels" }}
+  {{ chart_receipts_debt|json_script:"chart-receipts-debt" }}
+  {{ chart_receipts_paid|json_script:"chart-receipts-paid" }}
+  {{ chart_cashbox_income|json_script:"chart-cashbox-income" }}
+  {{ chart_cashbox_expense|json_script:"chart-cashbox-expense" }}
+  <script>
+    $(function() {
+      const labels = JSON.parse(document.getElementById('chart-labels').textContent);
+
+      // --- График 1: Квитанции ---
+      const receiptsDebt = JSON.parse(document.getElementById('chart-receipts-debt').textContent);
+      const receiptsPaid = JSON.parse(document.getElementById('chart-receipts-paid').textContent);
+
+      new Chart($('#receiptsChart').get(0).getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Задолженность',
+            backgroundColor: '#dd4b39', // Red
+            data: receiptsDebt
+          }, {
+            label: 'Погашение задолженности',
+            backgroundColor: '#00a65a', // Green
+            data: receiptsPaid
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          datasetFill: false
+        }
+      });
+
+      // --- График 2: Касса ---
+      const cashboxIncome = JSON.parse(document.getElementById('chart-cashbox-income').textContent);
+      const cashboxExpense = JSON.parse(document.getElementById('chart-cashbox-expense').textContent);
+
+      new Chart($('#cashboxChart').get(0).getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Приход',
+            backgroundColor: '#00a65a', // Green
+            data: cashboxIncome
+          }, {
+            label: 'Расход',
+            backgroundColor: '#dd4b39', // Red
+            data: cashboxExpense
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          datasetFill: false
+        }
+      });
+    })
+  </script>
+{% endblock scripts %}

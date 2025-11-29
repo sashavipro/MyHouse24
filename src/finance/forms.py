@@ -1,13 +1,17 @@
 """src/finance/forms.py."""
 
+import logging
+
 from django import forms
 from django.db import transaction
 from django.utils import timezone
 
 from src.building.models import Apartment
 from src.building.models import PersonalAccount
+from src.users.models import User
 
 from .models import Article
+from .models import CashBox
 from .models import CounterReading
 from .models import Currency
 from .models import PaymentDetails
@@ -18,6 +22,8 @@ from .models import Service
 from .models import Tariff
 from .models import TariffService
 from .models import Unit
+
+logger = logging.getLogger(__name__)
 
 
 class ServiceForm(forms.ModelForm):
@@ -184,8 +190,8 @@ class CounterReadingForm(forms.ModelForm):
         ]
         widgets = {
             "number": forms.TextInput(attrs={"class": "form-control"}),
-            "date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": "form-control", "type": "date"}
+            "date": forms.TextInput(
+                attrs={"class": "form-control date-picker", "placeholder": "ДД.ММ.ГГГГ"}  # noqa: RUF001
             ),
             "counter": forms.HiddenInput(),
             "value": forms.NumberInput(
@@ -245,17 +251,17 @@ class ReceiptForm(forms.ModelForm):
         ]
         widgets = {
             "number": forms.TextInput(attrs={"class": "form-control"}),
-            "date": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": "form-control", "type": "date"}
+            "date": forms.TextInput(
+                attrs={"class": "form-control date-picker", "placeholder": "ДД.ММ.ГГГГ"}  # noqa: RUF001
             ),
             "tariff": forms.Select(attrs={"class": "form-select"}),
             "is_posted": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "status": forms.Select(attrs={"class": "form-select"}),
-            "period_start": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": "form-control", "type": "date"}
+            "period_start": forms.TextInput(
+                attrs={"class": "form-control date-picker", "placeholder": "ДД.ММ.ГГГГ"}  # noqa: RUF001
             ),
-            "period_end": forms.DateInput(
-                format="%Y-%m-%d", attrs={"class": "form-control", "type": "date"}
+            "period_end": forms.TextInput(
+                attrs={"class": "form-control date-picker", "placeholder": "ДД.ММ.ГГГГ"}  # noqa: RUF001
             ),
         }
         labels = {
@@ -415,3 +421,130 @@ class PrintTemplateForm(forms.ModelForm):
             "name": "Название",
             "template_file": "Файл шаблона (.xlsx)",
         }
+
+
+class ManagerChoiceField(forms.ModelChoiceField):
+    """Manager Choice Field."""
+
+    def label_from_instance(self, obj):
+        """Label from instance."""
+        role_name = obj.role.name if obj.role else "Без роли"
+        full_name = obj.get_full_name()
+        return f"{role_name} - {full_name}"
+
+
+class CashBoxForm(forms.ModelForm):
+    """Base form for CashBox."""
+
+    manager = ManagerChoiceField(
+        queryset=User.objects.none(),
+        label="Менеджер",
+        widget=forms.Select(attrs={"class": "form-select"}),
+        required=False,
+    )
+
+    class Meta:
+        """Meta class."""
+
+        model = CashBox
+        fields = [
+            "number",
+            "date",
+            "is_posted",
+            "amount",
+            "article",
+            "comment",
+            "manager",
+        ]
+        widgets = {
+            "number": forms.TextInput(attrs={"class": "form-control"}),
+            "date": forms.TextInput(
+                attrs={"class": "form-control date-picker", "placeholder": "ДД.ММ.ГГГГ"}  # noqa: RUF001
+            ),
+            "amount": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.01"}
+            ),
+            "comment": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "article": forms.Select(attrs={"class": "form-select"}),
+            "manager": forms.Select(attrs={"class": "form-select"}),
+            "is_posted": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        """Init."""
+        super().__init__(*args, **kwargs)
+        self.fields["manager"].queryset = (
+            User.objects.filter(
+                user_type=User.UserType.EMPLOYEE,
+                role__name__in=["Директор", "Управляющий", "Бухгалтер"],
+            )
+            .select_related("role")
+            .order_by("role__name", "last_name")
+        )
+
+        self.fields["manager"].empty_label = "Выберите..."
+
+        if (
+            not self.instance.pk
+            and "initial" in kwargs
+            and "manager" in kwargs["initial"]
+        ):
+            self.fields["manager"].initial = kwargs["initial"]["manager"]
+
+
+class CashBoxIncomeForm(CashBoxForm):
+    """Form for INCOME."""
+
+    owner = forms.ModelChoiceField(
+        queryset=User.objects.filter(user_type=User.UserType.OWNER),
+        label="Владелец квартиры",
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select select2-simple"}),
+    )
+
+    personal_account = forms.ModelChoiceField(
+        queryset=PersonalAccount.objects.all(),
+        label="Лицевой счет",
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select select2-simple"}),
+    )
+
+    class Meta(CashBoxForm.Meta):
+        """Meta class."""
+
+        fields = [*CashBoxForm.Meta.fields, "personal_account"]
+
+    def __init__(self, *args, **kwargs):
+        """Init."""
+        super().__init__(*args, **kwargs)
+        self.fields["article"].queryset = Article.objects.filter(
+            type=Article.ArticleType.INCOME
+        )
+
+        if self.instance.pk and self.instance.personal_account:
+            try:
+                apt = self.instance.personal_account.apartment
+                if apt and apt.owner:
+                    self.fields["owner"].initial = apt.owner
+            except Apartment.DoesNotExist:
+                logger.warning(
+                    "Personal account %s has no apartment",
+                    self.instance.personal_account.number,
+                )
+            except AttributeError as e:
+                logger.warning(
+                    "Error accessing apartment owner for personal account %s: %s",
+                    self.instance.personal_account.number,
+                    e,
+                )
+
+
+class CashBoxExpenseForm(CashBoxForm):
+    """Form for EXPENSE."""
+
+    def __init__(self, *args, **kwargs):
+        """Init."""
+        super().__init__(*args, **kwargs)
+        self.fields["article"].queryset = Article.objects.filter(
+            type=Article.ArticleType.EXPENSE
+        )

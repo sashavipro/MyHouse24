@@ -3,6 +3,7 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.shortcuts import redirect
+from django.urls import reverse
 
 
 class RoleRequiredMixin(PermissionRequiredMixin):
@@ -55,14 +56,13 @@ class RoleRequiredMixin(PermissionRequiredMixin):
         return False
 
     def handle_no_permission(self):
-        """Override the standard permission denied handler.
+        """Override the permission denied handler."""
+        if self.request.session.get("impersonator_id"):
+            current_url = self.request.get_full_path()
+            stop_impersonate_url = reverse("users:stop_impersonate")
 
-        It adds a message and performs a custom redirect.
-        """
-        messages.error(
-            self.request,
-            "У вас нет прав для доступа к этой странице.",  # noqa: RUF001
-        )
+            return redirect(f"{stop_impersonate_url}?next={current_url}")
 
+        messages.error(self.request, "У вас нет прав для доступа к этой странице.")  # noqa: RUF001
         home_url = getattr(self.request, "user_home_url", None) or "core:login"
         return redirect(home_url)

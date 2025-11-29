@@ -35,9 +35,6 @@ urlpatterns = [
         views.DeleteDocumentView.as_view(),
         name="delete_document",
     ),
-    path(
-        "adminlte/website/update-seo/",
-        views.UpdateSeoFilesView.as_view(),
-        name="update_seo_files",
-    ),
+    path("robots.txt", views.RobotsTxtView.as_view(), name="robots_txt"),
+    path("sitemap.xml", views.SitemapXmlView.as_view(), name="sitemap_xml"),
 ]

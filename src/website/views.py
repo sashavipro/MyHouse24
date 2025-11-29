@@ -1,15 +1,13 @@
 """src/website/views.py."""
 
 import logging
-from pathlib import Path
 
-from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import DatabaseError
 from django.db import transaction
+from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
@@ -415,43 +413,30 @@ class DeleteGalleryImageView(LoginRequiredMixin, RoleRequiredMixin, View):
             return JsonResponse({"status": "error", "message": str(e)}, status=404)
 
 
-class UpdateSeoFilesView(LoginRequiredMixin, RoleRequiredMixin, View):
-    """Generate and save robots.txt and sitemap.xml files."""
-
-    permission_required = "has_management"
+class RobotsTxtView(View):
+    """Dynamically generate robots.txt content."""
 
     def get(self, request, *args, **kwargs):
-        """Handle the generation process."""
-        try:
-            domain = request.build_absolute_uri("/")[:-1]
-            self._generate_robots(domain)
-            self._generate_sitemap(domain)
-            messages.success(
-                request, "Файлы robots.txt и sitemap.xml успешно обновлены."
-            )
-        except (OSError, DatabaseError, ValidationError) as e:
-            logger.exception("Error updating SEO files")
-            messages.error(request, f"Ошибка при обновлении файлов: {e}")
+        """Get."""
+        domain = request.build_absolute_uri("/")[:-1]
+        lines = [
+            "User-agent: *",
+            "Disallow: /admin/",
+            "Disallow: /adminlte/",
+            "Disallow: /cabinet/",
+            "",
+            f"Sitemap: {domain}/sitemap.xml",
+        ]
+        content = "\n".join(lines)
+        return HttpResponse(content, content_type="text/plain")
 
-        return redirect("website:admin_home")
 
-    def _generate_robots(self, domain):
-        """Create robots.txt file."""
-        content = (
-            f"User-agent: *\n"
-            f"Disallow: /admin/\n"
-            f"Disallow: /adminlte/\n"
-            f"Disallow: /cabinet/\n"
-            f"\n"
-            f"Sitemap: {domain}/media/sitemap.xml"
-        )
+class SitemapXmlView(View):
+    """Dynamically generate sitemap.xml content."""
 
-        file_path = Path(settings.MEDIA_ROOT) / "robots.txt"
-        with file_path.open("w", encoding="utf-8") as f:
-            f.write(content)
-
-    def _generate_sitemap(self, domain):
-        """Create sitemap.xml file."""
+    def get(self, request, *args, **kwargs):
+        """Get."""
+        domain = request.build_absolute_uri("/")[:-1]
         pages = [
             "website:home",
             "website:about",
@@ -480,6 +465,5 @@ class UpdateSeoFilesView(LoginRequiredMixin, RoleRequiredMixin, View):
 
         xml_content.append("</urlset>")
 
-        file_path = Path(settings.MEDIA_ROOT) / "sitemap.xml"
-        with file_path.open("w", encoding="utf-8") as f:
-            f.write("\n".join(xml_content))
+        content = "\n".join(xml_content)
+        return HttpResponse(content, content_type="application/xml")

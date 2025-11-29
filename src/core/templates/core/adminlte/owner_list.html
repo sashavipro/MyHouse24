@@ -36,10 +36,11 @@
                 <a class="dropdown-item" href="{% url 'users:owner_add' %}">Добавить владельца</a>
               </li>
               <li>
-                <a class="dropdown-item" href="#">Отправить сообщение должникам</a>
+                <a class="dropdown-item"
+                   href="{% url 'users:message_add' %}?to_debtors=true">Отправить сообщение должникам</a>
               </li>
               <li>
-                <a class="dropdown-item" href="#">Отправить приглашение</a>
+                <a class="dropdown-item" href="{% url 'users:owner_invite' %}">Отправить приглашение</a>
               </li>
             </ul>
           </div>

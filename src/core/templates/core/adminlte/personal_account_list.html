@@ -5,6 +5,57 @@
 {% block title %}
   Лицевые счета
 {% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    /* Стили для иконок в боксах */
+    .small-box {
+      position: relative;
+      overflow: hidden;
+      /* Чтобы огромная иконка не вылезала */
+    }
+
+    .small-box .icon {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      z-index: 0;
+      font-size: 70px;
+      /* Размер иконки */
+      color: rgba(0, 0, 0, 0.15);
+      /* Полупрозрачность */
+      transition: all 0.3s linear;
+    }
+
+    .small-box:hover .icon {
+      font-size: 80px;
+      /* Увеличение при наведении */
+      transform: rotate(-10deg);
+      /* Поворот для красоты */
+    }
+
+    .small-box .inner {
+      position: relative;
+      z-index: 1;
+      padding: 20px;
+    }
+
+    .small-box h3 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .small-box p {
+      font-size: 1.1rem;
+      margin-bottom: 0;
+    }
+
+    .sup-currency {
+      font-size: 20px;
+    }
+  </style>
+{% endblock styles %}
 {% block content %}
   <section class="content-header">
     <div class="container-fluid">
@@ -25,32 +76,52 @@
   </section>
   <section class="content">
     <div class="container-fluid">
+      <!-- Статистика -->
       <div class="row mb-3">
-        <div class="col-lg-3 col-md-4 col-sm-6">
-          <div class="card text-white gradient-card-1">
-            <div class="card-body">
-              <h3 class="mb-0">{{ total_balance|floatformat:2 }} грн</h3>
-              <p class="mb-0">Состояние кассы</p>
+        <!-- Состояние кассы -->
+        <div class="col-lg-4 col-md-4 col-12">
+          <div class="small-box bg-success">
+            <div class="inner">
+              <h3 id="stats-cash">
+                {{ total_cash|floatformat:2 }} <sup class="sup-currency">грн</sup>
+              </h3>
+              <p>Состояние кассы</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-cash-coin"></i>
             </div>
           </div>
         </div>
-        <div class="col-lg-3 col-md-4 col-sm-6">
-          <div class="card text-white gradient-card-2">
-            <div class="card-body">
-              <h3 class="mb-0">{{ total_accounts_balance|floatformat:2 }} грн</h3>
-              <p class="mb-0">Баланс по счетам</p>
+        <!-- Баланс по счетам -->
+        <div class="col-lg-4 col-md-4 col-12">
+          <div class="small-box bg-info">
+            <div class="inner">
+              <h3 id="stats-balance">
+                {{ total_balance_accounts|floatformat:2 }} <sup class="sup-currency">грн</sup>
+              </h3>
+              <p>Баланс по счетам</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-wallet2"></i>
             </div>
           </div>
         </div>
-        <div class="col-lg-3 col-md-4 col-sm-6">
-          <div class="card text-white gradient-card-3">
-            <div class="card-body">
-              <h3 class="mb-0">{{ total_debt|floatformat:2 }} грн</h3>
-              <p class="mb-0">Задолженность по счетам</p>
+        <!-- Задолженность -->
+        <div class="col-lg-4 col-md-4 col-12">
+          <div class="small-box bg-danger">
+            <div class="inner">
+              <h3 id="stats-debt">
+                {{ total_debt|floatformat:2 }} <sup class="sup-currency">грн</sup>
+              </h3>
+              <p>Задолженность по счетам</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-graph-down-arrow"></i>
             </div>
           </div>
         </div>
       </div>
+      <!-- Действия -->
       <div class="d-flex justify-content-end mb-3">
         <div class="dropdown">
           <button class="btn btn-success dropdown-toggle"

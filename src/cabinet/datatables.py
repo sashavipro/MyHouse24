@@ -1,12 +1,10 @@
 """src/cabinet/datatables.py."""
 
-import datetime
-import re
-
 from ajax_datatable import AjaxDatatableView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import escape
 
 from src.finance.models import Receipt
@@ -15,9 +13,6 @@ from src.users.models import MessageRecipient
 from src.users.models import Ticket
 
 SNIPPET_LENGTH = 70
-MIN_YEAR = 1900
-MAX_YEAR = 2100
-MAX_DAYS_IN_MONTH = 31
 
 
 class CabinetMessageAjaxDatatableView(LoginRequiredMixin, AjaxDatatableView):
@@ -125,29 +120,6 @@ class CabinetReceiptAjaxDatatableView(LoginRequiredMixin, AjaxDatatableView):
         },
     ]
 
-    def _filter_by_date(self, queryset, value):
-        """Apply date-based filters to the queryset for the 'date' field."""
-        try:
-            if re.match(r"^\d{1,2}\.\d{1,2}\.\d{4}$", value):
-                filter_date = datetime.datetime.strptime(value, "%d.%m.%Y").date()  # noqa: DTZ007
-                return queryset.filter(date=filter_date)
-            if re.match(r"^\d{1,2}\.\d{4}$", value):
-                month, year = value.split(".")
-                return queryset.filter(date__month=int(month), date__year=int(year))
-            if re.match(r"^\d{4}$", value):
-                year = int(value)
-                if MIN_YEAR < year < MAX_YEAR:
-                    return queryset.filter(date__year=year)
-            if re.match(r"^\d{1,2}$", value):
-                day_or_month = int(value)
-                if 1 <= day_or_month <= MAX_DAYS_IN_MONTH:
-                    return queryset.filter(
-                        Q(date__day=day_or_month) | Q(date__month=day_or_month)
-                    )
-        except (ValueError, TypeError):
-            pass
-        return queryset
-
     def get_initial_queryset(self, request=None):
         """Build the initial queryset and collect filters."""
         queryset = Receipt.objects.filter(apartment__owner=request.user)
@@ -168,12 +140,25 @@ class CabinetReceiptAjaxDatatableView(LoginRequiredMixin, AjaxDatatableView):
     def apply_filters(self, queryset, filters):
         """Apply a dictionary of filters to a queryset."""
         for key, value in filters.items():
-            if value:
-                cleaned_value = value.strip()
-                if key == "date":
-                    queryset = self._filter_by_date(queryset, cleaned_value)
-                else:  # для 'status'
-                    queryset = queryset.filter(**{key: cleaned_value})
+            if not value:
+                continue
+
+            cleaned_value = value.strip()
+
+            if key == "date":
+                try:
+                    filter_date = timezone.datetime.strptime(
+                        cleaned_value, "%d.%m.%Y"
+                    ).date()
+                    queryset = queryset.filter(date=filter_date)
+                except ValueError:
+                    pass
+
+            elif key == "status":
+                queryset = queryset.filter(status=cleaned_value)
+
+            else:
+                queryset = queryset.filter(**{key: cleaned_value})
 
         return queryset
 

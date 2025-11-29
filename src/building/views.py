@@ -15,6 +15,7 @@ from django.views.generic import ListView
 from django.views.generic import UpdateView
 from openpyxl.styles import Font
 
+from src.finance.models import CashBox
 from src.users.models import User
 from src.users.models import logger
 from src.users.permissions import RoleRequiredMixin
@@ -245,18 +246,30 @@ class PersonalAccountListView(LoginRequiredMixin, RoleRequiredMixin, ListView):
             "last_name", "first_name"
         )
 
-        context["total_accounts_balance"] = (
-            PersonalAccount.objects.aggregate(Sum("balance"))["balance__sum"] or 0
-        )
-
-        context["total_debt"] = (
-            PersonalAccount.objects.filter(balance__lt=0).aggregate(Sum("balance"))[
-                "balance__sum"
-            ]
+        income = (
+            CashBox.objects.filter(is_posted=True, article__type="income").aggregate(
+                s=Sum("amount")
+            )["s"]
             or 0
         )
+        expense = (
+            CashBox.objects.filter(is_posted=True, article__type="expense").aggregate(
+                s=Sum("amount")
+            )["s"]
+            or 0
+        )
+        context["total_cash"] = income - expense
 
-        context["total_balance"] = context["total_accounts_balance"]
+        context["total_balance_accounts"] = (
+            Apartment.objects.aggregate(total=Sum("personal_account__balance"))["total"]
+            or 0
+        )
+        context["total_debt"] = (
+            Apartment.objects.filter(personal_account__balance__lt=0).aggregate(
+                total=Sum("personal_account__balance")
+            )["total"]
+            or 0
+        )
 
         return context
 

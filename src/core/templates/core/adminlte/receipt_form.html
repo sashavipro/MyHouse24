@@ -270,11 +270,22 @@
 {% endblock content %}
 {% block scripts %}
   {{ block.super }}
-  <!-- JS для JQuery и Select2 -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/ru.js"></script>
   <script>
     $(document).ready(function() {
+      // --- 1. Инициализация Flatpickr ---
+      flatpickr(".date-picker", {
+        dateFormat: "Y-m-d",
+        locale: "ru",
+        altInput: true,
+        altFormat: "d.m.Y",
+        disableMobile: "true",
+        defaultDate: new Date()
+      });
+
       // --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ЭЛЕМЕНТЫ ---
       const houseSelect = $('#id_house');
       const sectionSelect = $('#id_section');
@@ -308,9 +319,7 @@
             };
           },
           processResults: function(data, params) {
-            // Select2 ожидает формат { results: [], pagination: { more: true/false } }
             params.page = params.page || 1;
-
             return {
               results: data.results,
               pagination: data.pagination
@@ -433,19 +442,13 @@
         }
       }
 
-      // === Обновляем эту функцию ===
       function addServiceRow(serviceId = null, price = '', consumption = '', unitName = '...') {
         const totalFormsInput = $('#id_services-TOTAL_FORMS');
         const formIdx = parseInt(totalFormsInput.val());
-
-        // Получаем чистый HTML из тега <template>
         const templateHtml = document.getElementById('service-form-template').innerHTML;
-        // Заменяем в нем префикс
         const newFormHtml = templateHtml.replace(/__prefix__/g, formIdx);
-        // Создаем jQuery-объект из этого HTML
         const newRow = $(newFormHtml);
 
-        // Остальная логика без изменений
         if (serviceId) newRow.find('.service-select').val(serviceId);
         newRow.find('.price-input').val(price);
         newRow.find('.consumption-input').val(consumption);
@@ -507,10 +510,62 @@
 
       function addReadingsToServices(e) {
         e.preventDefault();
-        alert('Функционал "Добавить показания счетчиков" в разработке.');
+        e.stopPropagation();
+
+        const apartmentId = hiddenApartmentInput.val();
+        if (!apartmentId) {
+          alert('Сначала выберите квартиру.');
+          return;
+        }
+
+        const serviceRows = servicesTableBody.find('tr.service-form:visible');
+        if (serviceRows.length === 0) {
+          alert('Сначала добавьте услуги.');
+          return;
+        }
+
+        $.get(`/api/v1/finance/apartment/${apartmentId}/unread-readings`, function(readings) {
+          if (readings.length === 0) {
+            alert('Для этой квартиры нет новых показаний счетчиков.');
+            return;
+          }
+
+          let updatedCount = 0;
+
+          readings.forEach(r => {
+            serviceRows.each(function() {
+              const row = $(this);
+              const select = row.find('.service-select');
+              const currentServiceId = parseInt(select.val());
+
+              if (currentServiceId === r.service_id) {
+                const consumptionInput = row.find('.consumption-input');
+                consumptionInput.val(r.value);
+                calculateRowTotal(row);
+                updatedCount++;
+              }
+            });
+          });
+
+          if (updatedCount > 0) {
+            alert(`Обновлено услуг: ${updatedCount} шт.\nСохраните квитанцию, чтобы зафиксировать показания.`);
+          } else {
+            alert('Новые показания есть, но соответствующих услуг в квитанции не найдено.');
+          }
+        }).fail(function(xhr) {
+          console.error('Error:', xhr.responseText);
+          alert('Ошибка при получении показаний.');
+        });
       }
-      $('#set-tariff-services-btn, #set-tariff-services-btn-dropdown').on('click', setServicesFromTariff);
-      $('#add-counter-readings-btn, #add-counter-readings-btn-dropdown').on('click', addReadingsToServices);
+      $('#set-tariff-services-btn, #set-tariff-services-btn-dropdown')
+        .off('click')
+        .on('click', setServicesFromTariff);
+
+      $('#add-counter-readings-btn, #add-counter-readings-btn-dropdown')
+        .off('click')
+        .on('click', addReadingsToServices);
+
+
       $('#receipt-form').on('submit', function(e) {
         const apartmentId = hiddenApartmentInput.val();
         if (!apartmentId) {

@@ -201,7 +201,7 @@ class Receipt(models.Model):
     number = models.CharField(
         max_length=50, unique=True, verbose_name="Номер квитанции"
     )
-    date = models.DateField(default=timezone.now, verbose_name="Дата")
+    date = models.DateField(default=timezone.now, verbose_name="Дата от")
 
     is_posted = models.BooleanField(default=False, verbose_name="Проведена")
 
@@ -315,36 +315,56 @@ class Article(models.Model):
 
 
 class CashBox(models.Model):
-    """CashBox."""
+    """CashBox transaction."""
 
+    number = models.CharField(
+        max_length=50, unique=True, verbose_name="Номер ведомости"
+    )
+    date = models.DateField(default=timezone.now, verbose_name="Дата")
+    is_posted = models.BooleanField(default=True, verbose_name="Проведен")
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Сумма")
+    comment = models.TextField(blank=True, verbose_name="Комментарий")
+
+    article = models.ForeignKey(
+        Article, on_delete=models.PROTECT, verbose_name="Статья"
+    )
     personal_account = models.ForeignKey(
         "building.PersonalAccount",
         on_delete=models.PROTECT,
-        verbose_name="personal account",
+        null=True,
+        blank=True,
+        verbose_name="Лицевой счет",
     )
-    article = models.ForeignKey(
-        Article, on_delete=models.PROTECT, verbose_name="Article"
+    manager = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Менеджер",
     )
     receipt = models.ForeignKey(
         Receipt,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name="receipt",
+        verbose_name="Квитанция",
     )
-    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="amount")
-    date = models.DateTimeField(default=timezone.now, verbose_name="Transaction date")
-    comment = models.TextField(blank=True, verbose_name="comment")
 
     class Meta:
         """Meta class."""
 
-        verbose_name = "Cash transaction"
-        verbose_name_plural = "Cash transaction"
+        verbose_name = "Кассовая операция"
+        verbose_name_plural = "Кассовые операции"
+        ordering = ["-date", "-id"]
 
     def __str__(self):
-        """Return a string representation of the cash transaction."""
-        return f"{self.service.name}: {self.amount} in receipt №{self.receipt.id}"
+        """Str."""
+        return f"Ведомость №{self.number} от {self.date}"
+
+    @property
+    def type(self):
+        """Proxy to article type."""
+        return self.article.type if self.article else None
 
 
 class PaymentDetails(models.Model):

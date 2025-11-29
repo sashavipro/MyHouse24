@@ -1,0 +1,214 @@
+{% extends 'core/adminlte/admin_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  {% if form.instance.pk %}
+    Редактирование прихода
+  {% else %}
+    Новая приходная ведомость
+  {% endif %}
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+        rel="stylesheet" />
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+{% endblock styles %}
+{% block content %}
+  <section class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1>
+            {% if form.instance.pk %}
+              Редактирование прихода
+            {% else %}
+              Новая приходная ведомость
+            {% endif %}
+          </h1>
+        </div>
+        <div class="col-sm-6">
+          <ol class="breadcrumb float-sm-end">
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:admin_stats' %}">Главная</a>
+            </li>
+            <li class="breadcrumb-item">
+              <a href="{% url 'finance:cashbox_list' %}">Касса</a>
+            </li>
+            <li class="breadcrumb-item active">Приходная ведомость</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="content">
+    <div class="container-fluid">
+      <form method="post">
+        {% csrf_token %}
+        <!-- Номер и Дата -->
+        <div class="row mb-3">
+          <div class="col-md-3 d-flex align-items-center">
+            <div class="input-group">
+              <span class="input-group-text">№</span>
+              {{ form.number }}
+            </div>
+          </div>
+          <div class="col-auto d-flex align-items-center">
+            <span class="fw-bold me-2">от</span>
+          </div>
+          <div class="col-md-3">
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+              {{ form.date }}
+            </div>
+          </div>
+        </div>
+        <div class="card card-primary card-outline">
+          <div class="card-body">
+            <div class="row">
+              <!-- Левая колонка -->
+              <div class="col-md-6">
+                {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.owner.label }}</label>
+                  {{ form.owner }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.personal_account.label }}</label>
+                  {{ form.personal_account }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.article.label }}</label>
+                  {{ form.article }}
+                  {% if form.article.errors %}<div class="text-danger small">{{ form.article.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.amount.label }}</label>
+                  {{ form.amount }}
+                  {% if form.amount.errors %}<div class="text-danger small">{{ form.amount.errors }}</div>{% endif %}
+                </div>
+              </div>
+              <!-- Правая колонка -->
+              <div class="col-md-6">
+                <div class="form-check mb-3">
+                  {{ form.is_posted }}
+                  <label class="form-check-label" for="{{ form.is_posted.id_for_label }}">{{ form.is_posted.label }}</label>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.manager.label }}</label>
+                  {{ form.manager }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">{{ form.comment.label }}</label>
+                  {{ form.comment }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <a href="{% url 'finance:cashbox_list' %}" class="btn btn-secondary">Отменить</a>
+            <button type="submit" class="btn btn-success">Сохранить</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/ru.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // --- Инициализация плагинов ---
+      // ИСПРАВЛЕНО: Используем класс .date-picker вместо input[type="date"]
+      flatpickr(".date-picker", {
+        dateFormat: "Y-m-d",
+        locale: "ru",
+        altInput: true,
+        altFormat: "d.m.Y",
+        disableMobile: "true",
+        defaultDate: new Date() // Автозаполнение текущей датой (если поле пустое)
+      });
+
+      // Select2
+      $('.select2-simple, select').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: "Выберите...",
+        allowClear: true
+      });
+
+      // --- Логика связанных полей (Владелец <-> Лицевой счет) ---
+      const ownerSelect = $('#{{ form.owner.id_for_label }}');
+      const accountSelect = $('#{{ form.personal_account.id_for_label }}');
+      const initialAccountId = '{{ form.personal_account.value|default:"" }}';
+      let isProgrammaticChange = false;
+
+      // 1. При выборе Владельца -> Фильтруем счета
+      ownerSelect.on('change', function() {
+        if (isProgrammaticChange) return;
+
+        const ownerId = $(this).val();
+        const currentAccountId = accountSelect.val() || initialAccountId;
+
+        // Очищаем список, но сохраняем текущее значение в памяти (currentAccountId)
+        accountSelect.empty().append(new Option("Выберите...", ""));
+
+        if (ownerId) {
+          accountSelect.prop('disabled', true);
+
+          $.get(`/api/v1/buildings/personal-accounts/by-owner`, {
+            owner_id: ownerId
+          }, function(data) {
+            data.forEach(function(acc) {
+              const isSelected = (String(acc.id) === String(currentAccountId));
+              accountSelect.append(new Option(acc.number, acc.id, false, isSelected));
+            });
+            accountSelect.prop('disabled', false);
+            // Если мы нашли и выбрали старое значение, нужно сообщить Select2
+            if (currentAccountId) {
+              accountSelect.val(currentAccountId).trigger('change.select2');
+            } else {
+              accountSelect.trigger('change.select2');
+            }
+          });
+        } else {
+          // Если владелец убран, можно оставить пустым или загрузить все счета (по желанию)
+          accountSelect.trigger('change.select2');
+        }
+      });
+
+      // 2. При выборе Счета -> Подставляем владельца
+      accountSelect.on('change', function() {
+        const accountId = $(this).val();
+
+        // Если это инициализация или программное изменение - выходим
+        if (!accountId || isProgrammaticChange) return;
+
+        // Если счет уже соответствует выбранному владельцу (проверка на клиенте сложна без данных, поэтому запрос)
+        // Но можно оптимизировать: если владелец уже выбран, не перезапрашивать.
+        // Однако надежнее спросить сервер "чей это счет?".
+
+        $.get(`/api/v1/buildings/personal-accounts/${accountId}/owner-info`, function(data) {
+          if (data.owner_id) {
+            isProgrammaticChange = true;
+            // Меняем владельца, но не триггерим его событие change, чтобы не перезагружать список счетов
+            ownerSelect.val(data.owner_id).trigger('change.select2');
+            isProgrammaticChange = false;
+          }
+        });
+      });
+
+      // --- Старт: Если владелец уже выбран (из initial или при ошибке валидации), подгружаем его счета ---
+      if (ownerSelect.val()) {
+        ownerSelect.trigger('change');
+      }
+    });
+  </script>
+{% endblock scripts %}

@@ -1,10 +1,10 @@
 .idea
 .media
+.static
 
 __pycache__/
 *.pyc
 
-# Virtualenv
 .venv/
 venv/
 env/
@@ -12,11 +12,9 @@ env/
 # Django
 *.log
 
-# Environment variables
 .env
 
-# User-uploaded files
 media/
 
-# Static files (собранные collectstatic)
 staticfiles/
+static/

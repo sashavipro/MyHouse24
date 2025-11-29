@@ -12,6 +12,36 @@
   {{ about_page.seo_block.keywords }}
 {% endblock keywords %}
 {% block content %}
+  <style>
+    .modal-transparent {
+      background-color: transparent;
+      border: none;
+      box-shadow: none;
+    }
+
+    .modal-header-custom {
+      border: none;
+      padding: 0 0 10px 0;
+    }
+
+    .close-custom {
+      color: white;
+      opacity: 1;
+      text-shadow: none;
+      font-size: 30px;
+    }
+
+    .modal-body-custom {
+      padding: 0;
+    }
+
+    .preview-image-custom {
+      margin: 0 auto;
+      max-height: 85vh;
+      border: 5px solid white;
+      border-radius: 4px;
+    }
+  </style>
   <div class="breadcrumbs">
     <div class="container">
       <div class="row">
@@ -46,14 +76,15 @@
         </div>
       </div>
     </div>
+    <!-- ГАЛЕРЕЯ 1 -->
     {% if about_page.gallery1 and about_page.gallery1.images.all %}
       <div class="gallery g1">
         <div class="container">
-          <div class="row">
+          <div class="row" id="gallery1-container">
             {% for image in about_page.gallery1.images.all %}
-              <div class="col-xs-12 col-sm-6 col-md-3 item"
-                   data-src="{{ image.image.url }}">
-                <a href="{{ image.image.url }}" class="big">
+              <div class="col-xs-12 col-sm-6 col-md-3 item">
+                <!-- Добавлен класс show-image-modal и data-src для надежности -->
+                <a href="{{ image.image.url }}" class="big show-image-modal">
                   <img src="{{ image.image.url }}"
                        alt="Галерея 1"
                        class="img-responsive img-thumbnail" />
@@ -78,14 +109,15 @@
         </div>
       </div>
     </div>
+    <!-- ГАЛЕРЕЯ 2 -->
     {% if about_page.gallery2 and about_page.gallery2.images.all %}
       <div class="gallery g2">
         <div class="container">
-          <div class="row">
+          <div class="row" id="gallery2-container">
             {% for image in about_page.gallery2.images.all %}
-              <div class="col-xs-12 col-sm-6 col-md-3 item"
-                   data-src="{{ image.image.url }}">
-                <a href="{{ image.image.url }}" class="big">
+              <div class="col-xs-12 col-sm-6 col-md-3 item">
+                <!-- Добавлен класс show-image-modal -->
+                <a href="{{ image.image.url }}" class="big show-image-modal">
                   <img src="{{ image.image.url }}"
                        alt="Галерея 2"
                        class="img-responsive img-thumbnail" />
@@ -129,4 +161,69 @@
       <p>Страница "О нас" еще не заполнена.</p>
     </div>
   {% endif %}
+  <!-- МОДАЛЬНОЕ ОКНО (Bootstrap 3/4 совместимое) -->
+  <div class="modal fade"
+       id="imagePreviewModal"
+       tabindex="-1"
+       role="dialog"
+       aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content modal-transparent">
+        <div class="modal-header modal-header-custom">
+          <button type="button"
+                  class="close close-custom"
+                  data-dismiss="modal"
+                  aria-label="Close">
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <div class="modal-body text-center modal-body-custom">
+          <!-- Картинка будет подставлена сюда -->
+          <img id="previewImage"
+               src=""
+               class="img-responsive preview-image-custom"
+               alt="Preview" />
+        </div>
+      </div>
+    </div>
+  </div>
 {% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Используем делегирование событий на body, чтобы точно поймать клик
+      // даже если DOM загрузился криво или jQuery еще не готов.
+      document.body.addEventListener('click', function(event) {
+        // Ищем ближайшую ссылку с классом show-image-modal
+        // (потому что клик может быть по тегу <img /> внутри <a>)
+        var targetLink = event.target.closest('.show-image-modal');
+
+        if (targetLink) {
+          // 1. Запрещаем переход по ссылке
+          event.preventDefault();
+
+          // 2. Получаем URL картинки
+          var imageUrl = targetLink.getAttribute('href');
+
+          // 3. Находим элементы модального окна
+          var modalImg = document.getElementById('previewImage');
+
+          // 4. Устанавливаем картинку
+          if (modalImg) {
+            modalImg.src = imageUrl;
+          }
+
+          // 5. Открываем модальное окно через jQuery (Bootstrap требует jQuery)
+          if (window.jQuery) {
+            window.jQuery('#imagePreviewModal').modal('show');
+          } else {
+            console.error('Ошибка: jQuery не загружен, модальное окно не может быть открыто.');
+            // Если jQuery нет, открываем картинку просто в новой вкладке как фоллбэк
+            window.open(imageUrl, '_blank');
+          }
+        }
+      });
+    });
+  </script>
+{% endblock scripts %}

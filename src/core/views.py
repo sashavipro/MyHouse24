@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView
 
+from Config import settings
 from src.core.forms import CustomAuthenticationForm
 from src.core.forms import ResidentHCaptchaForm
 from src.users.models import User
@@ -151,14 +152,39 @@ class LoginView(FormView):
 
 
 class LogoutView(View):
-    """Handle user logout for both GET and POST requests."""
+    """Handle user logout.
+
+    If the session is an impersonation session, switch back to the admin user.
+    Otherwise, perform a standard logout.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        """Dispatch."""
+        impersonator_id = request.session.get("impersonator_id")
+
+        if impersonator_id:
+            try:
+                admin_user = User.objects.get(pk=impersonator_id)
+
+                if not hasattr(admin_user, "backend"):
+                    admin_user.backend = settings.AUTHENTICATION_BACKENDS[0]
+
+                login(request, admin_user)
+
+                messages.info(request, "Вы вернулись в панель администратора.")
+
+                return redirect("users:owner_list")
+
+            except User.DoesNotExist:
+                pass
+
+        logout(request)
+        return redirect("website:home")
 
     def get(self, request, *args, **kwargs):
-        """Log the user out and redirect to the homepage."""
-        logout(request)
-        return redirect("website:home")
+        """Get."""
+        return self.dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        """Log the user out and redirect to the homepage."""
-        logout(request)
-        return redirect("website:home")
+        """Post."""
+        return self.dispatch(request, *args, **kwargs)

@@ -1,0 +1,208 @@
+{% extends 'core/adminlte/cabinet_layout.html' %}
+
+{% load static %}
+
+{% block title %}
+  Сводка - {{ apartment.house.title }}, кв.{{ apartment.number }}
+{% endblock title %}
+{% block styles %}
+  {{ block.super }}
+  <style>
+    .small-box {
+      border-radius: 0.25rem;
+      position: relative;
+      display: block;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    }
+
+    .small-box>.inner {
+      padding: 10px;
+    }
+
+    .small-box h3 {
+      font-size: 38px;
+      font-weight: bold;
+      margin: 0 0 10px 0;
+      white-space: nowrap;
+      padding: 0;
+      color: white;
+    }
+
+    .small-box h3 sup {
+      font-size: 20px;
+    }
+
+    .small-box p {
+      font-size: 15px;
+      color: white;
+    }
+
+    .small-box .icon {
+      position: absolute;
+      top: -10px;
+      right: 10px;
+      z-index: 0;
+      font-size: 90px;
+      color: rgba(0, 0, 0, 0.15);
+    }
+
+    .bg-balance-debt {
+      background-color: #dd4b39 !important;
+    }
+
+    /* Красный */
+    .bg-balance-ok {
+      background-color: #00a65a !important;
+    }
+
+    /* Зеленый */
+
+    /* Стили для canvas графиков */
+    .chart-canvas {
+      min-height: 250px;
+      height: 250px;
+      max-height: 250px;
+      max-width: 100%;
+    }
+  </style>
+{% endblock styles %}
+{% block content %}
+  <div class="content-header">
+    <div class="container-fluid">
+      <div class="row mb-2">
+        <div class="col-sm-6">
+          <h1 class="m-0">Сводка - {{ apartment.house.title }}, кв.{{ apartment.number }}</h1>
+        </div>
+      </div>
+    </div>
+  </div>
+  <section class="content">
+    <div class="container-fluid">
+      <!-- Верхние плашки -->
+      <div class="row">
+        <!-- 1. Баланс -->
+        <div class="col-lg-4 col-12">
+          <div class="small-box {% if account_balance < 0 %}bg-balance-debt{% else %}bg-balance-ok{% endif %}">
+            <div class="inner">
+              <h3>
+                {{ account_balance|floatformat:2 }} <sup>грн</sup>
+              </h3>
+              <p>Баланс по квартире</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-cash"></i>
+            </div>
+          </div>
+        </div>
+        <!-- 2. Лицевой счет -->
+        <div class="col-lg-4 col-12">
+          <div class="small-box bg-primary">
+            <div class="inner">
+              <h3>{{ account_number }}</h3>
+              <p>Лицевой счет</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-person-badge"></i>
+            </div>
+          </div>
+        </div>
+        <!-- 3. Средний расход -->
+        <div class="col-lg-4 col-12">
+          <div class="small-box bg-warning">
+            <div class="inner">
+              <h3>
+                {{ avg_expense|floatformat:2 }} <sup>грн</sup>
+              </h3>
+              <p>Средний расход за месяц</p>
+            </div>
+            <div class="icon">
+              <i class="bi bi-pie-chart"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Графики -->
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="card">
+            <div class="card-header border-0">
+              <h3 class="card-title">Диаграмма расходов по месяцам за год</h3>
+            </div>
+            <div class="card-body">
+              <canvas id="barChart" class="chart-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card">
+            <div class="card-header border-0">
+              <h3 class="card-title">Диаграмма расходов</h3>
+            </div>
+            <div class="card-body">
+              <canvas id="pieChart" class="chart-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}
+{% block scripts %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  {{ chart_labels_year|json_script:"chart-labels-year" }}
+  {{ chart_data_year|json_script:"chart-data-year" }}
+  {{ chart_labels_pie|json_script:"chart-labels-pie" }}
+  {{ chart_data_pie|json_script:"chart-data-pie" }}
+  <script>
+    $(function() {
+      // --- Bar Chart (Столбчатая) ---
+      const labelsYear = JSON.parse(document.getElementById('chart-labels-year').textContent);
+      const dataYear = JSON.parse(document.getElementById('chart-data-year').textContent);
+
+      new Chart($('#barChart').get(0).getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: labelsYear,
+          datasets: [{
+            label: 'Расход (грн)',
+            backgroundColor: '#007bff',
+            borderColor: '#007bff',
+            data: dataYear
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          datasetFill: false
+        }
+      });
+
+      // --- Pie Chart (Круговая) ---
+      const labelsPie = JSON.parse(document.getElementById('chart-labels-pie').textContent);
+      const dataPie = JSON.parse(document.getElementById('chart-data-pie').textContent);
+
+      // Если данных нет, показываем заглушку или пустой график
+      if (dataPie.length === 0) {}
+
+      // Генератор цветов
+      const colors = ['#f56954', '#00a65a', '#f39c12', '#00c0ef', '#3c8dbc', '#d2d6de'];
+
+      new Chart($('#pieChart').get(0).getContext('2d'), {
+        type: 'doughnut', // или 'pie'
+        data: {
+          labels: labelsPie,
+          datasets: [{
+            data: dataPie,
+            backgroundColor: colors.slice(0, dataPie.length)
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          responsive: true,
+        }
+      });
+    })
+  </script>
+{% endblock scripts %}

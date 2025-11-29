@@ -4,6 +4,7 @@ from django.urls import path
 
 from . import views
 from .datatables import ArticleAjaxDatatableView
+from .datatables import CashBoxAjaxDatatableView
 from .datatables import CounterAjaxDatatableView
 from .datatables import CounterReadingAjaxDatatableView
 from .datatables import ReceiptAjaxDatatableView
@@ -107,5 +108,36 @@ urlpatterns = [
         "adminlte/receipts/templates/",
         views.ReceiptTemplateSettingsView.as_view(),
         name="receipt_template_settings",
+    ),
+    path("adminlte/cashbox/", views.CashBoxListView.as_view(), name="cashbox_list"),
+    path(
+        "adminlte/cashbox/income/add/",
+        views.CashBoxIncomeCreateView.as_view(),
+        name="cashbox_income_add",
+    ),
+    path(
+        "adminlte/cashbox/expense/add/",
+        views.CashBoxExpenseCreateView.as_view(),
+        name="cashbox_expense_add",
+    ),
+    path(
+        "adminlte/cashbox/<int:pk>/edit/",
+        views.CashBoxUpdateView.as_view(),
+        name="cashbox_update",
+    ),
+    path(
+        "ajax-datatable/cashbox/",
+        CashBoxAjaxDatatableView.as_view(),
+        name="ajax_datatable_cashbox",
+    ),
+    path(
+        "adminlte/cashbox/<int:pk>/",
+        views.CashBoxDetailView.as_view(),
+        name="cashbox_detail",
+    ),
+    path(
+        "adminlte/cashbox/export/",
+        views.ExportCashBoxExcelView.as_view(),
+        name="cashbox_export",
     ),
 ]

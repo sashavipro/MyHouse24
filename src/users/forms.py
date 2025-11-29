@@ -372,6 +372,12 @@ class MessageForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         """Initialize form with dynamic querysets based on parent selections."""
         super().__init__(*args, **kwargs)
+
+        self.fields["house"].empty_label = "Всем..."
+        self.fields["section"].empty_label = "Всем..."
+        self.fields["floor"].empty_label = "Всем..."
+        self.fields["apartment"].empty_label = "Всем..."
+
         if "house" in self.data:
             try:
                 house_id = int(self.data.get("house"))
@@ -381,11 +387,21 @@ class MessageForm(forms.ModelForm):
                 self.fields["floor"].queryset = Floor.objects.filter(house_id=house_id)
             except (ValueError, TypeError):
                 pass
-        if "section" in self.data:
+
+        if "section" in self.data and self.data.get("section"):
             try:
                 section_id = int(self.data.get("section"))
                 self.fields["apartment"].queryset = Apartment.objects.filter(
                     section_id=section_id
+                )
+            except (ValueError, TypeError):
+                pass
+
+        elif "house" in self.data and self.data.get("house"):
+            try:
+                house_id = int(self.data.get("house"))
+                self.fields["apartment"].queryset = Apartment.objects.filter(
+                    house_id=house_id
                 )
             except (ValueError, TypeError):
                 pass
@@ -540,3 +556,48 @@ class TicketForm(forms.ModelForm):
                 raise forms.ValidationError(error_msg)
 
         return cleaned_data
+
+
+class MessageToOwnerForm(forms.ModelForm):
+    """Form for sending a message to a specific owner (with a dropdown)."""
+
+    owner = forms.ModelChoiceField(
+        label="Владелец квартир",
+        queryset=User.objects.filter(user_type=User.UserType.OWNER),
+        widget=forms.Select(
+            attrs={"class": "form-select select2-simple", "style": "width: 100%;"}
+        ),
+        required=True,
+    )
+
+    class Meta:
+        """Meta clas."""
+
+        model = Message
+        fields = ["title", "text"]
+        widgets = {
+            "title": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Тема сообщения"}
+            ),
+            "text": forms.Textarea(attrs={"class": "tinymce-editor"}),
+        }
+        labels = {"title": "Тема сообщения", "text": "Текст сообщения"}
+
+
+class InviteOwnerForm(forms.Form):
+    """Form to send an invitation to a new owner."""
+
+    phone = forms.CharField(
+        label="Телефон",
+        required=True,
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "+380991234567"}
+        ),
+    )
+    email = forms.EmailField(
+        label="Email",
+        required=True,
+        widget=forms.EmailInput(
+            attrs={"class": "form-control", "placeholder": "info@example.com"}
+        ),
+    )
