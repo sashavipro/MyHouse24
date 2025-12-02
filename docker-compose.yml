@@ -52,6 +52,7 @@ services:
     command: celery -A Config worker -l info
     volumes:
       - .:/app
+      - media_volume:/app/media
     env_file:
       - .env
     depends_on:

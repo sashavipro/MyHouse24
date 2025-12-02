@@ -70,7 +70,10 @@
             <div>
               <a href="{% url 'finance:receipt_print_form' receipt.pk %}"
                  class="btn btn-sm btn-outline-secondary">Печать</a>
-              <button type="button" class="btn btn-sm btn-outline-secondary disabled">Отправить на e-mail</button>
+              <a href="{% url 'finance:receipt_print_form' receipt.pk %}"
+                 class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-envelope"></i> Отправить на e-mail
+              </a>
               <a href="{% url 'finance:receipt_edit' receipt.pk %}"
                  class="btn btn-sm btn-primary">Редактировать квитанцию</a>
             </div>

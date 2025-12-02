@@ -62,6 +62,8 @@ from src.users.models import Ticket
 from src.users.models import User
 from src.users.permissions import RoleRequiredMixin
 
+from .tasks import send_receipt_email_task
+
 logger = logging.getLogger(__name__)
 
 
@@ -851,7 +853,7 @@ class ReceiptUpdateView(LoginRequiredMixin, RoleRequiredMixin, UpdateView):
 
 
 class ReceiptPrintFormView(LoginRequiredMixin, RoleRequiredMixin, View):
-    """Show template selection page and generate Excel file from it."""
+    """Show template selection page and generate Excel file or send Email."""
 
     template_name = "core/adminlte/receipt_print_form.html"
     permission_required = "has_receipt"
@@ -879,6 +881,7 @@ class ReceiptPrintFormView(LoginRequiredMixin, RoleRequiredMixin, View):
         template_id = request.POST.get("template_id")
 
         if not template_id:
+            messages.error(request, "Пожалуйста, выберите шаблон.")
             templates = PrintTemplate.objects.all().order_by("-is_default", "name")
             return render(
                 request,
@@ -886,21 +889,37 @@ class ReceiptPrintFormView(LoginRequiredMixin, RoleRequiredMixin, View):
                 {"receipt": receipt, "templates": templates},
             )
 
-        template_obj = get_object_or_404(PrintTemplate, pk=template_id)
+        if "send_email" in request.POST:
+            if not receipt.apartment.owner or not receipt.apartment.owner.email:
+                messages.error(
+                    request,
+                    "У владельца квартиры не указан Email. Отправка невозможна.",  # noqa: RUF001
+                )
+            else:
+                send_receipt_email_task.delay(receipt.pk, int(template_id))
 
-        try:
-            generator = ReceiptExcelGenerator(receipt, template_obj.template_file.path)
-            workbook = generator.generate_workbook()
+                messages.success(
+                    request,
+                    f"Запущен процесс отправки квитанции на "
+                    f"{receipt.apartment.owner.email}."
+                    f" Это может занять некоторое время.",
+                )
 
-            if "download" in request.POST:
+            return redirect("finance:receipt_print_form", pk=receipt.pk)
+
+        if "download" in request.POST:
+            template_obj = get_object_or_404(PrintTemplate, pk=template_id)
+
+            try:
+                generator = ReceiptExcelGenerator(
+                    receipt, template_obj.template_file.path
+                )
+                workbook = generator.generate_workbook()
                 return self._create_download_response(workbook, receipt)
 
-            if "send_email" in request.POST:
-                messages.info(request, "Отправка на E-mail в разработке.")
-
-        except Exception:
-            logger.exception("Error generating receipt Excel file")
-            messages.error(request, "Ошибка при формировании файла квитанции.")
+            except Exception:
+                logger.exception("Error generating receipt Excel file")
+                messages.error(request, "Ошибка при формировании файла квитанции.")
 
         templates = PrintTemplate.objects.all().order_by("-is_default", "name")
         return render(
